@@ -6,10 +6,12 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/dipdup-net/go-lib/cmdline"
-	"github.com/dipdup-net/metadata/cmd/metadata/config"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/dipdup-net/go-lib/cmdline"
+	"github.com/dipdup-net/go-lib/hasura"
+	"github.com/dipdup-net/metadata/cmd/metadata/config"
+	"github.com/dipdup-net/metadata/cmd/metadata/models"
 )
 
 func main() {
@@ -43,6 +45,13 @@ func main() {
 		indexers[network] = indexer
 
 		if err := indexer.Start(); err != nil {
+			log.Error(err)
+			return
+		}
+	}
+
+	if cfg.Hasura.URL != "" {
+		if err := hasura.Create(cfg.Hasura, cfg.Database, &models.TokenMetadata{}, &models.ContractMetadata{}); err != nil {
 			log.Error(err)
 			return
 		}

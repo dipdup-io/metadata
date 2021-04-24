@@ -82,9 +82,7 @@ func (indexer *Indexer) Start() error {
 	indexer.wg.Add(1)
 	go indexer.listen()
 
-	if err := indexer.scanner.Start(indexer.state.Level); err != nil {
-		return err
-	}
+	go indexer.scanner.Start(indexer.state.Level)
 
 	return nil
 }

@@ -3,7 +3,7 @@ module github.com/dipdup-net/metadata
 go 1.15
 
 require (
-	github.com/dipdup-net/go-lib v0.0.0-20210423120100-841d1cc08b71
+	github.com/dipdup-net/go-lib v0.0.0-20210424171755-da7bbc235129
 	github.com/ipfs/go-cid v0.0.7
 	github.com/json-iterator/go v1.1.10
 	github.com/karlseguin/ccache v2.0.3+incompatible

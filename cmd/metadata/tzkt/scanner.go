@@ -45,10 +45,11 @@ func New(baseURL string, contracts ...string) *Scanner {
 }
 
 // Start -
-func (scanner *Scanner) Start(level uint64) error {
+func (scanner *Scanner) Start(level uint64) {
 	head, err := scanner.api.GetHead()
 	if err != nil {
-		return err
+		log.Error(err)
+		return
 	}
 	log.Infof("Current node level is %d. Indexer state is %d.", head.Level, level)
 
@@ -56,12 +57,14 @@ func (scanner *Scanner) Start(level uint64) error {
 
 	for head.Level > scanner.level {
 		if err := scanner.sync(head.Level); err != nil {
-			return err
+			log.Error(err)
+			return
 		}
 
 		head, err = scanner.api.GetHead()
 		if err != nil {
-			return err
+			log.Error(err)
+			return
 		}
 	}
 
@@ -69,14 +72,14 @@ func (scanner *Scanner) Start(level uint64) error {
 	go scanner.listen()
 
 	if err := scanner.client.Connect(); err != nil {
-		return err
+		log.Error(err)
+		return
 	}
 
 	if err := scanner.subscribe(); err != nil {
-		return err
+		log.Error(err)
+		return
 	}
-
-	return nil
 }
 
 // Close -
