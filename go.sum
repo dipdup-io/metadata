@@ -15,8 +15,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/denisenkom/go-mssqldb v0.9.0 h1:RSohk2RsiZqLZ0zCjtfn3S4Gp4exhpBWHyQ7D0yGjAk=
 github.com/denisenkom/go-mssqldb v0.9.0/go.mod h1:xbL0rPBG9cCiLr28tMa8zpbdarY27NDyej4t/EjAShU=
-github.com/dipdup-net/go-lib v0.0.0-20210424171755-da7bbc235129 h1:QQYgcWfxnHA4IeSCJeGT1NcCW7vKarnfvMsDp/0CTqw=
-github.com/dipdup-net/go-lib v0.0.0-20210424171755-da7bbc235129/go.mod h1:eVL+pxrOblB7w7srIwVxdNaPSH0CUoGOqOu7dvqPCfY=
+github.com/dipdup-net/go-lib v0.0.0-20210425143230-3b45357821b2 h1:jzwF4sL/yze8tkKL0vaUQl3tvhcVG5q+UPvzF8OL15Q=
+github.com/dipdup-net/go-lib v0.0.0-20210425143230-3b45357821b2/go.mod h1:eVL+pxrOblB7w7srIwVxdNaPSH0CUoGOqOu7dvqPCfY=
 github.com/go-sql-driver/mysql v1.4.0/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
 github.com/go-sql-driver/mysql v1.5.0 h1:ozyZYNQW3x3HtqT1jira07DN2PArx2v7/mN66gGcHOs=
 github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
