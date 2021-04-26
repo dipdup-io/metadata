@@ -23,7 +23,7 @@ type Receiver struct {
 
 // New -
 func New(db *gorm.DB, settings config.Settings, ctx *context.Context) (Receiver, error) {
-	ipfs := NewIPFS(settings.IPFSGateways, WithTimeoutIpfs(settings.IPFSTimeout))
+	ipfs := NewIPFS(settings.IPFSGateways, WithTimeoutIpfs(settings.IPFSTimeout), WithPinningIpfs(settings.IPFSPinning))
 	if err := ipfs.Init(db); err != nil {
 		return Receiver{}, err
 	}

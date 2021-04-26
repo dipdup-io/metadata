@@ -9,6 +9,8 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/karlseguin/ccache"
 	"gorm.io/gorm"
+
+	shell "github.com/ipfs/go-ipfs-api"
 )
 
 const (
@@ -20,6 +22,7 @@ type Ipfs struct {
 	Http
 
 	cache    *ccache.Cache
+	pinning  []*shell.Shell
 	gateways []string
 }
 
@@ -33,10 +36,25 @@ func WithTimeoutIpfs(timeout uint64) IpfsOption {
 	}
 }
 
+// WithPinningIpfs -
+func WithPinningIpfs(urls []string) IpfsOption {
+	return func(s *Ipfs) {
+		if s.pinning == nil {
+			s.pinning = make([]*shell.Shell, 0)
+		}
+		for _, url := range urls {
+			sh := shell.NewShell(url)
+			sh.SetTimeout(10 * time.Second)
+			s.pinning = append(s.pinning, sh)
+		}
+	}
+}
+
 // NewIPFS -
 func NewIPFS(gateways []string, opts ...IpfsOption) Ipfs {
 	s := Ipfs{
 		Http:     NewHttp(),
+		pinning:  make([]*shell.Shell, 0),
 		gateways: gateways,
 		cache:    ccache.New(ccache.Configure().MaxSize(30000)),
 	}
@@ -107,9 +125,12 @@ func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
 		return nil, err
 	}
 
+	for _, sh := range s.pinning {
+		_ = sh.Pin(hash)
+	}
+
 	for i := range s.gateways {
 		url := fmt.Sprintf("%s/ipfs/%s", s.gateways[i], hash)
-
 		data, err := s.cache.Fetch(hash, time.Hour, func() (interface{}, error) {
 			return s.Http.Resolve(network, address, url)
 		})

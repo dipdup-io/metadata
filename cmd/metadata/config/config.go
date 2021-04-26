@@ -108,6 +108,7 @@ func (cfg MetadataDataSource) Validate() error {
 // Settings -
 type Settings struct {
 	IPFSGateways         []string `yaml:"ipfs_gateways"`
+	IPFSPinning          []string `yaml:"ipfs_pinning"`
 	IPFSTimeout          uint64   `yaml:"ipfs_timeout"`
 	HTTPTimeout          uint64   `yaml:"http_timeout"`
 	MaxRetryCountOnError uint64   `yaml:"max_retry_count_on_error"`
