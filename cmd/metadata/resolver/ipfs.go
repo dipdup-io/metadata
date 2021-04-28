@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -114,6 +115,8 @@ func (s Ipfs) Init(db *gorm.DB) error {
 	return nil
 }
 
+var ipfsURL = regexp.MustCompile(`ipfs:\/\/(?P<hash>Qm[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{44})`)
+
 // Resolve -
 func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
 	if len(s.gateways) == 0 {
@@ -135,9 +138,12 @@ func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
 			return s.Http.Resolve(network, address, url)
 		})
 		if err == nil {
-			return data.Value().([]byte), nil
+			contents := data.Value().([]byte)
+			if len(s.pinning) > 0 {
+				s.pinContents(contents)
+			}
+			return contents, nil
 		}
-
 	}
 
 	return nil, ErrNoIPFSResponse
@@ -146,4 +152,21 @@ func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
 // Is -
 func (s Ipfs) Is(link string) bool {
 	return strings.HasPrefix(link, prefixIpfs)
+}
+
+func (s Ipfs) pinContents(data []byte) {
+	matches := ipfsURL.FindAllSubmatch(data, -1)
+	if len(matches) == 0 {
+		return
+	}
+
+	for i := range matches {
+		if len(matches[i]) != 2 {
+			continue
+		}
+		hash := string(matches[i][1])
+		for _, sh := range s.pinning {
+			_ = sh.Pin(hash)
+		}
+	}
 }
