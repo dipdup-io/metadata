@@ -20,7 +20,7 @@ func IndexName(network string) string {
 
 // OpenDatabaseConnection -
 func OpenDatabaseConnection(cfg config.Database) (*gorm.DB, error) {
-	db, err := state.OpenConnection(cfg.Kind, cfg.Path)
+	db, err := state.OpenConnection(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func OpenDatabaseConnection(cfg config.Database) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	if cfg.Kind == state.DBKindSqlite {
+	if cfg.Kind == config.DBKindSqlite {
 		sql.SetMaxOpenConns(1)
 	}
 

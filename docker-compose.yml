@@ -1,10 +1,8 @@
 version: "3.6"
 
 services:
-  metadata:
+  indexer:
     build:
-        args: 
-            CONFIG: config.yaml
         dockerfile: build/Dockerfile
         context: .
     depends_on:
@@ -16,8 +14,10 @@ services:
 
   db:
     image: postgres:13
-    ports:
-      - 127.0.0.1:6423:5432
+    expose:
+      - 5432
+#    ports:
+#      - 127.0.0.1:5432:5432
     restart: always
     volumes:
       - db:/var/lib/postgres/data
@@ -34,7 +34,7 @@ services:
   hasura:
     image: hasura/graphql-engine:v1.3.3
     ports:
-      - 127.0.0.1:8080:8080
+      - 127.0.0.1:33000:8080
     depends_on:
       - db
     restart: always
@@ -45,6 +45,20 @@ services:
       - HASURA_GRAPHQL_ENABLED_LOG_TYPES=startup, http-log, webhook-log, websocket-log, query-log
       - HASURA_GRAPHQL_ADMIN_SECRET=${ADMIN_SECRET:-changeme}
       - HASURA_GRAPHQL_UNAUTHORIZED_ROLE=user
-  
+
+  imgproxy:
+    image: darthsim/imgproxy:latest
+    restart: always
+    ports:
+      - 127.0.0.1:32000:8080
+    environment:
+      - IMGPROXY_TTL=86400
+      - IMGPROXY_SO_REUSEPORT=true
+    healthcheck:
+      test: [ "CMD", "imgproxy", "health" ]
+      timeout: 10s
+      interval: 10s
+      retries: 3
+
 volumes:
   db:

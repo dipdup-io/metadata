@@ -18,3 +18,4 @@ vendor/
 .env*
 *.db
 config.yaml
+build/metadata

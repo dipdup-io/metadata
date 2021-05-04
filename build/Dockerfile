@@ -6,7 +6,6 @@ FROM golang:1.15-alpine as builder
 ENV CGO_ENABLED=1
 ENV GO111MODULE=on
 ENV GOOS=linux
-ENV CONFIG=config.yaml
 
 RUN apk --no-cache add ca-certificates
 RUN apk add --update git musl-dev gcc build-base
@@ -31,6 +30,6 @@ WORKDIR /app/metadata
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /go/bin/dipdup-metadata /go/bin/dipdup-metadata
-COPY $CONFIG .
+COPY ./build/*.yml .
 
-CMD ["/go/bin/dipdup-metadata"]
+ENTRYPOINT ["/go/bin/dipdup-metadata"]
