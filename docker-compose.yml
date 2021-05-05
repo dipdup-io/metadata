@@ -52,7 +52,7 @@ services:
     ports:
       - 127.0.0.1:32000:8080
     environment:
-      - IMGPROXY_TTL=86400
+      - IMGPROXY_TTL=2592000
       - IMGPROXY_SO_REUSEPORT=true
     healthcheck:
       test: [ "CMD", "imgproxy", "health" ]
