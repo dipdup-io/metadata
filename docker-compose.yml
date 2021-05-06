@@ -2,6 +2,7 @@ version: "3.6"
 
 services:
   indexer:
+    image: dipdup/metadata:latest
     build:
         dockerfile: build/Dockerfile
         context: .
@@ -14,10 +15,6 @@ services:
 
   db:
     image: postgres:13
-    expose:
-      - 5432
-#    ports:
-#      - 127.0.0.1:5432:5432
     restart: always
     volumes:
       - db:/var/lib/postgres/data
