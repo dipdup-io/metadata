@@ -13,6 +13,9 @@ import (
 )
 
 func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate, tx *gorm.DB) error {
+	if update.Content != nil {
+		return nil
+	}
 	if update.Content.Hash != emptyHash {
 		return indexer.ctx.Add(update, indexer.network)
 	}
@@ -51,7 +54,7 @@ func (indexer *Indexer) resolveContractMetadata(cm *models.ContractMetadata) {
 		switch {
 		case errors.Is(err, resolver.ErrNoIPFSResponse) || errors.Is(err, resolver.ErrTezosStorageKeyNotFound):
 			cm.RetryCount += 1
-			if cm.RetryCount < int(indexer.maxRetryCount) {
+			if cm.RetryCount < int(indexer.settings.MaxRetryCountOnError) {
 				indexer.logContractMetadata(*cm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
 			} else {
 				cm.Status = models.StatusFailed

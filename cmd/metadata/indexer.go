@@ -1,10 +1,10 @@
 package main
 
 import (
-	"errors"
 	"strings"
 	"sync"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 
@@ -14,21 +14,23 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/context"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
+	"github.com/dipdup-net/metadata/cmd/metadata/storage"
 	"github.com/dipdup-net/metadata/cmd/metadata/tzkt"
 )
 
 // Indexer -
 type Indexer struct {
-	network       string
-	indexName     string
-	state         state.State
-	resolver      resolver.Receiver
-	db            *gorm.DB
-	scanner       *tzkt.Scanner
-	ctx           *context.Context
-	contracts     *Queue
-	tokens        *Queue
-	maxRetryCount uint64
+	network          string
+	indexName        string
+	state            state.State
+	resolver         resolver.Receiver
+	db               *gorm.DB
+	scanner          *tzkt.Scanner
+	ctx              *context.Context
+	contracts        *Queue
+	tokens           *Queue
+	thumbnailCreator *ThumbnailCreator
+	settings         config.Settings
 
 	stop chan struct{}
 	wg   sync.WaitGroup
@@ -50,16 +52,19 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 	}
 
 	indexer := &Indexer{
-		scanner:       tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
-		network:       network,
-		indexName:     models.IndexName(network),
-		resolver:      rslvr,
-		maxRetryCount: settings.MaxRetryCountOnError,
-		ctx:           ctx,
-		db:            db,
-		stop:          make(chan struct{}, 1),
+		scanner:   tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
+		network:   network,
+		indexName: models.IndexName(network),
+		resolver:  rslvr,
+		settings:  settings,
+		ctx:       ctx,
+		db:        db,
+		stop:      make(chan struct{}, 1),
 	}
 
+	if aws := storage.NewAWS(settings.AWS.AccessKey, settings.AWS.Secret, settings.AWS.Region, settings.AWS.BucketName); aws != nil {
+		indexer.thumbnailCreator = NewThumbnailCreator(aws, db, settings.IPFSGateways)
+	}
 	indexer.contracts = NewQueue(db, 15, 60, indexer.onContractFlush, indexer.onContractTick)
 	indexer.tokens = NewQueue(db, 15, 60, indexer.onTokenFlush, indexer.onTokenTick)
 
@@ -76,6 +81,9 @@ func (indexer *Indexer) Start() error {
 		return err
 	}
 
+	if indexer.thumbnailCreator != nil {
+		indexer.thumbnailCreator.Start()
+	}
 	indexer.contracts.Start()
 	indexer.tokens.Start()
 
@@ -91,6 +99,12 @@ func (indexer *Indexer) Start() error {
 func (indexer *Indexer) Close() error {
 	indexer.stop <- struct{}{}
 	indexer.wg.Wait()
+
+	if indexer.thumbnailCreator != nil {
+		if err := indexer.thumbnailCreator.Close(); err != nil {
+			return err
+		}
+	}
 
 	if err := indexer.scanner.Close(); err != nil {
 		return err
@@ -175,11 +189,11 @@ func (indexer *Indexer) handlerUpdate(msg tzkt.Message) error {
 			switch path[len(path)-1] {
 			case "token_metadata":
 				if err := indexer.processTokenMetadata(msg.Body[i], tx); err != nil {
-					return err
+					return errors.Wrap(err, "token_metadata")
 				}
 			case "metadata":
 				if err := indexer.processContractMetadata(msg.Body[i], tx); err != nil {
-					return err
+					return errors.Wrap(err, "contract_metadata")
 				}
 			}
 		}

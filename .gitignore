@@ -17,5 +17,5 @@ vendor/
 *.csv
 .env*
 *.db
-config.yaml
+dipdup.yml
 build/metadata

@@ -17,12 +17,12 @@ type ContractMetadata struct {
 }
 
 // Status - metadata status
-type Status string
+type Status int
 
 const (
-	StatusNew     Status = "new"
-	StatusFailed  Status = "failed"
-	StatusApplied Status = "applied"
+	StatusNew Status = iota + 1
+	StatusFailed
+	StatusApplied
 )
 
 // GetContractMetadata -

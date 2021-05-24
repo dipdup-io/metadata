@@ -1,13 +1,11 @@
 package resolver
 
 import (
-	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
+	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
-	"github.com/ipfs/go-cid"
 	"github.com/karlseguin/ccache"
 	"gorm.io/gorm"
 
@@ -115,16 +113,14 @@ func (s Ipfs) Init(db *gorm.DB) error {
 	return nil
 }
 
-var ipfsURL = regexp.MustCompile(`ipfs:\/\/(?P<hash>Qm[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{44})`)
-
 // Resolve -
 func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
 	if len(s.gateways) == 0 {
 		return nil, ErrEmptyIPFSGatewayList
 	}
 
-	hash := strings.TrimPrefix(link, prefixIpfs)
-	if _, err := cid.Decode(hash); err != nil {
+	hash, err := helpers.IPFSHash(link)
+	if err != nil {
 		return nil, err
 	}
 
@@ -133,7 +129,7 @@ func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
 	}
 
 	for i := range s.gateways {
-		url := fmt.Sprintf("%s/ipfs/%s", s.gateways[i], hash)
+		url := helpers.IPFSLink(s.gateways[i], hash)
 		data, err := s.cache.Fetch(hash, time.Hour, func() (interface{}, error) {
 			return s.Http.Resolve(network, address, url)
 		})
@@ -155,18 +151,11 @@ func (s Ipfs) Is(link string) bool {
 }
 
 func (s Ipfs) pinContents(data []byte) {
-	matches := ipfsURL.FindAllSubmatch(data, -1)
-	if len(matches) == 0 {
-		return
-	}
+	hash := helpers.FindAllIPFSLinks(data)
 
-	for i := range matches {
-		if len(matches[i]) != 2 {
-			continue
-		}
-		hash := string(matches[i][1])
+	for i := range hash {
 		for _, sh := range s.pinning {
-			_ = sh.Pin(hash)
+			_ = sh.Pin(hash[i])
 		}
 	}
 }

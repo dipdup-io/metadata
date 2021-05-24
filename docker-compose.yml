@@ -6,6 +6,8 @@ services:
     build:
         dockerfile: build/Dockerfile
         context: .
+    env_file:
+      - .env
     depends_on:
       - db
     restart: always

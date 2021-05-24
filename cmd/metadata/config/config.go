@@ -113,6 +113,7 @@ type Settings struct {
 	HTTPTimeout          uint64   `yaml:"http_timeout"`
 	MaxRetryCountOnError uint64   `yaml:"max_retry_count_on_error"`
 	Index                []string `yaml:"index"`
+	AWS                  AWS      `yaml:"aws"`
 }
 
 // Validate -
@@ -141,4 +142,12 @@ func (cfg *Settings) Validate() error {
 	}
 
 	return nil
+}
+
+// AWS -
+type AWS struct {
+	BucketName string `yaml:"bucket_name"`
+	Region     string `yaml:"region"`
+	AccessKey  string `yaml:"access_key_id"`
+	Secret     string `yaml:"secret_access_key"`
 }

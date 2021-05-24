@@ -10,9 +10,10 @@
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/cmd/metadata/",
+            "envFile": "${workspaceFolder}/.env",
             "args": [
-                "-f",
-                "${workspaceFolder}/config.yaml"
+                "-c",
+                "${workspaceFolder}/build/dipdup.yml"
             ]
         }
     ]

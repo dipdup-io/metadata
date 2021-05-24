@@ -1,3 +1,6 @@
+-include .env
+export $(shell sed 's/=.*//' .env)
+
 .PHONY: build
 
 build:
@@ -9,3 +12,7 @@ debug: build
 
 run:
 	docker-compose up -d --build
+
+metadata:
+	docker-compose up -d db
+	cd cmd/metadata && go run .

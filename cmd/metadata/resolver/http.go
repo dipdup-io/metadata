@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/pkg/errors"
 )
 
@@ -69,7 +70,12 @@ func (s Http) Resolve(network, address, link string) ([]byte, error) {
 		return nil, errors.Errorf("Invalid status code: %s", resp.Status)
 	}
 
-	return ioutil.ReadAll(io.LimitReader(resp.Body, 20971520)) // 20 MB limit for metadata
+	data, err := ioutil.ReadAll(io.LimitReader(resp.Body, 20971520)) // 20 MB limit for metadata
+	if err != nil {
+		return nil, err
+	}
+
+	return helpers.Escape(data), nil
 }
 
 // Is -

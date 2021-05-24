@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/dipdup-net/go-lib/tzkt/api"
+	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
 	"gorm.io/gorm"
@@ -50,7 +51,9 @@ func (tokenInfo *TokenInfo) UnmarshalJSON(data []byte) error {
 		if err != nil {
 			return err
 		}
-		tokenInfo.Link = string(b)
+		if utf8.Valid(b) {
+			tokenInfo.Link = string(b)
+		}
 		delete(tokenInfo.TokenInfo, "")
 	}
 
@@ -61,10 +64,8 @@ func (tokenInfo *TokenInfo) UnmarshalJSON(data []byte) error {
 
 func decodeMap(m map[string]string) {
 	for key, value := range m {
-		if b, err := hex.DecodeString(value); err == nil {
-			if utf8.Valid(b) {
-				m[key] = string(b)
-			}
+		if b, err := hex.DecodeString(value); err == nil && utf8.Valid(b) {
+			m[key] = string(b)
 		}
 	}
 }
@@ -84,13 +85,14 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate, tx *gorm.D
 		Network:  indexer.network,
 		Contract: update.Contract.Address,
 		TokenID:  tokenInfo.TokenID,
-		Link:     tokenInfo.Link,
 		Status:   models.StatusNew,
-		Metadata: metadata,
+		Metadata: helpers.Escape(metadata),
 	}
 
-	if _, err := url.ParseRequestURI(token.Link); err != nil {
+	if _, err := url.ParseRequestURI(tokenInfo.Link); err != nil {
 		token.Status = models.StatusApplied
+	} else {
+		token.Link = tokenInfo.Link
 	}
 
 	return tx.Save(&token).Error
@@ -115,7 +117,7 @@ func (indexer *Indexer) resolveTokenMetadata(tm *models.TokenMetadata) error {
 		switch {
 		case errors.Is(err, resolver.ErrNoIPFSResponse) || errors.Is(err, resolver.ErrTezosStorageKeyNotFound):
 			tm.RetryCount += 1
-			if tm.RetryCount < int(indexer.maxRetryCount) {
+			if tm.RetryCount < int(indexer.settings.MaxRetryCountOnError) {
 				indexer.logTokenMetadata(*tm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
 			} else {
 				tm.Status = models.StatusFailed
@@ -130,8 +132,13 @@ func (indexer *Indexer) resolveTokenMetadata(tm *models.TokenMetadata) error {
 		if err != nil {
 			return err
 		}
-		tm.Metadata = metadata
-		tm.Status = models.StatusApplied
+
+		if utf8.Valid(metadata) {
+			tm.Metadata = metadata
+			tm.Status = models.StatusApplied
+		} else {
+			tm.Status = models.StatusFailed
+		}
 	}
 	return nil
 }
@@ -159,7 +166,6 @@ func mergeTokenMetadata(src, got []byte) ([]byte, error) {
 			srcMap[key] = value
 		}
 	}
-
 	return json.Marshal(srcMap)
 }
 
@@ -190,10 +196,8 @@ func (indexer *Indexer) onTokenTick(tx *gorm.DB) error {
 		return err
 	}
 	for i := range uresolved {
-		if uresolved[i].Status != models.StatusApplied {
-			if err := indexer.resolveTokenMetadata(&uresolved[i]); err != nil {
-				return err
-			}
+		if err := indexer.resolveTokenMetadata(&uresolved[i]); err != nil {
+			return err
 		}
 		indexer.tokens.Add(&uresolved[i])
 	}

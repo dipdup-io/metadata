@@ -9,6 +9,11 @@ metadata:
     ipfs_timeout: 10
     http_timeout: 10
     max_retry_count_on_error: 3
+    aws:
+      bucket_name: dipdup-thumbnails
+      region: eu-central-1
+      access_key_id: ${AWS_ACCESS_KEY_ID}
+      secret_access_key: ${AWS_SECRET_ACCESS_KEY}
   indexers:
     mainnet:
       datasources:
