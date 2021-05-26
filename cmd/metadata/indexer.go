@@ -10,6 +10,7 @@ import (
 
 	generalConfig "github.com/dipdup-net/go-lib/config"
 	"github.com/dipdup-net/go-lib/state"
+	"github.com/dipdup-net/metadata/cmd/metadata/adapter"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/context"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
@@ -31,6 +32,7 @@ type Indexer struct {
 	tokens           *Queue
 	thumbnailCreator *ThumbnailCreator
 	settings         config.Settings
+	adapter          *adapter.Runner
 
 	stop chan struct{}
 	wg   sync.WaitGroup
@@ -68,6 +70,14 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 	indexer.contracts = NewQueue(db, 15, 60, indexer.onContractFlush, indexer.onContractTick)
 	indexer.tokens = NewQueue(db, 15, 60, indexer.onTokenFlush, indexer.onTokenTick)
 
+	if indexerConfig.DataSource.TzKTConnString != "" {
+		a, err := adapter.NewTzKT(indexerConfig.DataSource.TzKTConnString, database)
+		if err != nil {
+			return nil, err
+		}
+		indexer.adapter = adapter.NewRunner(a)
+	}
+
 	return indexer, nil
 }
 
@@ -79,6 +89,10 @@ func (indexer *Indexer) Start() error {
 
 	if err := indexer.ctx.Load(indexer.db); err != nil {
 		return err
+	}
+
+	if indexer.adapter != nil {
+		indexer.adapter.Start()
 	}
 
 	if indexer.thumbnailCreator != nil {
@@ -99,6 +113,12 @@ func (indexer *Indexer) Start() error {
 func (indexer *Indexer) Close() error {
 	indexer.stop <- struct{}{}
 	indexer.wg.Wait()
+
+	if indexer.adapter != nil {
+		if err := indexer.adapter.Close(); err != nil {
+			return err
+		}
+	}
 
 	if indexer.thumbnailCreator != nil {
 		if err := indexer.thumbnailCreator.Close(); err != nil {
