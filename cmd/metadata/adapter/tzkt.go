@@ -56,7 +56,7 @@ func (t *TzKT) Do() error {
 
 	return t.tzkt.Transaction(func(tx *gorm.DB) error {
 		for i := range metadata {
-			if err := tx.Table("Accounts").Where("Address = ?", metadata[i].Contract).Update("ContractMetadata = ?", metadata[i].Metadata).Error; err != nil {
+			if err := tx.Table("Accounts").Where("Address = ?", metadata[i].Contract).Update("ContractMetadata", metadata[i].Metadata).Error; err != nil {
 				return err
 			}
 
