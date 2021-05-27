@@ -39,7 +39,7 @@ func (tokenInfo *TokenInfo) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	tokenID, err := strconv.ParseUint(ti.TokenID, 16, 64)
+	tokenID, err := strconv.ParseUint(ti.TokenID, 10, 64)
 	if err != nil {
 		return err
 	}
