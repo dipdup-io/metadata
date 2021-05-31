@@ -9,11 +9,10 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate, tx *gorm.DB) error {
-	if update.Content != nil {
+	if update.Content == nil {
 		return nil
 	}
 	if update.Content.Hash != emptyHash {
@@ -32,7 +31,7 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate, tx *gor
 		Link:     string(link),
 	}
 
-	return tx.Save(metadata).Error
+	return tx.Create(metadata).Error
 }
 
 func (indexer *Indexer) logContractMetadata(cm models.ContractMetadata, str, level string) {
@@ -81,9 +80,11 @@ func (indexer *Indexer) onContractFlush(tx *gorm.DB, flushed []interface{}) erro
 			if !ok {
 				return errors.Errorf("Invalid contract's queue type: %T", flushed[i])
 			}
-			if err := tx.Clauses(clause.OnConflict{
-				UpdateAll: true,
-			}).Create(cm).Error; err != nil {
+			if err := tx.Model(cm).Updates(map[string]interface{}{
+				"status":      cm.Status,
+				"metadata":    cm.Metadata,
+				"retry_count": cm.RetryCount,
+			}).Error; err != nil {
 				return err
 			}
 		}

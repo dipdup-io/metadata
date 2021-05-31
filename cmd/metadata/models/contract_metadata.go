@@ -7,12 +7,12 @@ import (
 
 // ContractMetadata -
 type ContractMetadata struct {
+	gorm.Model
 	Network    string `gorm:"primaryKey"`
 	Contract   string `gorm:"primaryKey"`
 	RetryCount int
 	Link       string
 	Status     Status
-	UpdatedAt  int
 	Metadata   datatypes.JSON
 }
 
