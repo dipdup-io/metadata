@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/aws/aws-sdk-go v1.27.0
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
-	github.com/dipdup-net/go-lib v0.1.1
+	github.com/dipdup-net/go-lib v0.1.2
 	github.com/disintegration/imaging v1.6.2
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/ipfs/go-cid v0.0.7
