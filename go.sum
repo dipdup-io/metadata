@@ -82,8 +82,8 @@ github.com/decred/dcrd/lru v1.0.0/go.mod h1:mxKOwFd7lFjN2GZYsiz/ecgqR6kkYAl+0pz0
 github.com/denisenkom/go-mssqldb v0.9.0 h1:RSohk2RsiZqLZ0zCjtfn3S4Gp4exhpBWHyQ7D0yGjAk=
 github.com/denisenkom/go-mssqldb v0.9.0/go.mod h1:xbL0rPBG9cCiLr28tMa8zpbdarY27NDyej4t/EjAShU=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
-github.com/dipdup-net/go-lib v0.1.1 h1:2bOLFRifhdRk2p0jSXOfjBxW7TIg3fhI66ioaKEoZNw=
-github.com/dipdup-net/go-lib v0.1.1/go.mod h1:0cNnDttYnfIudJ4qNIzcIrfGmoIPV4yECAI3EGos9x0=
+github.com/dipdup-net/go-lib v0.1.2 h1:oX35DDM/jMwzx3SSobqWjCAa2JtWeEO5iowTE4DWjfk=
+github.com/dipdup-net/go-lib v0.1.2/go.mod h1:0cNnDttYnfIudJ4qNIzcIrfGmoIPV4yECAI3EGos9x0=
 github.com/disintegration/imaging v1.6.2 h1:w1LecBlG2Lnp8B3jk5zSuNqd7b4DXhcjwek1ei82L+c=
 github.com/disintegration/imaging v1.6.2/go.mod h1:44/5580QXChDfwIclfc/PCwrr44amcmDAg8hxG0Ewe4=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
