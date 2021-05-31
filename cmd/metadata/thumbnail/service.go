@@ -101,12 +101,16 @@ func (s *Service) work() {
 		case <-s.stop:
 			return
 		case one := <-s.tasks:
+			filename := fmt.Sprintf("%s/%d.png", one.Contract, one.TokenID)
+			if s.storage.Exists(filename) {
+				continue
+			}
+
 			var raw Metadata
 			if err := json.Unmarshal(one.Metadata, &raw); err != nil {
 				log.Warn(err.Error())
 				continue
 			}
-			filename := fmt.Sprintf("%s/%d.png", one.Contract, one.TokenID)
 
 			var found bool
 			for _, format := range raw.Formats {

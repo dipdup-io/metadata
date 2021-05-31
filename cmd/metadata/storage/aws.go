@@ -61,3 +61,12 @@ func (storage *AWS) Download(filename string) (io.Reader, error) {
 
 	return bytes.NewReader(buf.Bytes()), nil
 }
+
+// Exists -
+func (storage *AWS) Exists(filename string) bool {
+	_, err := s3.New(storage.Session).HeadObject(&s3.HeadObjectInput{
+		Bucket: storage.Bucket,
+		Key:    aws.String(filename),
+	})
+	return err == nil
+}

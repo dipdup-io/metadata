@@ -6,4 +6,5 @@ import "io"
 type Storage interface {
 	Upload(body io.Reader, filename string) error
 	Download(filename string) (io.Reader, error)
+	Exists(filename string) bool
 }
