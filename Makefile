@@ -1,6 +1,8 @@
 -include .env
 export $(shell sed 's/=.*//' .env)
 
+CONFIG?=../../build/dipdup.yml
+
 .PHONY: build
 
 build:
@@ -16,3 +18,7 @@ run:
 metadata:
 	docker-compose up -d db
 	cd cmd/metadata && go run .
+
+migration:
+	docker-compose up -d db
+	cd cmd/migration && go run . -c $(CONFIG)

@@ -15,7 +15,6 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -95,7 +94,7 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate, tx *gorm.D
 		token.Link = tokenInfo.Link
 	}
 
-	return tx.Save(&token).Error
+	return tx.Create(&token).Error
 }
 
 func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str, level string) {
@@ -180,9 +179,11 @@ func (indexer *Indexer) onTokenFlush(tx *gorm.DB, flushed []interface{}) error {
 			if !ok {
 				return errors.Errorf("Invalid token's queue type: %T", flushed[i])
 			}
-			if err := tx.Clauses(clause.OnConflict{
-				UpdateAll: true,
-			}).Create(tm).Error; err != nil {
+			if err := tx.Model(tm).Updates(map[string]interface{}{
+				"status":      tm.Status,
+				"metadata":    tm.Metadata,
+				"retry_count": tm.RetryCount,
+			}).Error; err != nil {
 				return err
 			}
 		}

@@ -100,7 +100,7 @@ func (q *Queue) listen() {
 			if err := q.flush(); err != nil {
 				log.Error(err)
 			}
-			if q.onTick != nil {
+			if q.onTick != nil && len(q.stop) == 0 {
 				if err := q.onTick(q.db); err != nil {
 					log.Error(err)
 				}
@@ -110,7 +110,7 @@ func (q *Queue) listen() {
 				log.Error(err)
 			}
 			ticker.Reset(q.flushTimeout)
-			if q.onTick != nil {
+			if q.onTick != nil && len(q.stop) == 0 {
 				if err := q.onTick(q.db); err != nil {
 					log.Error(err)
 				}

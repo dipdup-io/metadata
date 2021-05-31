@@ -15,8 +15,9 @@ require (
 	github.com/karlseguin/ccache v2.0.3+incompatible
 	github.com/karlseguin/expect v1.0.8 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.6 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/libp2p/go-libp2p-core v0.8.5 // indirect
-	github.com/mattn/go-sqlite3 v1.14.7 // indirect
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/multiformats/go-multiaddr v0.3.1 // indirect
 	github.com/multiformats/go-multihash v0.0.15 // indirect
 	github.com/pkg/errors v0.9.1

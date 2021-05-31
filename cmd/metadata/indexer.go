@@ -15,22 +15,23 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
+	"github.com/dipdup-net/metadata/cmd/metadata/thumbnail"
 	"github.com/dipdup-net/metadata/cmd/metadata/tzkt"
 )
 
 // Indexer -
 type Indexer struct {
-	network          string
-	indexName        string
-	state            state.State
-	resolver         resolver.Receiver
-	db               *gorm.DB
-	scanner          *tzkt.Scanner
-	ctx              *context.Context
-	contracts        *Queue
-	tokens           *Queue
-	thumbnailCreator *ThumbnailCreator
-	settings         config.Settings
+	network   string
+	indexName string
+	state     state.State
+	resolver  resolver.Receiver
+	db        *gorm.DB
+	scanner   *tzkt.Scanner
+	ctx       *context.Context
+	contracts *Queue
+	tokens    *Queue
+	thumbnail *thumbnail.Service
+	settings  config.Settings
 
 	stop chan struct{}
 	wg   sync.WaitGroup
@@ -63,7 +64,7 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 	}
 
 	if aws := storage.NewAWS(settings.AWS.AccessKey, settings.AWS.Secret, settings.AWS.Region, settings.AWS.BucketName); aws != nil {
-		indexer.thumbnailCreator = NewThumbnailCreator(aws, db, settings.IPFSGateways)
+		indexer.thumbnail = thumbnail.New(aws, db, settings.IPFSGateways, 10)
 	}
 	indexer.contracts = NewQueue(db, 15, 60, indexer.onContractFlush, indexer.onContractTick)
 	indexer.tokens = NewQueue(db, 15, 60, indexer.onTokenFlush, indexer.onTokenTick)
@@ -81,9 +82,10 @@ func (indexer *Indexer) Start() error {
 		return err
 	}
 
-	if indexer.thumbnailCreator != nil {
-		indexer.thumbnailCreator.Start()
+	if indexer.thumbnail != nil {
+		indexer.thumbnail.Start()
 	}
+
 	indexer.contracts.Start()
 	indexer.tokens.Start()
 
@@ -99,14 +101,11 @@ func (indexer *Indexer) Start() error {
 func (indexer *Indexer) Close() error {
 	indexer.stop <- struct{}{}
 	indexer.wg.Wait()
-
-	if indexer.thumbnailCreator != nil {
-		if err := indexer.thumbnailCreator.Close(); err != nil {
-			return err
-		}
+	if err := indexer.scanner.Close(); err != nil {
+		return err
 	}
 
-	if err := indexer.scanner.Close(); err != nil {
+	if err := indexer.tokens.Close(); err != nil {
 		return err
 	}
 
@@ -114,8 +113,10 @@ func (indexer *Indexer) Close() error {
 		return err
 	}
 
-	if err := indexer.tokens.Close(); err != nil {
-		return err
+	if indexer.thumbnail != nil {
+		if err := indexer.thumbnail.Close(); err != nil {
+			return err
+		}
 	}
 
 	if err := indexer.ctx.Dump(indexer.db); err != nil {
