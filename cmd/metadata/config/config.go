@@ -94,7 +94,8 @@ func (cfg Filters) Validate() error {
 
 // MetadataDataSource -
 type MetadataDataSource struct {
-	Tzkt string `yaml:"tzkt"`
+	Tzkt           string `yaml:"tzkt"`
+	TzKTConnString string `yaml:"tzkt_conn_string"`
 }
 
 // Validate -
