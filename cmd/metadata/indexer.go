@@ -10,7 +10,6 @@ import (
 
 	generalConfig "github.com/dipdup-net/go-lib/config"
 	"github.com/dipdup-net/go-lib/state"
-	"github.com/dipdup-net/metadata/cmd/metadata/adapter"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/context"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
@@ -33,7 +32,6 @@ type Indexer struct {
 	tokens    *Queue
 	thumbnail *thumbnail.Service
 	settings  config.Settings
-	adapter          *adapter.Runner
 
 	stop chan struct{}
 	wg   sync.WaitGroup
@@ -68,14 +66,6 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 
 	if err := indexer.resolver.Init(db); err != nil {
 		return nil, err
-  }
-  
-	if indexerConfig.DataSource.TzKTConnString != "" {
-		a, err := adapter.NewTzKT(indexerConfig.DataSource.TzKTConnString, database)
-		if err != nil {
-			return nil, err
-		}
-		indexer.adapter = adapter.NewRunner(a)
 	}
 
 	return indexer, nil
@@ -93,10 +83,6 @@ func (indexer *Indexer) Start() error {
 
 	if indexer.thumbnail != nil {
 		indexer.thumbnail.Start()
-  }
-  
-	if indexer.adapter != nil {
-		indexer.adapter.Start()
 	}
 
 	indexer.contracts.Start()
@@ -114,17 +100,11 @@ func (indexer *Indexer) Start() error {
 func (indexer *Indexer) Close() error {
 	indexer.stop <- struct{}{}
 	indexer.wg.Wait()
-  
+
 	if err := indexer.scanner.Close(); err != nil {
 		return err
-  }
-
-	if indexer.adapter != nil {
-		if err := indexer.adapter.Close(); err != nil {
-			return err
-		}
 	}
-    
+
 	if err := indexer.tokens.Close(); err != nil {
 		return err
 	}
