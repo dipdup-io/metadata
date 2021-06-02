@@ -128,8 +128,9 @@ func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
 		_ = sh.Pin(hash)
 	}
 
-	for i := range s.gateways {
-		url := helpers.IPFSLink(s.gateways[i], hash)
+	gateways := helpers.ShuffleGateways(s.gateways)
+	for i := range gateways {
+		url := helpers.IPFSLink(gateways[i], hash)
 		data, err := s.cache.Fetch(hash, time.Hour, func() (interface{}, error) {
 			return s.Http.Resolve(network, address, url)
 		})

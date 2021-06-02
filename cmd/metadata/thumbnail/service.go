@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -119,7 +120,7 @@ func (s *Service) work() {
 				}
 				found = true
 
-				if err := s.processFormat(format, filename); err != nil {
+				if err := s.resolve(format.URI, format.MimeType, filename); err != nil {
 					log.Error(err)
 					continue
 				}
@@ -129,6 +130,10 @@ func (s *Service) work() {
 			}
 
 			if !found {
+				if err := s.fallback(raw.ThumbnailURI, filename); err != nil {
+					log.Error(err)
+					continue
+				}
 				one.ImageProcessed = true
 			}
 
@@ -152,23 +157,6 @@ func (s *Service) Close() error {
 	close(s.stop)
 	close(s.tasks)
 	return nil
-}
-
-func (s *Service) processFormat(format Format, filename string) error {
-	hash, err := helpers.IPFSHash(format.URI)
-	if err != nil {
-		return err
-	}
-
-	for _, gateway := range s.gateways {
-		link := helpers.IPFSLink(gateway, hash)
-		if err := processLink(s.storage, link, format.MimeType, filename); err != nil {
-			log.WithField("link", format.URI).WithField("mime", format.MimeType).WithField("ipfs", gateway).Error(err)
-			continue
-		}
-		return nil
-	}
-	return errors.Wrapf(errThumbnailCreating, "link=%s mime=%s", format.URI, format.MimeType)
 }
 
 func processLink(thumbnailStorage storage.Storage, link, mime, filename string) error {
@@ -220,4 +208,40 @@ func (s *Service) unprocessedMetadata() (all []models.TokenMetadata, err error) 
 	}
 	err = query.Limit(s.limit).Order("id asc").Find(&all).Error
 	return
+}
+
+func (s *Service) fallback(link, filename string) error {
+	if link == "" {
+		return nil
+	}
+
+	log.WithField("link", link).WithField("filename", filename).Info("Fallback thumbnail")
+	return s.resolve(link, MimeTypePNG, filename)
+}
+
+func (s *Service) resolve(link, mime, filename string) error {
+	switch {
+	case strings.HasPrefix(link, "ipfs://"):
+		hash, err := helpers.IPFSHash(link)
+		if err != nil {
+			return err
+		}
+
+		gateways := helpers.ShuffleGateways(s.gateways)
+		for _, gateway := range gateways {
+			link := helpers.IPFSLink(gateway, hash)
+			if err := processLink(s.storage, link, mime, filename); err != nil {
+				log.WithField("link", link).WithField("mime", mime).WithField("ipfs", gateway).Error(err)
+				continue
+			}
+			return nil
+		}
+		return errors.Wrapf(ErrThumbnailCreating, "link=%s mime=%s", link, mime)
+
+	case strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://"):
+		return processLink(s.storage, link, mime, filename)
+
+	default:
+		return errors.Wrapf(ErrInvalidThumbnailLink, "link=%s", link)
+	}
 }

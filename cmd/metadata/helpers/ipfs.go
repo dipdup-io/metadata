@@ -2,8 +2,10 @@ package helpers
 
 import (
 	"fmt"
+	"math/rand"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/ipfs/go-cid"
 )
@@ -43,4 +45,17 @@ func FindAllIPFSLinks(data []byte) []string {
 		res = append(res, string(matches[i][1]))
 	}
 	return res
+}
+
+// ShuffleGateways - shuffle gateways for different request order for different files
+func ShuffleGateways(gateways []string) []string {
+	if len(gateways) < 2 {
+		return gateways
+	}
+
+	shuffled := make([]string, len(gateways))
+	copy(shuffled, gateways)
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+	return shuffled
 }

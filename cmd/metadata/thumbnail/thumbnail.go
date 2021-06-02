@@ -3,15 +3,12 @@ package thumbnail
 import (
 	_ "image/gif"
 	_ "image/jpeg"
-
-	"github.com/pkg/errors"
 )
-
-var errThumbnailCreating = errors.New("Can't create thumbnail")
 
 // Metadata -
 type Metadata struct {
-	Formats []Format `json:"formats,omitempty"`
+	Formats      []Format `json:"formats,omitempty"`
+	ThumbnailURI string   `json:"thumbnailUri,omitempty"`
 }
 
 // Format -

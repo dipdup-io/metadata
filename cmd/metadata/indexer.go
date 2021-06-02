@@ -47,16 +47,11 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 
 	log.Infof("Indices which will be processed: %s", strings.Join(settings.Index, ", "))
 
-	rslvr, err := resolver.New(db, settings, ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	indexer := &Indexer{
 		scanner:   tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
 		network:   network,
 		indexName: models.IndexName(network),
-		resolver:  rslvr,
+		resolver:  resolver.New(settings, ctx),
 		settings:  settings,
 		ctx:       ctx,
 		db:        db,
@@ -68,6 +63,10 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 	}
 	indexer.contracts = NewQueue(db, 15, 60, indexer.onContractFlush, indexer.onContractTick)
 	indexer.tokens = NewQueue(db, 15, 60, indexer.onTokenFlush, indexer.onTokenTick)
+
+	if err := indexer.resolver.Init(db); err != nil {
+		return nil, err
+	}
 
 	return indexer, nil
 }

@@ -22,19 +22,20 @@ type Receiver struct {
 }
 
 // New -
-func New(db *gorm.DB, settings config.Settings, ctx *context.Context) (Receiver, error) {
-	ipfs := NewIPFS(settings.IPFSGateways, WithTimeoutIpfs(settings.IPFSTimeout), WithPinningIpfs(settings.IPFSPinning))
-	if err := ipfs.Init(db); err != nil {
-		return Receiver{}, err
+func New(settings config.Settings, ctx *context.Context) Receiver {
+	return Receiver{
+		[]Resolver{
+			NewIPFS(settings.IPFSGateways, WithTimeoutIpfs(settings.IPFSTimeout), WithPinningIpfs(settings.IPFSPinning)),
+			NewTezosStorage(ctx),
+			NewHttp(WithTimeoutHttp(settings.HTTPTimeout)),
+			NewSha256(WithTimeoutSha256(settings.HTTPTimeout)),
+		},
 	}
-	resolvers := []Resolver{
-		ipfs,
-		NewTezosStorage(ctx),
-		NewHttp(WithTimeoutHttp(settings.HTTPTimeout)),
-		NewSha256(WithTimeoutSha256(settings.HTTPTimeout)),
-	}
+}
 
-	return Receiver{resolvers}, nil
+// Init -
+func (r Receiver) Init(db *gorm.DB) error {
+	return r.resolvers[0].(Ipfs).Init(db)
 }
 
 // Resolve -
