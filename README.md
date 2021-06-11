@@ -112,33 +112,34 @@ Metadata creates two models: `token_metadata` and `contract_metadata`
 ```go
 // ContractMetadata -
 type ContractMetadata struct {
+	gorm.Model
 	Network    string `gorm:"primaryKey"`
 	Contract   string `gorm:"primaryKey"`
 	RetryCount int
 	Link       string
 	Status     Status
-	UpdatedAt  int
 	Metadata   datatypes.JSON // postgres: JSONB, mysql and sqlite: JSON
 }
 
 // TokenMetadata -
 type TokenMetadata struct {
-	Network    string `gorm:"primaryKey"`
-	Contract   string `gorm:"primaryKey"`
-	TokenID    uint64 `gorm:"primaryKey"`
-	Link       string
-	RetryCount int
-	Status     Status
-	UpdatedAt  int
-	Metadata   datatypes.JSON // postgres: JSONB, mysql and sqlite: JSON
+  gorm.Model
+	Network        string `gorm:"primaryKey"`
+	Contract       string `gorm:"primaryKey"`
+	TokenID        uint64 `gorm:"primaryKey"`
+	Link           string
+	RetryCount     int `gorm:"default:0"`
+	Status         Status
+	Metadata       datatypes.JSON // postgres: JSONB, mysql and sqlite: JSON
+	ImageProcessed bool 
 }
 
 // Status - metadata status
-type Status string
+type Status int
 
 const (
-	StatusNew     Status = "new"     // when metadata was found and not requested
-	StatusFailed  Status = "failed"  // when metadata request was failed
-	StatusApplied Status = "applied" // when metadata was successfully requested
+	StatusNew Status = iota + 1
+	StatusFailed
+	StatusApplied
 )
 ```
