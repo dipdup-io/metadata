@@ -1,0 +1,19 @@
+version: 0.0.1
+
+metadata:
+  settings:
+    ipfs_gateways:
+      - https://cloudflare-ipfs.com
+      - https://ipfs.io
+      - https://dweb.link
+    ipfs_timeout: 10
+    http_timeout: 10
+    max_retry_count_on_error: 3
+  indexers:
+    mainnet:
+      datasources:
+          tzkt: https://staging.api.tzkt.io
+
+database:
+  kind: elastic
+  path: http://127.0.0.1:9200

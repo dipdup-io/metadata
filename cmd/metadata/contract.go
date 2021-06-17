@@ -8,30 +8,29 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
-func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate, tx *gorm.DB) error {
+func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*models.ContractMetadata, error) {
 	if update.Content == nil {
-		return nil
+		return nil, nil
 	}
 	if update.Content.Hash != emptyHash {
-		return indexer.ctx.Add(update, indexer.network)
+		return nil, indexer.ctx.Add(update, indexer.network)
 	}
 
 	link, err := helpers.Decode(update.Content.Value)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	metadata := &models.ContractMetadata{
+	metadata := models.ContractMetadata{
 		Network:  indexer.network,
 		Contract: update.Contract.Address,
 		Status:   models.StatusNew,
 		Link:     string(link),
 	}
 
-	return tx.Create(metadata).Error
+	return &metadata, nil
 }
 
 func (indexer *Indexer) logContractMetadata(cm models.ContractMetadata, str, level string) {
@@ -69,37 +68,20 @@ func (indexer *Indexer) resolveContractMetadata(cm *models.ContractMetadata) {
 	}
 }
 
-func (indexer *Indexer) onContractFlush(tx *gorm.DB, flushed []interface{}) error {
-	if len(flushed) == 0 {
-		return nil
-	}
-
-	return indexer.db.Transaction(func(tx *gorm.DB) error {
-		for i := range flushed {
-			cm, ok := flushed[i].(*models.ContractMetadata)
-			if !ok {
-				return errors.Errorf("Invalid contract's queue type: %T", flushed[i])
-			}
-			if err := tx.Model(cm).Updates(map[string]interface{}{
-				"status":      cm.Status,
-				"metadata":    cm.Metadata,
-				"retry_count": cm.RetryCount,
-			}).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func (indexer *Indexer) onContractTick(tx *gorm.DB) error {
-	uresolved, err := models.GetContractMetadata(indexer.db, models.StatusNew, 15, 0)
+func (indexer *Indexer) onContractTick() error {
+	uresolved, err := indexer.db.GetContractMetadata(models.StatusNew, 15, 0)
 	if err != nil {
 		return err
 	}
 	for i := range uresolved {
 		indexer.resolveContractMetadata(&uresolved[i])
-		indexer.contracts.Add(&uresolved[i])
+		if err := indexer.db.UpdateContractMetadata(&uresolved[i], map[string]interface{}{
+			"status":      uresolved[i].Status,
+			"metadata":    uresolved[i].Metadata,
+			"retry_count": uresolved[i].RetryCount,
+		}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

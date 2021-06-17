@@ -14,6 +14,7 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/context"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
+	"github.com/dipdup-net/metadata/cmd/metadata/service"
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
 	"github.com/dipdup-net/metadata/cmd/metadata/thumbnail"
 	"github.com/dipdup-net/metadata/cmd/metadata/tzkt"
@@ -25,11 +26,11 @@ type Indexer struct {
 	indexName string
 	state     state.State
 	resolver  resolver.Receiver
-	db        *gorm.DB
+	db        models.Database
 	scanner   *tzkt.Scanner
 	ctx       *context.Context
-	contracts *Queue
-	tokens    *Queue
+	contracts *service.Service
+	tokens    *service.Service
 	thumbnail *thumbnail.Service
 	settings  config.Settings
 
@@ -39,7 +40,7 @@ type Indexer struct {
 
 // NewIndexer -
 func NewIndexer(network string, indexerConfig *config.Indexer, database generalConfig.Database, filters config.Filters, settings config.Settings) (*Indexer, error) {
-	db, err := models.OpenDatabaseConnection(database)
+	db, err := models.NewDatabase(database)
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +62,8 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 	if aws := storage.NewAWS(settings.AWS.AccessKey, settings.AWS.Secret, settings.AWS.Region, settings.AWS.BucketName); aws != nil {
 		indexer.thumbnail = thumbnail.New(aws, db, settings.IPFSGateways, 10)
 	}
-	indexer.contracts = NewQueue(db, 15, 60, indexer.onContractFlush, indexer.onContractTick)
-	indexer.tokens = NewQueue(db, 15, 60, indexer.onTokenFlush, indexer.onTokenTick)
-
-	if err := indexer.resolver.Init(db); err != nil {
-		return nil, err
-	}
+	indexer.contracts = service.New(indexer.onContractTick, service.WithName("contracts"))
+	indexer.tokens = service.New(indexer.onTokenTick, service.WithName("tokens"))
 
 	return indexer, nil
 }
@@ -123,11 +120,7 @@ func (indexer *Indexer) Close() error {
 		return err
 	}
 
-	sqlDB, err := indexer.db.DB()
-	if err != nil {
-		return err
-	}
-	if err := sqlDB.Close(); err != nil {
+	if err := indexer.db.Close(); err != nil {
 		return err
 	}
 
@@ -137,7 +130,7 @@ func (indexer *Indexer) Close() error {
 }
 
 func (indexer *Indexer) initState() error {
-	current, err := state.Get(indexer.db, indexer.indexName)
+	current, err := indexer.db.GetState(indexer.indexName)
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -172,7 +165,7 @@ func (indexer *Indexer) listen() {
 		case level := <-indexer.scanner.Blocks():
 			if level-indexer.state.Level > 1 {
 				indexer.state.Level = level - 1
-				if err := indexer.state.Update(indexer.db); err != nil {
+				if err := indexer.db.UpdateState(indexer.state); err != nil {
 					log.Error(err)
 				} else {
 					indexer.log().Infof("New level %d", indexer.state.Level)
@@ -183,23 +176,38 @@ func (indexer *Indexer) listen() {
 }
 
 func (indexer *Indexer) handlerUpdate(msg tzkt.Message) error {
-	return indexer.db.Transaction(func(tx *gorm.DB) error {
-		for i := range msg.Body {
-			path := strings.Split(msg.Body[i].Path, ".")
+	tokens := make([]*models.TokenMetadata, 0)
+	contracts := make([]*models.ContractMetadata, 0)
+	for i := range msg.Body {
+		path := strings.Split(msg.Body[i].Path, ".")
 
-			switch path[len(path)-1] {
-			case "token_metadata":
-				if err := indexer.processTokenMetadata(msg.Body[i], tx); err != nil {
-					return errors.Wrap(err, "token_metadata")
-				}
-			case "metadata":
-				if err := indexer.processContractMetadata(msg.Body[i], tx); err != nil {
-					return errors.Wrap(err, "contract_metadata")
-				}
+		switch path[len(path)-1] {
+		case "token_metadata":
+			token, err := indexer.processTokenMetadata(msg.Body[i])
+			if err != nil {
+				return errors.Wrap(err, "token_metadata")
+			}
+			if token != nil {
+				tokens = append(tokens, token)
+			}
+		case "metadata":
+			contract, err := indexer.processContractMetadata(msg.Body[i])
+			if err != nil {
+				return errors.Wrap(err, "contract_metadata")
+			}
+			if contract != nil {
+				contracts = append(contracts, contract)
 			}
 		}
+	}
 
-		indexer.state.Level = msg.Level
-		return indexer.state.Update(tx)
-	})
+	if err := indexer.db.SaveContractMetadata(contracts); err != nil {
+		return err
+	}
+	if err := indexer.db.SaveTokenMetadata(tokens); err != nil {
+		return err
+	}
+
+	indexer.state.Level = msg.Level
+	return indexer.db.UpdateState(indexer.state)
 }

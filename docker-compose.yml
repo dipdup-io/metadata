@@ -4,7 +4,7 @@ services:
   indexer:
     image: dipdup/metadata:latest
     build:
-        dockerfile: build/Dockerfile
+        dockerfile: build/metadata/Dockerfile
         context: .
     env_file:
       - .env

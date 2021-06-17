@@ -1,0 +1,158 @@
+{
+    "mappings": {
+        "properties": {
+            "metadata": {
+                "properties": {
+                    "booleanAmount": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "creator": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "serial number": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "genres": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "decimals": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "displayUri": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "name": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "description": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "Creator": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "Date": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "artifactUri": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "ignore_above": 256.0,
+                                "type": "keyword"
+                            }
+                        }
+                    },
+                    "extras": {
+                        "type": "object",
+                        "enabled": false
+                    }
+                }
+            },
+            "retry_count": {
+                "type": "long"
+            },
+            "token_id": {
+                "type": "long"
+            },
+            "updated_at": {
+                "type": "date"
+            },
+            "contract": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "ignore_above": 36,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "link": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "ignore_above": 256.0,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "created_at": {
+                "type": "date"
+            },
+            "image_processed": {
+                "type": "boolean"
+            },
+            "network": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "ignore_above": 16,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "status": {
+                "type": "long"
+            }
+        }
+    }
+}

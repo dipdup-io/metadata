@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
@@ -23,7 +22,6 @@ func main() {
 	if args.Help {
 		return
 	}
-	runtime.GOMAXPROCS(4)
 
 	cfg, err := config.Load(args.Config)
 	if err != nil {

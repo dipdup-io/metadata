@@ -18,4 +18,3 @@ vendor/
 .env*
 *.db
 dipdup.yml
-build/metadata
