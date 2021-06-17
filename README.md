@@ -125,7 +125,7 @@ type ContractMetadata struct {
 
 // TokenMetadata -
 type TokenMetadata struct {
-ID             uint64         `gorm:"autoIncrement;not null;" json:"-"`
+	ID             uint64         `gorm:"autoIncrement;not null;" json:"-"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	Network        string         `gorm:"primaryKey" json:"network"`
@@ -135,7 +135,7 @@ ID             uint64         `gorm:"autoIncrement;not null;" json:"-"`
 	RetryCount     int            `gorm:"type:SMALLINT;default:0" json:"retry_count"`
 	Status         Status         `gorm:"type:SMALLINT" json:"status"`
 	Metadata       datatypes.JSON `json:"metadata,omitempty"` // postgres: JSONB, mysql and sqlite: JSON
-	ImageProcessed bool           `json:"image_processed"
+	ImageProcessed bool           `json:"image_processed"`
 }
 
 // Status - metadata status
