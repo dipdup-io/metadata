@@ -1,0 +1,48 @@
+{
+    "mappings": {
+        "properties": {
+            "status": {
+                "type": "long"
+            },
+            "retry_count": {
+                "type": "long"
+            },
+            "created_at": {
+                "type": "date"
+            },
+            "network": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "ignore_above": 16,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "contract": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "ignore_above": 36,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "updated_at": {
+                "type": "date"
+            },
+            "link": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "ignore_above": 256.0,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "metadata": {
+                "type": "object"
+            }
+        }
+    }
+}

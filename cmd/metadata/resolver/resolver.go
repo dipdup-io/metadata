@@ -7,7 +7,6 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/context"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
 // Resolver -
@@ -31,11 +30,6 @@ func New(settings config.Settings, ctx *context.Context) Receiver {
 			NewSha256(WithTimeoutSha256(settings.HTTPTimeout)),
 		},
 	}
-}
-
-// Init -
-func (r Receiver) Init(db *gorm.DB) error {
-	return r.resolvers[0].(Ipfs).Init(db)
 }
 
 // Resolve -

@@ -17,8 +17,8 @@ run:
 
 metadata:
 	docker-compose up -d db
-	cd cmd/metadata && go run .
+	cd cmd/metadata && go run . -c $(CONFIG)
 
-migration:
-	docker-compose up -d db
-	cd cmd/migration && go run . -c $(CONFIG)
+elastic:
+	docker-compose -f docker-compose.elastic.yml up -d elastic
+	cd cmd/metadata && go run . -c ../../build/elastic.yml

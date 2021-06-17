@@ -14,7 +14,6 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
-	"gorm.io/gorm"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -69,15 +68,15 @@ func decodeMap(m map[string]string) {
 	}
 }
 
-func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate, tx *gorm.DB) error {
+func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.TokenMetadata, error) {
 	var tokenInfo TokenInfo
 	if err := json.Unmarshal(update.Content.Value, &tokenInfo); err != nil {
-		return err
+		return nil, err
 	}
 
 	metadata, err := json.Marshal(tokenInfo.TokenInfo)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	token := models.TokenMetadata{
@@ -94,7 +93,7 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate, tx *gorm.D
 		token.Link = tokenInfo.Link
 	}
 
-	return tx.Create(&token).Error
+	return &token, nil
 }
 
 func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str, level string) {
@@ -168,39 +167,23 @@ func mergeTokenMetadata(src, got []byte) ([]byte, error) {
 	return json.Marshal(srcMap)
 }
 
-func (indexer *Indexer) onTokenFlush(tx *gorm.DB, flushed []interface{}) error {
-	if len(flushed) == 0 {
-		return nil
-	}
-
-	return indexer.db.Transaction(func(tx *gorm.DB) error {
-		for i := range flushed {
-			tm, ok := flushed[i].(*models.TokenMetadata)
-			if !ok {
-				return errors.Errorf("Invalid token's queue type: %T", flushed[i])
-			}
-			if err := tx.Model(tm).Updates(map[string]interface{}{
-				"status":      tm.Status,
-				"metadata":    tm.Metadata,
-				"retry_count": tm.RetryCount,
-			}).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func (indexer *Indexer) onTokenTick(tx *gorm.DB) error {
-	uresolved, err := models.GetTokenMetadata(indexer.db, models.StatusNew, 15, 0)
+func (indexer *Indexer) onTokenTick() error {
+	uresolved, err := indexer.db.GetTokenMetadata(models.StatusNew, 15, 0)
 	if err != nil {
 		return err
 	}
+
 	for i := range uresolved {
 		if err := indexer.resolveTokenMetadata(&uresolved[i]); err != nil {
 			return err
 		}
-		indexer.tokens.Add(&uresolved[i])
+		if err := indexer.db.UpdateTokenMetadata(&uresolved[i], map[string]interface{}{
+			"status":      uresolved[i].Status,
+			"metadata":    uresolved[i].Metadata,
+			"retry_count": uresolved[i].RetryCount,
+		}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

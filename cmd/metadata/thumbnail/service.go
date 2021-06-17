@@ -19,16 +19,15 @@ import (
 	"github.com/disintegration/imaging"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 // Service -
 type Service struct {
-	cursor   uint
+	cursor   uint64
 	limit    int
 	gateways []string
 	storage  storage.Storage
-	db       *gorm.DB
+	db       models.Database
 
 	workersCount int
 	tasks        chan models.TokenMetadata
@@ -37,7 +36,7 @@ type Service struct {
 }
 
 // New -
-func New(storage storage.Storage, db *gorm.DB, gateways []string, workersCount int) *Service {
+func New(storage storage.Storage, db models.Database, gateways []string, workersCount int) *Service {
 	return &Service{
 		cursor:       0,
 		limit:        50,
@@ -80,7 +79,7 @@ func (s *Service) dispatch() {
 				continue
 			}
 
-			metadata, err := s.unprocessedMetadata()
+			metadata, err := s.db.GetUnprocessedImage(s.cursor, s.limit)
 			if err != nil {
 				log.Error(err)
 				continue
@@ -138,7 +137,7 @@ func (s *Service) work() {
 			}
 
 			if one.ImageProcessed {
-				if err := s.db.Model(&one).Update("image_processed", true).Error; err != nil {
+				if err := s.db.SetImageProcessed(one); err != nil {
 					log.Error(err)
 					continue
 				}
@@ -199,15 +198,6 @@ func createThumbnail(thumbnailStorage storage.Storage, reader io.Reader, mime, f
 		return thumbnailStorage.Upload(&buf, filename)
 	}
 	return nil
-}
-
-func (s *Service) unprocessedMetadata() (all []models.TokenMetadata, err error) {
-	query := s.db.Model(&models.TokenMetadata{}).Where("status = 3 AND image_processed = false")
-	if s.cursor > 0 {
-		query.Where("id > ?", s.cursor)
-	}
-	err = query.Limit(s.limit).Order("id asc").Find(&all).Error
-	return
 }
 
 func (s *Service) fallback(link, filename string) error {

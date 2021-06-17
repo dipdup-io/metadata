@@ -4,22 +4,11 @@ import (
 	"github.com/dipdup-net/go-lib/tzkt/api"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
-	"gorm.io/gorm"
-)
-
-// Action -
-type Action string
-
-// Actions
-const (
-	ActionDelete Action = "delete"
-	ActionCreate Action = "create"
-	ActionUpdate Action = "update"
 )
 
 // ContextAction -
 type ContextAction struct {
-	Action Action
+	Action models.Action
 	Update models.ContextItem
 }
 
@@ -54,12 +43,12 @@ func (ctx *Context) Add(update api.BigMapUpdate, network string) error {
 	switch update.Action {
 	case "add_key":
 		ctx.journal[key] = ContextAction{
-			Action: ActionCreate,
+			Action: models.ActionCreate,
 			Update: item,
 		}
 	case "update_key":
 		ctx.journal[key] = ContextAction{
-			Action: ActionUpdate,
+			Action: models.ActionUpdate,
 			Update: item,
 		}
 	}
@@ -73,7 +62,7 @@ func (ctx *Context) Remove(update models.ContextItem) {
 		delete(ctx.journal, key)
 	} else {
 		ctx.journal[key] = ContextAction{
-			Action: ActionDelete,
+			Action: models.ActionDelete,
 			Update: update,
 		}
 	}
@@ -91,17 +80,10 @@ func (ctx *Context) Get(network, address, key string) (models.ContextItem, bool)
 }
 
 // Dump -
-func (ctx *Context) Dump(tx *gorm.DB) error {
+func (ctx *Context) Dump(db models.Database) error {
 	for key, action := range ctx.journal {
-		switch action.Action {
-		case ActionCreate, ActionUpdate:
-			if err := tx.Save(&action.Update).Error; err != nil {
-				return err
-			}
-		case ActionDelete:
-			if err := tx.Delete(&action.Update).Error; err != nil {
-				return err
-			}
+		if err := db.DumpContext(action.Action, action.Update); err != nil {
+			return err
 		}
 		delete(ctx.journal, key)
 	}
@@ -109,8 +91,8 @@ func (ctx *Context) Dump(tx *gorm.DB) error {
 }
 
 // Load -
-func (ctx *Context) Load(db *gorm.DB) error {
-	items, err := models.CurrentContext(db)
+func (ctx *Context) Load(db models.Database) error {
+	items, err := db.CurrentContext()
 	if err != nil {
 		return err
 	}

@@ -5,9 +5,7 @@ import (
 	"time"
 
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
-	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/karlseguin/ccache"
-	"gorm.io/gorm"
 
 	shell "github.com/ipfs/go-ipfs-api"
 )
@@ -63,54 +61,6 @@ func NewIPFS(gateways []string, opts ...IpfsOption) Ipfs {
 	}
 
 	return s
-}
-
-// Init -
-func (s Ipfs) Init(db *gorm.DB) error {
-	pageSize := 1000
-
-	var offset int
-	var end bool
-	for !end {
-		tokens, err := models.GetTokenMetadata(db, models.StatusApplied, pageSize, offset)
-		if err != nil {
-			return err
-		}
-
-		for i := range tokens {
-			if !strings.HasPrefix(tokens[i].Link, prefixIpfs) {
-				continue
-			}
-
-			hash := strings.TrimPrefix(tokens[i].Link, prefixIpfs)
-			s.cache.Set(hash, []byte(tokens[i].Metadata), time.Hour)
-		}
-
-		end = len(tokens) < pageSize
-		offset += pageSize
-	}
-
-	offset = 0
-	end = false
-	for !end {
-		contracts, err := models.GetContractMetadata(db, models.StatusApplied, pageSize, offset)
-		if err != nil {
-			return err
-		}
-
-		for i := range contracts {
-			if !strings.HasPrefix(contracts[i].Link, prefixIpfs) {
-				continue
-			}
-
-			hash := strings.TrimPrefix(contracts[i].Link, prefixIpfs)
-			s.cache.Set(hash, []byte(contracts[i].Metadata), time.Hour)
-		}
-
-		end = len(contracts) < pageSize
-		offset += pageSize
-	}
-	return nil
 }
 
 // Resolve -

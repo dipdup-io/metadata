@@ -1,0 +1,36 @@
+{
+    "mappings": {
+        "properties": {
+            "index_name": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "ignore_above": 256,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "index_type": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "ignore_above": 256,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "hash": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "ignore_above": 256,
+                        "type": "keyword"
+                    }
+                }
+            },
+            "level": {
+                "type": "long"
+            }
+        }
+    }
+}

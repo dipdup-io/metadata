@@ -1,39 +1,32 @@
 package models
 
 import (
+	"time"
+
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 // ContractMetadata -
 type ContractMetadata struct {
-	gorm.Model
-	Network    string `gorm:"primaryKey"`
-	Contract   string `gorm:"primaryKey"`
-	RetryCount int
-	Link       string
-	Status     Status
-	Metadata   datatypes.JSON
+	ID         uint64         `gorm:"autoIncrement;not null;" json:"-"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+	Network    string         `gorm:"primaryKey" json:"network"`
+	Contract   string         `gorm:"primaryKey" json:"contract"`
+	RetryCount int            `gorm:"type:SMALLINT" json:"retry_count"`
+	Link       string         `json:"link"`
+	Status     Status         `gorm:"type:SMALLINT" json:"status"`
+	Metadata   datatypes.JSON `json:"metadata,omitempty"`
 }
 
-// Status - metadata status
-type Status int
+// Table -
+func (ContractMetadata) TableName() string {
+	return "contract_metadata"
+}
 
-const (
-	StatusNew Status = iota + 1
-	StatusFailed
-	StatusApplied
-)
-
-// GetContractMetadata -
-func GetContractMetadata(tx *gorm.DB, status Status, limit, offset int) (all []ContractMetadata, err error) {
-	query := tx.Model(&ContractMetadata{}).Where("status = ?", status)
-	if limit > 0 {
-		query.Limit(limit)
-	}
-	if offset > 0 {
-		query.Offset(offset)
-	}
-	err = query.Order("retry_count asc").Find(&all).Error
-	return
+// ContractRepository -
+type ContractRepository interface {
+	GetContractMetadata(status Status, limit, offset int) ([]ContractMetadata, error)
+	UpdateContractMetadata(metadata *ContractMetadata, fields map[string]interface{}) error
+	SaveContractMetadata(metadata []*ContractMetadata) error
 }
