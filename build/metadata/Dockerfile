@@ -26,10 +26,10 @@ RUN go build -ldflags "-linkmode external -extldflags '-static' -s -w"  -a -inst
 # ---------------------------------------------------------------------
 FROM scratch
 
-WORKDIR /app/metadata
+WORKDIR /app/metadata/
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /go/bin/dipdup-metadata /go/bin/dipdup-metadata
-COPY ./build/*.yml .
+COPY build/*.yml ./
 
 ENTRYPOINT ["/go/bin/dipdup-metadata"]
