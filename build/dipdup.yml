@@ -17,7 +17,7 @@ metadata:
   indexers:
     mainnet:
       datasources:
-          tzkt: https://staging.api.tzkt.io
+          tzkt: https://api.tzkt.io
           tzkt_conn_string: "host=127.0.0.1 port=5432 user=tzkt dbname=tzkt password=${TZKT_PASSWORD:-changeme} sslmode=disable"
 
 database:
