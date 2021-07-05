@@ -12,7 +12,7 @@ metadata:
   indexers:
     mainnet:
       datasources:
-          tzkt: https://staging.api.tzkt.io
+          tzkt: https://api.tzkt.io
 
 database:
   kind: elastic

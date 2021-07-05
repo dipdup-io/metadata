@@ -26,7 +26,7 @@ RUN go build -ldflags "-linkmode external -extldflags '-static' -s -w"  -a -inst
 # ---------------------------------------------------------------------
 FROM scratch
 
-WORKDIR /app/metadata
+WORKDIR /app/metadata/
 
 ARG CONFIG=dipdup.yml
 
