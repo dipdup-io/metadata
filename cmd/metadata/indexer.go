@@ -12,6 +12,7 @@ import (
 	"github.com/dipdup-net/go-lib/state"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/context"
+	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
 	"github.com/dipdup-net/metadata/cmd/metadata/service"
@@ -34,6 +35,9 @@ type Indexer struct {
 	thumbnail *thumbnail.Service
 	settings  config.Settings
 
+	contractActionsCounter *helpers.Counter
+	tokenActionsCounter    *helpers.Counter
+
 	stop chan struct{}
 	wg   sync.WaitGroup
 }
@@ -49,14 +53,16 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 	log.Infof("Indices which will be processed: %s", strings.Join(settings.Index, ", "))
 
 	indexer := &Indexer{
-		scanner:   tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
-		network:   network,
-		indexName: models.IndexName(network),
-		resolver:  resolver.New(settings, ctx),
-		settings:  settings,
-		ctx:       ctx,
-		db:        db,
-		stop:      make(chan struct{}, 1),
+		scanner:                tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
+		network:                network,
+		indexName:              models.IndexName(network),
+		resolver:               resolver.New(settings, ctx),
+		settings:               settings,
+		ctx:                    ctx,
+		db:                     db,
+		stop:                   make(chan struct{}, 1),
+		contractActionsCounter: helpers.NewCounter(0),
+		tokenActionsCounter:    helpers.NewCounter(0),
 	}
 
 	if aws := storage.NewAWS(settings.AWS.AccessKey, settings.AWS.Secret, settings.AWS.Region, settings.AWS.BucketName); aws != nil {
@@ -141,7 +147,27 @@ func (indexer *Indexer) initState() error {
 		}
 	} else {
 		indexer.state = current
+
+		if err := indexer.initCounters(); err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+func (indexer *Indexer) initCounters() error {
+	contractActionsCounter, err := indexer.db.LastContractUpdateID()
+	if err != nil {
+		return err
+	}
+	indexer.contractActionsCounter.Set(contractActionsCounter)
+
+	tokenActionsCounter, err := indexer.db.LastTokenUpdateID()
+	if err != nil {
+		return err
+	}
+	indexer.tokenActionsCounter.Set(tokenActionsCounter)
+
 	return nil
 }
 

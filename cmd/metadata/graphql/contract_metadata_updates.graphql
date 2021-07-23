@@ -1,0 +1,8 @@
+query ContractMetadataUpdatesQuery($limit: Int, $update_id: Int) {
+  contract_metadata(where: {update_id: {_gt: $update_id}, status: {_eq: 3}}, limit: $limit, order_by: {update_id: asc}) {
+    network
+    contract
+    metadata
+    update_id
+  }
+}

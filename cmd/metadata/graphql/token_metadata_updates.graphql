@@ -1,0 +1,9 @@
+query TokenMetadataUpdatesQuery($limit: Int, $update_id: Int) {
+  token_metadata(where: {update_id: {_gt: $update_id}, status: {_eq: 3}}, limit: $limit, order_by: {update_id: asc}) {
+    network
+    contract
+    token_id
+    metadata
+    update_id
+  }
+}

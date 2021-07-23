@@ -146,7 +146,7 @@ func (e *Elastic) GetContractMetadata(status Status, limit, offset int) ([]Contr
 
 // UpdateContractMetadata -
 func (e *Elastic) UpdateContractMetadata(metadata *ContractMetadata, fields map[string]interface{}) error {
-	fields["updated_at"] = time.Now().UTC()
+	fields["updated_at"] = time.Now().Unix()
 	data, err := json.Marshal(fields)
 	if err != nil {
 		return err
@@ -180,7 +180,7 @@ func (e *Elastic) SaveContractMetadata(metadata []*ContractMetadata) error {
 	}
 	bulk := bytes.NewBuffer([]byte{})
 	for i := range metadata {
-		metadata[i].CreatedAt = time.Now().UTC()
+		metadata[i].CreatedAt = time.Now().Unix()
 		metadata[i].UpdatedAt = metadata[i].CreatedAt
 		meta := fmt.Sprintf(`{"index":{"_id":"%d","_index":"%s"}}`, time.Now().UnixNano(), metadata[i].TableName())
 		if _, err := bulk.WriteString(meta); err != nil {
@@ -212,6 +212,12 @@ func (e *Elastic) SaveContractMetadata(metadata []*ContractMetadata) error {
 	return nil
 }
 
+// LastContractUpdateID -
+func (e *Elastic) LastContractUpdateID() (value int64, err error) {
+	// TODO: realize LastContractUpdateID
+	return
+}
+
 // GetContractMetadata -
 func (e *Elastic) GetTokenMetadata(status Status, limit, offset int) ([]TokenMetadata, error) {
 	hits, err := e.search(
@@ -241,7 +247,7 @@ func (e *Elastic) GetTokenMetadata(status Status, limit, offset int) ([]TokenMet
 
 // UpdateTokenMetadata -
 func (e *Elastic) UpdateTokenMetadata(metadata *TokenMetadata, fields map[string]interface{}) error {
-	fields["updated_at"] = time.Now().UTC()
+	fields["updated_at"] = time.Now().Unix()
 	data, err := json.Marshal(fields)
 	if err != nil {
 		return err
@@ -275,7 +281,7 @@ func (e *Elastic) SaveTokenMetadata(metadata []*TokenMetadata) error {
 	}
 	bulk := bytes.NewBuffer([]byte{})
 	for i := range metadata {
-		metadata[i].CreatedAt = time.Now().UTC()
+		metadata[i].CreatedAt = time.Now().Unix()
 		metadata[i].UpdatedAt = metadata[i].CreatedAt
 		meta := fmt.Sprintf(`{"index":{"_id":"%d","_index":"%s"}}`, time.Now().UnixNano(), metadata[i].TableName())
 		if _, err := bulk.WriteString(meta); err != nil {
@@ -307,9 +313,15 @@ func (e *Elastic) SaveTokenMetadata(metadata []*TokenMetadata) error {
 	return nil
 }
 
+// LastTokenUpdateID -
+func (e *Elastic) LastTokenUpdateID() (value int64, err error) {
+	// TODO: realize LastTokenUpdateID
+	return
+}
+
 // SetImageProcessed -
 func (e *Elastic) SetImageProcessed(token TokenMetadata) error {
-	token.UpdatedAt = time.Now().UTC()
+	token.UpdatedAt = time.Now().Unix()
 	response, err := e.Update(
 		token.TableName(),
 		fmt.Sprintf("%d", token.ID),
