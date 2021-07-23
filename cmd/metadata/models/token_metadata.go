@@ -1,16 +1,14 @@
 package models
 
 import (
-	"time"
-
 	"gorm.io/datatypes"
 )
 
 // TokenMetadata -
 type TokenMetadata struct {
 	ID             uint64         `gorm:"autoIncrement;not null;" json:"-"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
+	CreatedAt      int64          `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      int64          `gorm:"autoUpdateTime" json:"updated_at"`
 	Network        string         `gorm:"primaryKey" json:"network"`
 	Contract       string         `gorm:"primaryKey" json:"contract"`
 	TokenID        uint64         `gorm:"primaryKey" json:"token_id"`
@@ -19,6 +17,7 @@ type TokenMetadata struct {
 	Status         Status         `gorm:"type:SMALLINT" json:"status"`
 	Metadata       datatypes.JSON `json:"metadata,omitempty"`
 	ImageProcessed bool           `json:"image_processed"`
+	UpdateID       int64          `gorm:"type:int4;uniqueIndex:token_metadata_update_id_key;autoIncrement:false;not null;" json:"-"`
 }
 
 // Table -
@@ -33,4 +32,5 @@ type TokenRepository interface {
 	GetUnprocessedImage(from uint64, limit int) ([]TokenMetadata, error)
 	UpdateTokenMetadata(metadata *TokenMetadata, fields map[string]interface{}) error
 	SaveTokenMetadata(metadata []*TokenMetadata) error
+	LastTokenUpdateID() (int64, error)
 }

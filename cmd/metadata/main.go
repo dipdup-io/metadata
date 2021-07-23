@@ -49,7 +49,7 @@ func main() {
 	}
 
 	if cfg.Hasura.URL != "" {
-		if err := hasura.Create(cfg.Hasura, cfg.Database, &models.TokenMetadata{}, &models.ContractMetadata{}); err != nil {
+		if err := hasura.Create(cfg.Hasura, cfg.Database, nil, &models.TokenMetadata{}, &models.ContractMetadata{}); err != nil {
 			log.Error(err)
 			return
 		}
