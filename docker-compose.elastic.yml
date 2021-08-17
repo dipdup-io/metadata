@@ -6,14 +6,13 @@ services:
     build:
         dockerfile: build/metadata/Dockerfile
         context: .
+        args:
+          - CONFIG=elastic.yml
     env_file:
       - .env
     depends_on:
       - elastic
     restart: always
-    environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
-      - ADMIN_SECRET=${ADMIN_SECRET:-changeme}
 
   elastic:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.13.1
@@ -27,6 +26,21 @@ services:
       - .env
     ports:
       - 127.0.0.1:9200:9200
+
+  api:
+    image: dipdup/metadata-api:latest
+    build:
+        dockerfile: build/api/Dockerfile
+        context: .
+        args:
+          - CONFIG=elastic.yml
+    env_file:
+      - .env
+    depends_on:
+      - elastic
+    restart: always
+    ports:
+      - 127.0.0.1:11111:11111
 
 volumes:
   esdata:
