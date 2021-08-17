@@ -8,8 +8,6 @@ services:
         context: .
     env_file:
       - .env
-    depends_on:
-      - db
     restart: always
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
@@ -34,8 +32,6 @@ services:
     image: hasura/graphql-engine:v2.0.1
     ports:
       - 127.0.0.1:33000:8080
-    depends_on:
-      - db
     restart: always
     environment:
       - HASURA_GRAPHQL_DATABASE_URL=postgres://dipdup:${POSTGRES_PASSWORD:-changeme}@db:5432/dipdup
