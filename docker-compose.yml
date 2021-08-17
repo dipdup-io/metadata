@@ -85,9 +85,9 @@ services:
         - traefik.http.services.imgproxy.loadbalancer.server.port=8080
         - traefik.http.routers.imgproxy.rule=Host(`thumbnails.${ROOT_DOMAIN}`)
         - traefik.http.routers.imgproxy.entrypoints=http,https
-        - traefik.http.routers.imgproxy.middlewares=redirect@file
-        - "traefik.http.middlewares.imgproxy.replacepathregex.regex=^/(.*)"
-        - "traefik.http.middlewares.imgproxy.replacepathregex.replacement=/insecure/auto/50/50/sm/0/plain/https://ipfs.baking-bad.org/ipfs/$${1}@png"
+        - "traefik.http.middlewares.imgproxy-ipfs.replacepathregex.regex=^/(.*)"
+        - "traefik.http.middlewares.imgproxy-ipfs.replacepathregex.replacement=/insecure/auto/50/50/sm/0/plain/https://ipfs.baking-bad.org/ipfs/$${1}@png"
+        - traefik.http.routers.imgproxy.middlewares=redirect@file,imgproxy-ipfs
     networks:
       - metadata-network
       - traefik-public
