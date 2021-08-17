@@ -88,6 +88,8 @@ github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumC
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dipdup-net/go-lib v0.1.14 h1:Nq88fjNqtxrpUjN6QVK7DnBXeeS+uAnh9xEUjLr2IDM=
 github.com/dipdup-net/go-lib v0.1.14/go.mod h1:8HmLvEu4KKzJAJpvs/yQwEv53tS+ma6gypxSrcNw1/g=
+github.com/dipdup-net/go-lib v0.1.15 h1:T/YAmTTRlB/t8RgFVDplrxP0mWyhXr4ZRuBnrjIqWt0=
+github.com/dipdup-net/go-lib v0.1.15/go.mod h1:8HmLvEu4KKzJAJpvs/yQwEv53tS+ma6gypxSrcNw1/g=
 github.com/disintegration/imaging v1.6.2 h1:w1LecBlG2Lnp8B3jk5zSuNqd7b4DXhcjwek1ei82L+c=
 github.com/disintegration/imaging v1.6.2/go.mod h1:44/5580QXChDfwIclfc/PCwrr44amcmDAg8hxG0Ewe4=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
