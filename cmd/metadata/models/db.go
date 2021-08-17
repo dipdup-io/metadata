@@ -6,6 +6,7 @@ import (
 	"github.com/dipdup-net/go-lib/config"
 	"github.com/dipdup-net/go-lib/state"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // index type
@@ -71,7 +72,24 @@ func (db *RelativeDatabase) SaveContractMetadata(metadata []*ContractMetadata) e
 	if len(metadata) == 0 {
 		return nil
 	}
-	return db.CreateInBatches(metadata, 100).Error
+	for i := range metadata {
+		if err := db.Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "network"},
+				{Name: "contract"},
+			},
+			DoUpdates: clause.AssignmentColumns([]string{"metadata", "link", "update_id", "status"}),
+		}).Create(metadata[i]).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// LastTokenUpdateID -
+func (db *RelativeDatabase) LastContractUpdateID() (updateID int64, err error) {
+	err = db.Model(&ContractMetadata{}).Select("max(update_id)").Scan(&updateID).Error
+	return
 }
 
 // GetTokenMetadata -
@@ -89,7 +107,11 @@ func (db *RelativeDatabase) GetTokenMetadata(status Status, limit, offset int) (
 
 // UpdateTokenMetadata -
 func (db *RelativeDatabase) UpdateTokenMetadata(metadata *TokenMetadata, fields map[string]interface{}) error {
-	return db.Model(metadata).Updates(fields).Error
+	return db.Model(metadata).
+		Where("network = ?", metadata.Network).
+		Where("contract = ?", metadata.Contract).
+		Where("token_id = ?", metadata.TokenID).
+		Updates(fields).Error
 }
 
 // SaveTokenMetadata -
@@ -97,7 +119,19 @@ func (db *RelativeDatabase) SaveTokenMetadata(metadata []*TokenMetadata) error {
 	if len(metadata) == 0 {
 		return nil
 	}
-	return db.CreateInBatches(metadata, 100).Error
+	for i := range metadata {
+		if err := db.Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "network"},
+				{Name: "contract"},
+				{Name: "token_id"},
+			},
+			DoUpdates: clause.AssignmentColumns([]string{"metadata", "link", "update_id", "status"}),
+		}).Create(metadata[i]).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SetImageProcessed -
@@ -118,6 +152,12 @@ func (db *RelativeDatabase) GetUnprocessedImage(from uint64, limit int) (all []T
 // CurrentContext -
 func (db *RelativeDatabase) CurrentContext() (updates []ContextItem, err error) {
 	err = db.Model(&ContextItem{}).Find(&updates).Error
+	return
+}
+
+// LastTokenUpdateID -
+func (db *RelativeDatabase) LastTokenUpdateID() (updateID int64, err error) {
+	err = db.Model(&TokenMetadata{}).Select("max(update_id)").Scan(&updateID).Error
 	return
 }
 

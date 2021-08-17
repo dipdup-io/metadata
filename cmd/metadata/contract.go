@@ -28,6 +28,7 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 		Contract: update.Contract.Address,
 		Status:   models.StatusNew,
 		Link:     string(link),
+		UpdateID: indexer.contractActionsCounter.Increment(),
 	}
 
 	return &metadata, nil
@@ -63,9 +64,10 @@ func (indexer *Indexer) resolveContractMetadata(cm *models.ContractMetadata) {
 			indexer.logContractMetadata(*cm, "Failed", "warn")
 		}
 	} else {
-		cm.Metadata = data
+		cm.Metadata = helpers.Escape(data)
 		cm.Status = models.StatusApplied
 	}
+	cm.UpdateID = indexer.contractActionsCounter.Increment()
 }
 
 func (indexer *Indexer) onContractTick() error {
@@ -79,6 +81,7 @@ func (indexer *Indexer) onContractTick() error {
 			"status":      uresolved[i].Status,
 			"metadata":    uresolved[i].Metadata,
 			"retry_count": uresolved[i].RetryCount,
+			"update_id":   uresolved[i].UpdateID,
 		}); err != nil {
 			return err
 		}

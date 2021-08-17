@@ -1,0 +1,9 @@
+query ContractMetadataQuery(
+  $network: String!, 
+  $contract: String!) {
+  contract_metadata(where: {
+    network: {_eq: $network}, 
+    contract: {_eq: $contract}}) {
+    metadata
+  }
+}

@@ -85,6 +85,7 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.T
 		TokenID:  tokenInfo.TokenID,
 		Status:   models.StatusNew,
 		Metadata: helpers.Escape(metadata),
+		UpdateID: indexer.tokenActionsCounter.Increment(),
 	}
 
 	if _, err := url.ParseRequestURI(tokenInfo.Link); err != nil {
@@ -132,12 +133,13 @@ func (indexer *Indexer) resolveTokenMetadata(tm *models.TokenMetadata) error {
 		}
 
 		if utf8.Valid(metadata) {
-			tm.Metadata = metadata
+			tm.Metadata = helpers.Escape(metadata)
 			tm.Status = models.StatusApplied
 		} else {
 			tm.Status = models.StatusFailed
 		}
 	}
+	tm.UpdateID = indexer.tokenActionsCounter.Increment()
 	return nil
 }
 
@@ -181,6 +183,7 @@ func (indexer *Indexer) onTokenTick() error {
 			"status":      uresolved[i].Status,
 			"metadata":    uresolved[i].Metadata,
 			"retry_count": uresolved[i].RetryCount,
+			"update_id":   uresolved[i].UpdateID,
 		}); err != nil {
 			return err
 		}
