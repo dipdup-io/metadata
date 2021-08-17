@@ -29,10 +29,8 @@ FROM scratch
 
 WORKDIR /app/metadata-api
 
-ARG CONFIG=dipdup.yml
-
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /go/bin/dipdup-metadata-api /go/bin/dipdup-metadata-api
-COPY ./build/$CONFIG ./dipdup.yml
+COPY ./build/*.yml ./dipdup.yml
 
 ENTRYPOINT ["/go/bin/dipdup-metadata-api"]

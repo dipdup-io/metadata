@@ -3,11 +3,10 @@ version: "3.6"
 services:
   indexer:
     image: dipdup/metadata:latest
+    command: -c dipdup.search.yml
     build:
         dockerfile: build/metadata/Dockerfile
         context: .
-        args:
-          - CONFIG=elastic.yml
     env_file:
       - .env
     depends_on:
@@ -29,11 +28,10 @@ services:
 
   api:
     image: dipdup/metadata-api:latest
+    command: -c dipdup.search.yml
     build:
         dockerfile: build/api/Dockerfile
         context: .
-        args:
-          - CONFIG=elastic.yml
     env_file:
       - .env
     depends_on:
