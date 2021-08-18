@@ -2,7 +2,7 @@ module github.com/dipdup-net/metadata
 
 go 1.15
 
-replace github.com/dipdup-net/go-lib => ../go-lib
+// replace github.com/dipdup-net/go-lib => ../go-lib
 
 require (
 	github.com/aws/aws-sdk-go v1.38.63
