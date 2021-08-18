@@ -51,7 +51,7 @@ func (scanner *Scanner) Start(level uint64) {
 		log.Error(err)
 		return
 	}
-	log.Infof("Current node level is %d. Indexer state is %d.", head.Level, level)
+	log.Infof("Current TzKT head is %d. Indexer state is %d.", head.Level, level)
 
 	scanner.level = level
 

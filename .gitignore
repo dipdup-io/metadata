@@ -18,3 +18,5 @@ vendor/
 .env*
 *.db
 dipdup.yml
+
+dist/

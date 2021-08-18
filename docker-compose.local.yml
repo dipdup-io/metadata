@@ -18,6 +18,8 @@ services:
     restart: always
     volumes:
       - db:/var/lib/postgres/data
+    ports:
+      - 127.0.0.1:5432:5432
     environment: 
       - POSTGRES_USER=dipdup
       - POSTGRES_DB=dipdup
@@ -31,7 +33,7 @@ services:
   hasura:
     image: hasura/graphql-engine:v2.0.1
     ports:
-      - 127.0.0.1:33000:8080
+      - 127.0.0.1:8080:8080
     restart: always
     environment:
       - HASURA_GRAPHQL_DATABASE_URL=postgres://dipdup:${POSTGRES_PASSWORD:-changeme}@db:5432/dipdup

@@ -31,7 +31,7 @@ WORKDIR /app/metadata/
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /go/bin/dipdup-metadata /go/bin/dipdup-metadata
 COPY ./cmd/metadata/mappings ./mappings
-COPY cmd/metadata/graphql/*.graphql ./graphql/
+COPY ./cmd/metadata/graphql ./graphql
 COPY ./build/*.yml ./
 
 ENTRYPOINT ["/go/bin/dipdup-metadata"]
