@@ -32,3 +32,4 @@ hasura:
   admin_secret: ${ADMIN_SECRET:-changeme}
   select_limit: 100
   allow_aggregation: false
+  rest: true
