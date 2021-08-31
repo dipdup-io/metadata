@@ -1,6 +1,6 @@
 module github.com/dipdup-net/metadata
 
-go 1.15
+go 1.16
 
 // replace github.com/dipdup-net/go-lib => ../go-lib
 
@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.63
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/dipdup-net/go-lib v0.1.16
+	github.com/dipdup-net/go-lib v0.1.17
 	github.com/disintegration/imaging v1.6.2
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20210608143047-aa1301e7ba9d
 	github.com/gogo/protobuf v1.3.2 // indirect
