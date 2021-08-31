@@ -69,6 +69,9 @@ func decodeMap(m map[string]string) {
 }
 
 func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.TokenMetadata, error) {
+	if update.Content == nil {
+		return nil, nil
+	}
 	var tokenInfo TokenInfo
 	if err := json.Unmarshal(update.Content.Value, &tokenInfo); err != nil {
 		return nil, err
