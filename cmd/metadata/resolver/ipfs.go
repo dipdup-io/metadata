@@ -69,19 +69,15 @@ func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
 		return nil, ErrEmptyIPFSGatewayList
 	}
 
-	hash, err := helpers.IPFSHash(link)
-	if err != nil {
-		return nil, err
-	}
-
+	path := helpers.IPFSPath(link)
 	for _, sh := range s.pinning {
-		_ = sh.Pin(hash)
+		_ = sh.Pin(path)
 	}
 
 	gateways := helpers.ShuffleGateways(s.gateways)
 	for i := range gateways {
-		url := helpers.IPFSLink(gateways[i], hash)
-		data, err := s.cache.Fetch(hash, time.Hour, func() (interface{}, error) {
+		url := helpers.IPFSLink(gateways[i], path)
+		data, err := s.cache.Fetch(path, time.Hour, func() (interface{}, error) {
 			return s.Http.Resolve(network, address, url)
 		})
 		if err == nil {

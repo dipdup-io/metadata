@@ -8,19 +8,17 @@ import (
 	"time"
 
 	"github.com/ipfs/go-cid"
-)
-
-const (
-	prefixIpfs = "ipfs://"
+	"github.com/pkg/errors"
 )
 
 // IPFSHash - separate IPFS hash from link
 func IPFSHash(link string) (string, error) {
-	hash := strings.TrimPrefix(link, prefixIpfs)
-	if _, err := cid.Decode(hash); err != nil {
-		return "", err
+	hash := FindAllIPFSLinks([]byte(link))
+	if len(hash) != 1 {
+		return "", errors.Errorf("invalid IPFS link: %s", link)
 	}
-	return hash, nil
+	_, err := cid.Decode(hash[0])
+	return hash[0], err
 }
 
 // IPFSLink - get gateway link
@@ -28,7 +26,12 @@ func IPFSLink(gateway, hash string) string {
 	return fmt.Sprintf("%s/ipfs/%s", gateway, hash)
 }
 
-var ipfsURL = regexp.MustCompile(`ipfs:\/\/(?P<hash>Qm[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{44})`)
+// IPFSPath - get path without protocol
+func IPFSPath(link string) string {
+	return strings.TrimPrefix(link, "ipfs://")
+}
+
+var ipfsURL = regexp.MustCompile(`ipfs:\/\/(?P<hash>(baf[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{56})|Qm[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{44})`)
 
 // FindAllIPFSLinks -
 func FindAllIPFSLinks(data []byte) []string {
