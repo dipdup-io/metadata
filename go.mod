@@ -1,6 +1,6 @@
 module github.com/dipdup-net/metadata
 
-go 1.16
+go 1.15
 
 // replace github.com/dipdup-net/go-lib => ../go-lib
 
