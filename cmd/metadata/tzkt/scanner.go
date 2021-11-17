@@ -212,7 +212,6 @@ func (scanner *Scanner) processSyncUpdates(updates []api.BigMapUpdate) {
 
 func (scanner *Scanner) handleBlocks(msg events.Message) error {
 	switch msg.Type {
-	case events.MessageTypeState:
 	case events.MessageTypeData:
 		body, ok := msg.Body.([]interface{})
 		if !ok {
@@ -235,14 +234,13 @@ func (scanner *Scanner) handleBlocks(msg events.Message) error {
 		}
 
 		scanner.blocks <- uint64(level)
-	case events.MessageTypeReorg:
+	case events.MessageTypeReorg, events.MessageTypeSubscribed, events.MessageTypeState:
 	}
 	return nil
 }
 
 func (scanner *Scanner) handleBigMaps(msg events.Message) error {
 	switch msg.Type {
-	case events.MessageTypeState:
 	case events.MessageTypeData:
 		b, err := json.Marshal(msg.Body)
 		if err != nil {
@@ -257,7 +255,7 @@ func (scanner *Scanner) handleBigMaps(msg events.Message) error {
 			Body:  diffs,
 			Level: msg.State,
 		}
-	case events.MessageTypeReorg:
+	case events.MessageTypeReorg, events.MessageTypeSubscribed, events.MessageTypeState:
 	}
 	return nil
 }
