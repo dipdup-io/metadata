@@ -15,3 +15,6 @@ up:
 
 down:
 	docker-compose -f docker-compose.local.yml down -v
+
+metadata:
+	cd cmd/metadata && go run . -c ../../build/dipdup.yml

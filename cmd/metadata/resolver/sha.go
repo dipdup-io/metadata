@@ -1,6 +1,9 @@
 package resolver
 
-import "strings"
+import (
+	"context"
+	"strings"
+)
 
 const (
 	prefixSha256 = "sha256://"
@@ -44,7 +47,7 @@ func NewSha256(opts ...Sha256Option) Sha256 {
 }
 
 // Resolve -
-func (s Sha256) Resolve(network, address, value string) ([]byte, error) {
+func (s Sha256) Resolve(ctx context.Context, network, address, value string) ([]byte, error) {
 	var uri Sha256URI
 	if err := uri.Parse(value); err != nil {
 		return nil, err
@@ -53,7 +56,7 @@ func (s Sha256) Resolve(network, address, value string) ([]byte, error) {
 		return nil, nil
 	}
 
-	return s.Http.Resolve(network, address, uri.Link)
+	return s.Http.Resolve(ctx, network, address, uri.Link)
 }
 
 func (s Sha256) validate(uriHash string) bool {

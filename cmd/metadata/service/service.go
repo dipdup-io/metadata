@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -11,15 +12,13 @@ import (
 type Service struct {
 	name           string
 	tickerDuration time.Duration
-	handler        func() error
-	stop           chan struct{}
+	handler        func(ctx context.Context) error
 	wg             sync.WaitGroup
 }
 
 // New -
-func New(handler func() error, opts ...ServiceOption) *Service {
+func New(handler func(context.Context) error, opts ...ServiceOption) *Service {
 	s := Service{
-		stop:           make(chan struct{}, 1),
 		tickerDuration: time.Second * 5,
 		handler:        handler,
 	}
@@ -32,19 +31,18 @@ func New(handler func() error, opts ...ServiceOption) *Service {
 }
 
 // Start -
-func (s *Service) Start() {
+func (s *Service) Start(ctx context.Context) {
 	s.wg.Add(1)
-	go s.worker()
+	go s.worker(ctx)
 }
 
 // Close -
 func (s *Service) Close() error {
-	s.stop <- struct{}{}
 	s.wg.Wait()
 	return nil
 }
 
-func (s *Service) worker() {
+func (s *Service) worker(ctx context.Context) {
 	defer s.wg.Done()
 
 	if s.handler == nil {
@@ -57,10 +55,10 @@ func (s *Service) worker() {
 
 	for {
 		select {
-		case <-s.stop:
+		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := s.handler(); err != nil {
+			if err := s.handler(ctx); err != nil {
 				log.Errorf("processor service '%s': %s", s.name, err.Error())
 			}
 		}

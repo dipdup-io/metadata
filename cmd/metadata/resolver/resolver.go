@@ -2,16 +2,48 @@ package resolver
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
-	"github.com/dipdup-net/metadata/cmd/metadata/context"
+	internalContext "github.com/dipdup-net/metadata/cmd/metadata/context"
 	"github.com/pkg/errors"
 )
 
+// ErrorType -
+type ErrorType string
+
+const (
+	ErrorTypeHttpRequest     ErrorType = "http_request"
+	ErrorTypeTooBig          ErrorType = "too_big"
+	ErrorTypeReceiving       ErrorType = "receiving"
+	ErrorTypeKeyTezosNotFond ErrorType = "tezos_key_not_found"
+	ErrorTypeTezosURIParsing ErrorType = "tezos_uri_parsing"
+	ErrorTypeInvalidJSON     ErrorType = "invalid_json"
+)
+
+// ResolvingError -
+type ResolvingError struct {
+	Code int
+	Type ErrorType
+	Err  error
+}
+
+// Error -
+func (err ResolvingError) Error() string {
+	if err.Err != nil {
+		return err.Err.Error()
+	}
+	return string(err.Type)
+}
+
+func newResolvingError(code int, typ ErrorType, err error) ResolvingError {
+	return ResolvingError{code, typ, err}
+}
+
 // Resolver -
 type Resolver interface {
-	Resolve(network, address, link string) ([]byte, error)
+	Resolve(ctx context.Context, network, address, link string) ([]byte, error)
 	Is(link string) bool
 }
 
@@ -21,7 +53,7 @@ type Receiver struct {
 }
 
 // New -
-func New(settings config.Settings, ctx *context.Context) Receiver {
+func New(settings config.Settings, ctx *internalContext.Context) Receiver {
 	return Receiver{
 		[]Resolver{
 			NewIPFS(settings.IPFSGateways, WithTimeoutIpfs(settings.IPFSTimeout), WithPinningIpfs(settings.IPFSPinning)),
@@ -33,19 +65,19 @@ func New(settings config.Settings, ctx *context.Context) Receiver {
 }
 
 // Resolve -
-func (r Receiver) Resolve(network, address, link string) ([]byte, error) {
+func (r Receiver) Resolve(ctx context.Context, network, address, link string) ([]byte, error) {
 	if len(link) < 7 { // the shortest prefix is http://
 		return nil, errors.Wrap(ErrUnknownStorageType, link)
 	}
 
 	for i := range r.resolvers {
 		if r.resolvers[i].Is(link) {
-			data, err := r.resolvers[i].Resolve(network, address, link)
+			data, err := r.resolvers[i].Resolve(ctx, network, address, link)
 			if err != nil {
 				return nil, err
 			}
 			if !json.Valid(data) {
-				return nil, errors.New("Invalid JSON")
+				return nil, newResolvingError(0, ErrorTypeInvalidJSON, errors.New("invalid json"))
 			}
 
 			var buf bytes.Buffer

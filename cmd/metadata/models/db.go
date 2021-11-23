@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dipdup-net/go-lib/config"
@@ -25,8 +26,8 @@ type RelativeDatabase struct {
 }
 
 // NewRelativeDatabase -
-func NewRelativeDatabase(cfg config.Database) (*RelativeDatabase, error) {
-	db, err := state.OpenConnection(cfg)
+func NewRelativeDatabase(ctx context.Context, cfg config.Database) (*RelativeDatabase, error) {
+	db, err := state.OpenConnection(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

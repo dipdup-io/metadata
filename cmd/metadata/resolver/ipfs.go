@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -64,7 +65,7 @@ func NewIPFS(gateways []string, opts ...IpfsOption) Ipfs {
 }
 
 // Resolve -
-func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
+func (s Ipfs) Resolve(ctx context.Context, network, address, link string) ([]byte, error) {
 	if len(s.gateways) == 0 {
 		return nil, ErrEmptyIPFSGatewayList
 	}
@@ -78,7 +79,7 @@ func (s Ipfs) Resolve(network, address, link string) ([]byte, error) {
 	for i := range gateways {
 		url := helpers.IPFSLink(gateways[i], path)
 		data, err := s.cache.Fetch(path, time.Hour, func() (interface{}, error) {
-			return s.Http.Resolve(network, address, url)
+			return s.Http.Resolve(ctx, network, address, url)
 		})
 		if err == nil {
 			contents := data.Value().([]byte)

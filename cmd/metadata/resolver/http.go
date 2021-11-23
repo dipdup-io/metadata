@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -48,31 +49,31 @@ func NewHttp(opts ...HttpOption) Http {
 }
 
 // Resolve -
-func (s Http) Resolve(network, address, link string) ([]byte, error) {
+func (s Http) Resolve(ctx context.Context, network, address, link string) ([]byte, error) {
 	if _, err := url.ParseRequestURI(link); err != nil {
 		return nil, ErrInvalidURI
 	}
 	client := http.Client{
 		Timeout: s.timeout,
 	}
-	req, err := http.NewRequest("GET", link, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(ErrHTTPRequest, err.Error())
+		return nil, newResolvingError(0, ErrorTypeReceiving, errors.Wrap(ErrHTTPRequest, err.Error()))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("Invalid status code: %s", resp.Status)
+		return nil, newResolvingError(resp.StatusCode, ErrorTypeHttpRequest, errors.Errorf("invalid status: %s", resp.Status))
 	}
 
 	data, err := ioutil.ReadAll(io.LimitReader(resp.Body, 20971520)) // 20 MB limit for metadata
 	if err != nil {
-		return nil, err
+		return nil, newResolvingError(0, ErrorTypeTooBig, err)
 	}
 
 	return helpers.Escape(data), nil
