@@ -1,6 +1,7 @@
 package tzkt
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -25,10 +26,10 @@ type Scanner struct {
 	msg       Message
 	contracts []string
 
-	diffs  chan Message
-	blocks chan uint64
-	stop   chan struct{}
-	wg     sync.WaitGroup
+	diffs    chan Message
+	blocks   chan uint64
+	wg       sync.WaitGroup
+	initOnce sync.Once
 }
 
 // New -
@@ -40,37 +41,19 @@ func New(baseURL string, contracts ...string) *Scanner {
 		contracts: contracts,
 		diffs:     make(chan Message, 1024),
 		blocks:    make(chan uint64, 10),
-		stop:      make(chan struct{}, 1),
 	}
 }
 
 // Start -
-func (scanner *Scanner) Start(level uint64) {
-	head, err := scanner.api.GetHead()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	log.Infof("Current TzKT head is %d. Indexer state is %d.", head.Level, level)
+func (scanner *Scanner) Start(ctx context.Context, level uint64) {
+	scanner.initOnce.Do(func() {
+		scanner.wg.Add(1)
+		go scanner.synchronization(ctx, level)
+	})
 
-	scanner.level = level
+}
 
-	for head.Level > scanner.level {
-		if err := scanner.sync(head.Level); err != nil {
-			log.Error(err)
-			return
-		}
-
-		head, err = scanner.api.GetHead()
-		if err != nil {
-			log.Error(err)
-			return
-		}
-	}
-
-	scanner.wg.Add(1)
-	go scanner.listen()
-
+func (scanner *Scanner) start(ctx context.Context) {
 	if err := scanner.client.Connect(); err != nil {
 		log.Error(err)
 		return
@@ -80,20 +63,58 @@ func (scanner *Scanner) Start(level uint64) {
 		log.Error(err)
 		return
 	}
+
+	scanner.listen(ctx)
+}
+
+func (scanner *Scanner) synchronization(ctx context.Context, level uint64) {
+	defer scanner.wg.Done()
+
+	head, err := scanner.api.GetHead(ctx)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.Infof("Current TzKT head is %d. Indexer state is %d.", head.Level, level)
+
+	scanner.level = level
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			if head.Level <= scanner.level {
+				scanner.start(ctx)
+				return
+			}
+
+			if err := scanner.sync(ctx, head.Level); err != nil {
+				log.Error(err)
+				return
+			}
+
+			head, err = scanner.api.GetHead(ctx)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+		}
+	}
 }
 
 // Close -
 func (scanner *Scanner) Close() error {
-	scanner.stop <- struct{}{}
 	scanner.wg.Wait()
 
-	if err := scanner.client.Close(); err != nil {
-		return err
+	if scanner.client.IsConnected() {
+		if err := scanner.client.Close(); err != nil {
+			return err
+		}
 	}
 
 	close(scanner.diffs)
 	close(scanner.blocks)
-	close(scanner.stop)
 	return nil
 }
 
@@ -127,12 +148,10 @@ func (scanner *Scanner) subscribe() error {
 	return nil
 }
 
-func (scanner *Scanner) listen() {
-	defer scanner.wg.Done()
-
+func (scanner *Scanner) listen(ctx context.Context) {
 	for {
 		select {
-		case <-scanner.stop:
+		case <-ctx.Done():
 			return
 		case msg := <-scanner.client.Listen():
 			switch msg.Channel {
@@ -151,30 +170,36 @@ func (scanner *Scanner) listen() {
 	}
 }
 
-func (scanner *Scanner) sync(headLevel uint64) error {
-	for headLevel > scanner.level {
-		updates, err := scanner.getSyncUpdates(headLevel)
-		if err != nil {
-			return err
-		}
+func (scanner *Scanner) sync(ctx context.Context, headLevel uint64) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			if headLevel <= scanner.level {
+				if scanner.level < scanner.msg.Level {
+					scanner.level = scanner.msg.Level
+					scanner.diffs <- scanner.msg.copy()
+					scanner.msg.clear()
+				}
+				return nil
+			}
 
-		if len(updates) > 0 {
-			scanner.processSyncUpdates(updates)
-		} else {
-			scanner.level = headLevel
+			updates, err := scanner.getSyncUpdates(ctx, headLevel)
+			if err != nil {
+				return err
+			}
+
+			if len(updates) > 0 {
+				scanner.processSyncUpdates(updates)
+			} else {
+				scanner.level = headLevel
+			}
 		}
 	}
-
-	if scanner.level < scanner.msg.Level {
-		scanner.level = scanner.msg.Level
-		scanner.diffs <- scanner.msg.copy()
-		scanner.msg.clear()
-	}
-
-	return nil
 }
 
-func (scanner *Scanner) getSyncUpdates(headLevel uint64) ([]api.BigMapUpdate, error) {
+func (scanner *Scanner) getSyncUpdates(ctx context.Context, headLevel uint64) ([]api.BigMapUpdate, error) {
 	filters := map[string]string{
 		"tags.any":  "token_metadata,metadata",
 		"action.in": "add_key,update_key",
@@ -193,7 +218,7 @@ func (scanner *Scanner) getSyncUpdates(headLevel uint64) ([]api.BigMapUpdate, er
 		filters["contract.in"] = strings.Join(scanner.contracts, ",")
 	}
 
-	return scanner.api.GetBigmapUpdates(filters)
+	return scanner.api.GetBigmapUpdates(ctx, filters)
 }
 
 func (scanner *Scanner) processSyncUpdates(updates []api.BigMapUpdate) {

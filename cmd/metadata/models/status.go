@@ -8,3 +8,16 @@ const (
 	StatusFailed
 	StatusApplied
 )
+
+func (s Status) String() string {
+	switch s {
+	case StatusApplied:
+		return "applied"
+	case StatusFailed:
+		return "failed"
+	case StatusNew:
+		return "new"
+	default:
+		return "unknown"
+	}
+}

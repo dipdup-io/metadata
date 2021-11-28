@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -9,9 +11,10 @@ import (
 	"gorm.io/gorm"
 
 	generalConfig "github.com/dipdup-net/go-lib/config"
+	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/go-lib/state"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
-	"github.com/dipdup-net/metadata/cmd/metadata/context"
+	internalContext "github.com/dipdup-net/metadata/cmd/metadata/context"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
@@ -29,7 +32,8 @@ type Indexer struct {
 	resolver  resolver.Receiver
 	db        models.Database
 	scanner   *tzkt.Scanner
-	ctx       *context.Context
+	prom      *prometheus.Service
+	ctx       *internalContext.Context
 	contracts *service.Service
 	tokens    *service.Service
 	thumbnail *thumbnail.Service
@@ -38,17 +42,16 @@ type Indexer struct {
 	contractActionsCounter *helpers.Counter
 	tokenActionsCounter    *helpers.Counter
 
-	stop chan struct{}
-	wg   sync.WaitGroup
+	wg sync.WaitGroup
 }
 
 // NewIndexer -
-func NewIndexer(network string, indexerConfig *config.Indexer, database generalConfig.Database, filters config.Filters, settings config.Settings) (*Indexer, error) {
-	db, err := models.NewDatabase(database)
+func NewIndexer(ctx context.Context, network string, indexerConfig *config.Indexer, database generalConfig.Database, filters config.Filters, settings config.Settings, prom *prometheus.Service) (*Indexer, error) {
+	db, err := models.NewDatabase(ctx, database)
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.NewContext()
+	cont := internalContext.NewContext()
 
 	log.Infof("Indices which will be processed: %s", strings.Join(settings.Index, ", "))
 
@@ -56,17 +59,17 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 		scanner:                tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
 		network:                network,
 		indexName:              models.IndexName(network),
-		resolver:               resolver.New(settings, ctx),
+		resolver:               resolver.New(settings, cont),
 		settings:               settings,
-		ctx:                    ctx,
+		ctx:                    cont,
 		db:                     db,
-		stop:                   make(chan struct{}, 1),
+		prom:                   prom,
 		contractActionsCounter: helpers.NewCounter(0),
 		tokenActionsCounter:    helpers.NewCounter(0),
 	}
 
 	if aws := storage.NewAWS(settings.AWS.AccessKey, settings.AWS.Secret, settings.AWS.Region, settings.AWS.BucketName); aws != nil {
-		indexer.thumbnail = thumbnail.New(aws, db, settings.IPFSGateways, 10)
+		indexer.thumbnail = thumbnail.New(aws, db, prom, network, settings.IPFSGateways, 10)
 	}
 	indexer.contracts = service.New(indexer.onContractTick, service.WithName("contracts"))
 	indexer.tokens = service.New(indexer.onTokenTick, service.WithName("tokens"))
@@ -75,7 +78,7 @@ func NewIndexer(network string, indexerConfig *config.Indexer, database generalC
 }
 
 // Start -
-func (indexer *Indexer) Start() error {
+func (indexer *Indexer) Start(ctx context.Context) error {
 	if err := indexer.initState(); err != nil {
 		return err
 	}
@@ -85,23 +88,22 @@ func (indexer *Indexer) Start() error {
 	}
 
 	if indexer.thumbnail != nil {
-		indexer.thumbnail.Start()
+		indexer.thumbnail.Start(ctx)
 	}
 
-	indexer.contracts.Start()
-	indexer.tokens.Start()
+	indexer.contracts.Start(ctx)
+	indexer.tokens.Start(ctx)
 
 	indexer.wg.Add(1)
-	go indexer.listen()
+	go indexer.listen(ctx)
 
-	go indexer.scanner.Start(indexer.state.Level)
+	indexer.scanner.Start(ctx, indexer.state.Level)
 
 	return nil
 }
 
 // Close -
 func (indexer *Indexer) Close() error {
-	indexer.stop <- struct{}{}
 	indexer.wg.Wait()
 
 	if err := indexer.scanner.Close(); err != nil {
@@ -129,8 +131,6 @@ func (indexer *Indexer) Close() error {
 	if err := indexer.db.Close(); err != nil {
 		return err
 	}
-
-	close(indexer.stop)
 
 	return nil
 }
@@ -175,12 +175,12 @@ func (indexer *Indexer) log() *log.Entry {
 	return log.WithField("state", indexer.state.Level).WithField("name", indexer.indexName)
 }
 
-func (indexer *Indexer) listen() {
+func (indexer *Indexer) listen(ctx context.Context) {
 	defer indexer.wg.Done()
 
 	for {
 		select {
-		case <-indexer.stop:
+		case <-ctx.Done():
 			return
 		case msg := <-indexer.scanner.BigMaps():
 			if err := indexer.handlerUpdate(msg); err != nil {
@@ -236,4 +236,26 @@ func (indexer *Indexer) handlerUpdate(msg tzkt.Message) error {
 
 	indexer.state.Level = msg.Level
 	return indexer.db.UpdateState(indexer.state)
+}
+
+func (indexer *Indexer) incrementCounter(typ string, status models.Status) {
+	if indexer.prom == nil {
+		return
+	}
+	indexer.prom.IncrementCounter(metricMetadataCounter, map[string]string{
+		"network": indexer.network,
+		"type":    typ,
+		"status":  status.String(),
+	})
+}
+
+func (indexer *Indexer) incrementErrorCounter(err resolver.ResolvingError) {
+	if indexer.prom == nil {
+		return
+	}
+	indexer.prom.IncrementCounter(metricsMetadataHttpErrors, map[string]string{
+		"network": indexer.network,
+		"type":    string(err.Type),
+		"code":    strconv.FormatInt(int64(err.Code), 10),
+	})
 }

@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------
 FROM golang:1.15-alpine as builder
 
-ENV CGO_ENABLED=1
+ENV CGO_ENABLED=0
 ENV GO111MODULE=on
 ENV GOOS=linux
 
@@ -19,7 +19,7 @@ RUN go mod download
 COPY cmd/metadata cmd/metadata
 
 WORKDIR $GOPATH/src/github.com/dipdup-net/metadata/cmd/metadata/
-RUN go build -ldflags "-linkmode external -extldflags '-static' -s -w"  -a -installsuffix cgo -o /go/bin/dipdup-metadata .
+RUN go build -a -installsuffix cgo -o /go/bin/dipdup-metadata .
 
 # ---------------------------------------------------------------------
 #  The second stage container, for running the application

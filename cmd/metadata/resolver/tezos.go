@@ -3,7 +3,9 @@ package resolver
 import (
 	"strings"
 
-	"github.com/dipdup-net/metadata/cmd/metadata/context"
+	"context"
+
+	internalContext "github.com/dipdup-net/metadata/cmd/metadata/context"
 )
 
 // prefixes
@@ -13,19 +15,19 @@ const (
 
 // TezosStorage -
 type TezosStorage struct {
-	ctx *context.Context
+	ctx *internalContext.Context
 }
 
 // NewTezosStorage -
-func NewTezosStorage(ctx *context.Context) TezosStorage {
+func NewTezosStorage(ctx *internalContext.Context) TezosStorage {
 	return TezosStorage{ctx}
 }
 
 // Resolve -
-func (s TezosStorage) Resolve(network, address, value string) ([]byte, error) {
+func (s TezosStorage) Resolve(ctx context.Context, network, address, value string) ([]byte, error) {
 	var uri TezosURI
 	if err := uri.Parse(value); err != nil {
-		return nil, err
+		return nil, newResolvingError(0, ErrorTypeTezosURIParsing, err)
 	}
 
 	if uri.Network == "" {
@@ -38,7 +40,7 @@ func (s TezosStorage) Resolve(network, address, value string) ([]byte, error) {
 
 	item, ok := s.ctx.Get(uri.Network, uri.Address, uri.Key)
 	if !ok {
-		return nil, ErrTezosStorageKeyNotFound
+		return nil, newResolvingError(0, ErrorTypeKeyTezosNotFond, ErrTezosStorageKeyNotFound)
 	}
 
 	return item.Value, nil

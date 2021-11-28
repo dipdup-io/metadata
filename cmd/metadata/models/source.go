@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"io"
 
 	"github.com/dipdup-net/go-lib/config"
@@ -16,12 +17,12 @@ type Database interface {
 }
 
 // NewDatabase -
-func NewDatabase(cfg config.Database) (Database, error) {
+func NewDatabase(ctx context.Context, cfg config.Database) (Database, error) {
 	switch cfg.Kind {
 	case "elastic":
 		return NewElastic(cfg)
 	default:
-		return NewRelativeDatabase(cfg)
+		return NewRelativeDatabase(ctx, cfg)
 	}
 }
 

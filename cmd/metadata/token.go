@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"net/url"
 	"strconv"
+	"time"
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
@@ -72,6 +74,7 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.T
 	if update.Content == nil {
 		return nil, nil
 	}
+
 	var tokenInfo TokenInfo
 	if err := json.Unmarshal(update.Content.Value, &tokenInfo); err != nil {
 		return nil, err
@@ -97,6 +100,8 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.T
 		token.Link = tokenInfo.Link
 	}
 
+	indexer.incrementCounter("token", token.Status)
+
 	return &token, nil
 }
 
@@ -112,9 +117,9 @@ func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str, level str
 	}
 }
 
-func (indexer *Indexer) resolveTokenMetadata(tm *models.TokenMetadata) error {
+func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.TokenMetadata) error {
 	indexer.logTokenMetadata(*tm, "Trying to resolve", "info")
-	data, err := indexer.resolver.Resolve(tm.Network, tm.Contract, tm.Link)
+	data, err := indexer.resolver.Resolve(ctx, tm.Network, tm.Contract, tm.Link)
 	if err != nil {
 		switch {
 		case errors.Is(err, resolver.ErrNoIPFSResponse) || errors.Is(err, resolver.ErrTezosStorageKeyNotFound):
@@ -129,6 +134,10 @@ func (indexer *Indexer) resolveTokenMetadata(tm *models.TokenMetadata) error {
 			tm.Status = models.StatusFailed
 			indexer.logTokenMetadata(*tm, "Failed", "warn")
 		}
+
+		if e, ok := err.(resolver.ResolvingError); ok {
+			indexer.incrementErrorCounter(e)
+		}
 	} else {
 		metadata, err := mergeTokenMetadata(tm.Metadata, data)
 		if err != nil {
@@ -142,6 +151,8 @@ func (indexer *Indexer) resolveTokenMetadata(tm *models.TokenMetadata) error {
 			tm.Status = models.StatusFailed
 		}
 	}
+
+	indexer.incrementCounter("token", tm.Status)
 	tm.UpdateID = indexer.tokenActionsCounter.Increment()
 	return nil
 }
@@ -172,14 +183,17 @@ func mergeTokenMetadata(src, got []byte) ([]byte, error) {
 	return json.Marshal(srcMap)
 }
 
-func (indexer *Indexer) onTokenTick() error {
+func (indexer *Indexer) onTokenTick(ctx context.Context) error {
 	uresolved, err := indexer.db.GetTokenMetadata(models.StatusNew, 15, 0)
 	if err != nil {
 		return err
 	}
 
 	for i := range uresolved {
-		if err := indexer.resolveTokenMetadata(&uresolved[i]); err != nil {
+		resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		if err := indexer.resolveTokenMetadata(resolveCtx, &uresolved[i]); err != nil {
 			return err
 		}
 		if err := indexer.db.UpdateTokenMetadata(&uresolved[i], map[string]interface{}{

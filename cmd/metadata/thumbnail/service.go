@@ -2,6 +2,7 @@ package thumbnail
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
@@ -28,43 +30,45 @@ type Service struct {
 	gateways []string
 	storage  storage.Storage
 	db       models.Database
+	prom     *prometheus.Service
+	network  string
 
 	workersCount int
 	tasks        chan models.TokenMetadata
-	stop         chan struct{}
 	wg           sync.WaitGroup
 }
 
 // New -
-func New(storage storage.Storage, db models.Database, gateways []string, workersCount int) *Service {
+func New(storage storage.Storage, db models.Database, prom *prometheus.Service, network string, gateways []string, workersCount int) *Service {
 	return &Service{
 		cursor:       0,
 		limit:        50,
 		storage:      storage,
 		gateways:     gateways,
+		prom:         prom,
 		db:           db,
 		workersCount: workersCount,
+		network:      network,
 		tasks:        make(chan models.TokenMetadata, 1024),
-		stop:         make(chan struct{}, workersCount+1),
 	}
 }
 
 // Start -
-func (s *Service) Start() {
+func (s *Service) Start(ctx context.Context) {
 	if s.storage == nil || s.db == nil {
 		return
 	}
 
 	s.wg.Add(1)
-	go s.dispatch()
+	go s.dispatch(ctx)
 
 	for i := 0; i < s.workersCount; i++ {
 		s.wg.Add(1)
-		go s.work()
+		go s.work(ctx)
 	}
 }
 
-func (s *Service) dispatch() {
+func (s *Service) dispatch(ctx context.Context) {
 	defer s.wg.Done()
 
 	ticker := time.NewTicker(time.Second * 2)
@@ -72,7 +76,7 @@ func (s *Service) dispatch() {
 
 	for {
 		select {
-		case <-s.stop:
+		case <-ctx.Done():
 			return
 		case <-ticker.C:
 			if len(s.tasks) > 0 {
@@ -93,12 +97,12 @@ func (s *Service) dispatch() {
 	}
 }
 
-func (s *Service) work() {
+func (s *Service) work(ctx context.Context) {
 	defer s.wg.Done()
 
 	for {
 		select {
-		case <-s.stop:
+		case <-ctx.Done():
 			return
 		case one := <-s.tasks:
 			filename := fmt.Sprintf("%s/%d.png", one.Contract, one.TokenID)
@@ -114,12 +118,17 @@ func (s *Service) work() {
 
 			var found bool
 			for _, format := range raw.Formats {
+				s.incrementMimeCounter(format.MimeType)
+
 				if _, ok := validMimes[format.MimeType]; !ok {
 					continue
 				}
 				found = true
 
-				if err := s.resolve(format.URI, format.MimeType, filename); err != nil {
+				reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+				defer cancel()
+
+				if err := s.resolve(reqCtx, format.URI, format.MimeType, filename); err != nil {
 					log.Error(err)
 					continue
 				}
@@ -129,7 +138,10 @@ func (s *Service) work() {
 			}
 
 			if !found {
-				if err := s.fallback(raw.ThumbnailURI, filename); err != nil {
+				reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+				defer cancel()
+
+				if err := s.fallback(reqCtx, raw.ThumbnailURI, filename); err != nil {
 					log.Error(err)
 					continue
 				}
@@ -148,29 +160,22 @@ func (s *Service) work() {
 
 // Close -
 func (s *Service) Close() error {
-	for i := 0; i < s.workersCount+1; i++ {
-		s.stop <- struct{}{}
-	}
 	s.wg.Wait()
 
-	close(s.stop)
 	close(s.tasks)
 	return nil
 }
 
-func processLink(thumbnailStorage storage.Storage, link, mime, filename string) error {
+func processLink(ctx context.Context, thumbnailStorage storage.Storage, link, mime, filename string) error {
 	if _, err := url.ParseRequestURI(link); err != nil {
 		return errors.Errorf("Invalid file link: %s", link)
 	}
-	client := http.Client{
-		Timeout: 20 * time.Second,
-	}
-	req, err := http.NewRequest("GET", link, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
 	if err != nil {
 		return err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -200,16 +205,16 @@ func createThumbnail(thumbnailStorage storage.Storage, reader io.Reader, mime, f
 	return nil
 }
 
-func (s *Service) fallback(link, filename string) error {
+func (s *Service) fallback(ctx context.Context, link, filename string) error {
 	if link == "" {
 		return nil
 	}
 
 	log.WithField("link", link).WithField("filename", filename).Info("Fallback thumbnail")
-	return s.resolve(link, MimeTypePNG, filename)
+	return s.resolve(ctx, link, MimeTypePNG, filename)
 }
 
-func (s *Service) resolve(link, mime, filename string) error {
+func (s *Service) resolve(ctx context.Context, link, mime, filename string) error {
 	switch {
 	case strings.HasPrefix(link, "ipfs://"):
 		hash, err := helpers.IPFSHash(link)
@@ -220,7 +225,7 @@ func (s *Service) resolve(link, mime, filename string) error {
 		gateways := helpers.ShuffleGateways(s.gateways)
 		for _, gateway := range gateways {
 			link := helpers.IPFSLink(gateway, hash)
-			if err := processLink(s.storage, link, mime, filename); err != nil {
+			if err := processLink(ctx, s.storage, link, mime, filename); err != nil {
 				log.WithField("link", link).WithField("mime", mime).WithField("ipfs", gateway).Error(err)
 				continue
 			}
@@ -229,9 +234,19 @@ func (s *Service) resolve(link, mime, filename string) error {
 		return errors.Wrapf(ErrThumbnailCreating, "link=%s mime=%s", link, mime)
 
 	case strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://"):
-		return processLink(s.storage, link, mime, filename)
+		return processLink(ctx, s.storage, link, mime, filename)
 
 	default:
 		return errors.Wrapf(ErrInvalidThumbnailLink, "link=%s", link)
 	}
+}
+
+func (service *Service) incrementMimeCounter(mime string) {
+	if service.prom == nil {
+		return
+	}
+	service.prom.IncrementCounter("metadata_mime_type", map[string]string{
+		"network": service.network,
+		"mime":    mime,
+	})
 }

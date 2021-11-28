@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/dipdup-net/go-lib/tzkt/api"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
@@ -30,6 +32,7 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 		Link:     string(link),
 		UpdateID: indexer.contractActionsCounter.Increment(),
 	}
+	indexer.incrementCounter("contract", metadata.Status)
 
 	return &metadata, nil
 }
@@ -46,9 +49,9 @@ func (indexer *Indexer) logContractMetadata(cm models.ContractMetadata, str, lev
 	}
 }
 
-func (indexer *Indexer) resolveContractMetadata(cm *models.ContractMetadata) {
+func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.ContractMetadata) {
 	indexer.logContractMetadata(*cm, "Trying to resolve", "info")
-	data, err := indexer.resolver.Resolve(cm.Network, cm.Contract, cm.Link)
+	data, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link)
 	if err != nil {
 		switch {
 		case errors.Is(err, resolver.ErrNoIPFSResponse) || errors.Is(err, resolver.ErrTezosStorageKeyNotFound):
@@ -63,20 +66,29 @@ func (indexer *Indexer) resolveContractMetadata(cm *models.ContractMetadata) {
 			cm.Status = models.StatusFailed
 			indexer.logContractMetadata(*cm, "Failed", "warn")
 		}
+
+		if e, ok := err.(resolver.ResolvingError); ok {
+			indexer.incrementErrorCounter(e)
+		}
 	} else {
 		cm.Metadata = helpers.Escape(data)
 		cm.Status = models.StatusApplied
 	}
 	cm.UpdateID = indexer.contractActionsCounter.Increment()
+	indexer.incrementCounter("contract", cm.Status)
 }
 
-func (indexer *Indexer) onContractTick() error {
+func (indexer *Indexer) onContractTick(ctx context.Context) error {
 	uresolved, err := indexer.db.GetContractMetadata(models.StatusNew, 15, 0)
 	if err != nil {
 		return err
 	}
 	for i := range uresolved {
-		indexer.resolveContractMetadata(&uresolved[i])
+		resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		indexer.resolveContractMetadata(resolveCtx, &uresolved[i])
+
 		if err := indexer.db.UpdateContractMetadata(&uresolved[i], map[string]interface{}{
 			"status":      uresolved[i].Status,
 			"metadata":    uresolved[i].Metadata,
