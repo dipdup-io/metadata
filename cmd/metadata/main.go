@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -21,6 +22,11 @@ const (
 	metricsMetadataHttpErrors = "metadata_http_errors"
 	metricsMetadataMimeType   = "metadata_mime_type"
 )
+
+type startResult struct {
+	cancel  context.CancelFunc
+	indexer *Indexer
+}
 
 func main() {
 	log.SetFormatter(&log.TextFormatter{
@@ -39,35 +45,63 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+	prometheusService := initPrometheus(cfg.Prometheus)
+
+	started := make(chan struct{}, len(cfg.Metadata.Indexers))
+	indexers := make(map[string]*Indexer)
+	indexerCancels := make(map[string]context.CancelFunc)
+	for network, indexer := range cfg.Metadata.Indexers {
+		go func(network string, ind *config.Indexer) {
+			result, err := startIndexer(ctx, cfg, *ind, network, prometheusService)
+			if err != nil {
+				log.Error(err)
+			} else {
+				indexers[network] = result.indexer
+				indexerCancels[network] = result.cancel
+				started <- struct{}{}
+				return
+			}
+
+			ticker := time.NewTicker(time.Minute)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					result, err := startIndexer(ctx, cfg, *ind, network, prometheusService)
+					if err != nil {
+						log.Error(err)
+					} else {
+						indexers[network] = result.indexer
+						indexerCancels[network] = result.cancel
+						started <- struct{}{}
+						return
+					}
+				}
+			}
+		}(network, indexer)
+	}
+
+	<-started
 
 	if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, &models.TokenMetadata{}, &models.ContractMetadata{}); err != nil {
 		log.Error(err)
 		return
 	}
 
-	prometheusService := initPrometheus(cfg.Prometheus)
-
-	indexers := make(map[string]*Indexer)
-	for network, indexer := range cfg.Metadata.Indexers {
-		indexer, err := NewIndexer(ctx, network, indexer, cfg.Database, indexer.Filters, cfg.Metadata.Settings, prometheusService)
-		if err != nil {
-			log.Error(err)
-			return
-		}
-		indexers[network] = indexer
-
-		if err := indexer.Start(ctx); err != nil {
-			log.Error(err)
-			return
-		}
-	}
-
 	<-signals
 
-	cancel()
+	for newtork, cancelIndexer := range indexerCancels {
+		log.Infof("stopping %s indexer...", newtork)
+		cancelIndexer()
+	}
 
 	log.Warn("Trying carefully stopping....")
 	for _, indexer := range indexers {
@@ -96,4 +130,24 @@ func initPrometheus(cfg *golibConfig.Prometheus) *prometheus.Service {
 
 	prometheusService.Start()
 	return prometheusService
+}
+
+func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.Indexer, network string, prom *prometheus.Service) (startResult, error) {
+	var result startResult
+	indexerCtx, cancel := context.WithCancel(ctx)
+
+	indexer, err := NewIndexer(indexerCtx, network, &indexerConfig, cfg.Database, indexerConfig.Filters, cfg.Metadata.Settings, prom)
+	if err != nil {
+		cancel()
+		return result, err
+	}
+	result.indexer = indexer
+
+	if err := indexer.Start(indexerCtx); err != nil {
+		cancel()
+		return result, err
+	}
+
+	result.cancel = cancel
+	return result, nil
 }
