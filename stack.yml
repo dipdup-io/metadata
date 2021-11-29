@@ -1,0 +1,107 @@
+version: "3.7"
+
+services:
+  indexer:
+    image: ${DOCKER_REGISTRY}/dipdup-net/metadata:${TAG}
+    build:
+        dockerfile: build/metadata/Dockerfile
+        context: .
+    depends_on:
+      - db
+      - hasura
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - ADMIN_SECRET=${ADMIN_SECRET:-changeme}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - prometheus-job=${METADATA_SERVICE}
+        - prometheus-port=2112
+    networks:
+      - metadata-network
+      - traefik-public
+
+  db:
+    image: postgres:13
+    restart: always
+    volumes:
+      - db:/var/lib/postgres/data
+    environment: 
+      - POSTGRES_USER=dipdup
+      - POSTGRES_DB=dipdup
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+    networks:
+      - metadata-network
+
+  hasura:
+    image: hasura/graphql-engine:v2.0.1
+    depends_on:
+      - db
+    restart: always
+    environment:
+      - HASURA_GRAPHQL_DATABASE_URL=postgres://dipdup:${POSTGRES_PASSWORD:-changeme}@db:5432/dipdup
+      - HASURA_GRAPHQL_ENABLE_CONSOLE=false
+      - HASURA_GRAPHQL_DEV_MODE=false
+      - HASURA_GRAPHQL_ENABLED_LOG_TYPES=startup, http-log, webhook-log, websocket-log, query-log
+      - HASURA_GRAPHQL_ADMIN_SECRET=${ADMIN_SECRET:-changeme}
+      - HASURA_GRAPHQL_UNAUTHORIZED_ROLE=user
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - traefik.enable=true
+        - traefik.http.services.${METADATA_SERVICE}.loadbalancer.server.port=8080
+        - traefik.http.routers.${METADATA_SERVICE}.rule=Host(`${METADATA_SERVICE}.${METADATA_ROOT_DOMAIN}`)
+        - traefik.http.routers.${METADATA_SERVICE}.entrypoints=https
+    networks:
+      - metadata-network
+      - traefik-public
+
+  imgproxy:
+    image: darthsim/imgproxy:latest
+    restart: always
+    environment:
+      - IMGPROXY_TTL=2592000
+      - IMGPROXY_SO_REUSEPORT=true
+    healthcheck:
+      test: [ "CMD", "imgproxy", "health" ]
+      timeout: 10s
+      interval: 10s
+      retries: 3
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - traefik.enable=true
+        - traefik.http.services.${THUMBS_SERVICE}.loadbalancer.server.port=8080
+        - traefik.http.routers.${THUMBS_SERVICE}.rule=Host(`${THUMBS_SERVICE}.${METADATA_ROOT_DOMAIN}`)
+        - traefik.http.routers.${THUMBS_SERVICE}.entrypoints=https
+        - traefik.http.middlewares.imgproxy-ipfs.replacepathregex.regex=^/(.*)
+        - traefik.http.middlewares.imgproxy-ipfs.replacepathregex.replacement=/insecure/auto/50/50/sm/0/plain/${IPFS_NODE_URI}/ipfs/$${1}@png
+        - traefik.http.middlewares.imgproxy-cors.headers.accesscontrolallowmethods=GET,OPTIONS
+        - traefik.http.middlewares.imgproxy-cors.headers.accesscontrolalloworigin=*
+        - traefik.http.middlewares.imgproxy-cors.headers.accesscontrolmaxage=100  
+        - traefik.http.routers.${THUMBS_SERVICE}.middlewares=imgproxy-ipfs,imgproxy-cors
+    networks:
+      - metadata-network
+      - traefik-public
+
+volumes:
+  db:
+
+networks:
+  metadata-network:
+  traefik-public:
+    external: true
