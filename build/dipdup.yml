@@ -33,3 +33,6 @@ hasura:
   select_limit: 100
   allow_aggregation: false
   rest: true
+
+prometheus:
+  url: ${EXPORT_HOST:-0.0.0.0}:2112
