@@ -64,7 +64,8 @@ func (scanner *Scanner) start(ctx context.Context) {
 		return
 	}
 
-	scanner.listen(ctx)
+	scanner.wg.Add(1)
+	go scanner.listen(ctx)
 }
 
 func (scanner *Scanner) synchronization(ctx context.Context, level uint64) {
@@ -149,6 +150,8 @@ func (scanner *Scanner) subscribe() error {
 }
 
 func (scanner *Scanner) listen(ctx context.Context) {
+	defer scanner.wg.Done()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -174,7 +177,7 @@ func (scanner *Scanner) sync(ctx context.Context, headLevel uint64) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return ctx.Err()
 		default:
 			if headLevel <= scanner.level {
 				if scanner.level < scanner.msg.Level {
@@ -191,7 +194,7 @@ func (scanner *Scanner) sync(ctx context.Context, headLevel uint64) error {
 			}
 
 			if len(updates) > 0 {
-				scanner.processSyncUpdates(updates)
+				scanner.processSyncUpdates(ctx, updates)
 			} else {
 				scanner.level = headLevel
 			}
@@ -221,17 +224,22 @@ func (scanner *Scanner) getSyncUpdates(ctx context.Context, headLevel uint64) ([
 	return scanner.api.GetBigmapUpdates(ctx, filters)
 }
 
-func (scanner *Scanner) processSyncUpdates(updates []api.BigMapUpdate) {
+func (scanner *Scanner) processSyncUpdates(ctx context.Context, updates []api.BigMapUpdate) {
 	for i := range updates {
-		if scanner.msg.Level != 0 && scanner.msg.Level != updates[i].Level {
-			scanner.level = scanner.msg.Level
-			scanner.diffs <- scanner.msg.copy()
-			scanner.msg.clear()
-		}
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			if scanner.msg.Level != 0 && scanner.msg.Level != updates[i].Level {
+				scanner.level = scanner.msg.Level
+				scanner.diffs <- scanner.msg.copy()
+				scanner.msg.clear()
+			}
 
-		scanner.msg.Body = append(scanner.msg.Body, updates[i])
-		scanner.msg.Level = updates[i].Level
-		scanner.lastID = updates[i].ID
+			scanner.msg.Body = append(scanner.msg.Body, updates[i])
+			scanner.msg.Level = updates[i].Level
+			scanner.lastID = updates[i].ID
+		}
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -52,9 +53,10 @@ func main() {
 
 	prometheusService := initPrometheus(cfg.Prometheus)
 
-	started := make(chan struct{}, len(cfg.Metadata.Indexers))
 	indexers := make(map[string]*Indexer)
 	indexerCancels := make(map[string]context.CancelFunc)
+
+	var hasuraInit sync.Once
 	for network, indexer := range cfg.Metadata.Indexers {
 		go func(network string, ind *config.Indexer) {
 			result, err := startIndexer(ctx, cfg, *ind, network, prometheusService)
@@ -63,7 +65,11 @@ func main() {
 			} else {
 				indexers[network] = result.indexer
 				indexerCancels[network] = result.cancel
-				started <- struct{}{}
+				hasuraInit.Do(func() {
+					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
+						log.Error(err)
+					}
+				})
 				return
 			}
 
@@ -81,19 +87,16 @@ func main() {
 					} else {
 						indexers[network] = result.indexer
 						indexerCancels[network] = result.cancel
-						started <- struct{}{}
+						hasuraInit.Do(func() {
+							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
+								log.Error(err)
+							}
+						})
 						return
 					}
 				}
 			}
 		}(network, indexer)
-	}
-
-	<-started
-
-	if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, &models.TokenMetadata{}, &models.ContractMetadata{}); err != nil {
-		log.Error(err)
-		return
 	}
 
 	<-signals
