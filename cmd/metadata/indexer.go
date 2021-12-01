@@ -34,8 +34,8 @@ type Indexer struct {
 	scanner   *tzkt.Scanner
 	prom      *prometheus.Service
 	ctx       *internalContext.Context
-	contracts *service.Service
-	tokens    *service.Service
+	contracts *service.ContractService
+	tokens    *service.TokenService
 	thumbnail *thumbnail.Service
 	settings  config.Settings
 
@@ -71,8 +71,8 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 	if aws := storage.NewAWS(settings.AWS.AccessKey, settings.AWS.Secret, settings.AWS.Region, settings.AWS.BucketName); aws != nil {
 		indexer.thumbnail = thumbnail.New(aws, db, prom, network, settings.IPFSGateways, 10)
 	}
-	indexer.contracts = service.New(indexer.onContractTick, service.WithName("contracts"))
-	indexer.tokens = service.New(indexer.onTokenTick, service.WithName("tokens"))
+	indexer.contracts = service.NewContractService(db, indexer.contractWorker)
+	indexer.tokens = service.NewTokenService(db, indexer.tokenWorker)
 
 	return indexer, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -44,6 +45,7 @@ func main() {
 		log.Error(err)
 		return
 	}
+	runtime.GOMAXPROCS(int(cfg.Metadata.Settings.MaxCPU))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

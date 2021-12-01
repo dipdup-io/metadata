@@ -78,25 +78,16 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 	indexer.incrementCounter("contract", cm.Status)
 }
 
-func (indexer *Indexer) onContractTick(ctx context.Context) error {
-	uresolved, err := indexer.db.GetContractMetadata(models.StatusNew, 15, 0)
-	if err != nil {
-		return err
-	}
-	for i := range uresolved {
-		resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
+func (indexer *Indexer) contractWorker(ctx context.Context, contract models.ContractMetadata) error {
+	resolveCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
 
-		indexer.resolveContractMetadata(resolveCtx, &uresolved[i])
+	indexer.resolveContractMetadata(resolveCtx, &contract)
 
-		if err := indexer.db.UpdateContractMetadata(&uresolved[i], map[string]interface{}{
-			"status":      uresolved[i].Status,
-			"metadata":    uresolved[i].Metadata,
-			"retry_count": uresolved[i].RetryCount,
-			"update_id":   uresolved[i].UpdateID,
-		}); err != nil {
-			return err
-		}
-	}
-	return nil
+	return indexer.db.UpdateContractMetadata(&contract, map[string]interface{}{
+		"status":      contract.Status,
+		"metadata":    contract.Metadata,
+		"retry_count": contract.RetryCount,
+		"update_id":   contract.UpdateID,
+	})
 }

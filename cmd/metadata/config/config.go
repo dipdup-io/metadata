@@ -114,6 +114,7 @@ type Settings struct {
 	MaxRetryCountOnError uint64   `yaml:"max_retry_count_on_error"`
 	Index                []string `yaml:"index"`
 	AWS                  AWS      `yaml:"aws"`
+	MaxCPU               uint64   `yaml:"max_cpu,omitempty"`
 }
 
 // Validate -
@@ -123,6 +124,9 @@ func (cfg *Settings) Validate() error {
 	}
 	if cfg.HTTPTimeout == 0 {
 		cfg.HTTPTimeout = 10
+	}
+	if cfg.MaxCPU == 0 {
+		cfg.MaxCPU = 4
 	}
 	if cfg.MaxRetryCountOnError == 0 {
 		cfg.MaxRetryCountOnError = 3

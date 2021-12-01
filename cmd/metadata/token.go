@@ -183,27 +183,17 @@ func mergeTokenMetadata(src, got []byte) ([]byte, error) {
 	return json.Marshal(srcMap)
 }
 
-func (indexer *Indexer) onTokenTick(ctx context.Context) error {
-	uresolved, err := indexer.db.GetTokenMetadata(models.StatusNew, 15, 0)
-	if err != nil {
+func (indexer *Indexer) tokenWorker(ctx context.Context, token models.TokenMetadata) error {
+	resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	if err := indexer.resolveTokenMetadata(resolveCtx, &token); err != nil {
 		return err
 	}
-
-	for i := range uresolved {
-		resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
-
-		if err := indexer.resolveTokenMetadata(resolveCtx, &uresolved[i]); err != nil {
-			return err
-		}
-		if err := indexer.db.UpdateTokenMetadata(&uresolved[i], map[string]interface{}{
-			"status":      uresolved[i].Status,
-			"metadata":    uresolved[i].Metadata,
-			"retry_count": uresolved[i].RetryCount,
-			"update_id":   uresolved[i].UpdateID,
-		}); err != nil {
-			return err
-		}
-	}
-	return nil
+	return indexer.db.UpdateTokenMetadata(&token, map[string]interface{}{
+		"status":      token.Status,
+		"metadata":    token.Metadata,
+		"retry_count": token.RetryCount,
+		"update_id":   token.UpdateID,
+	})
 }
