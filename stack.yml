@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   indexer:
-    image: ${DOCKER_REGISTRY}/dipdup-net/metadata:${TAG}
+    image: ${DOCKER_REGISTRY:-ghcr.io}/dipdup-net/metadata:${TAG}
     build:
         dockerfile: build/metadata/Dockerfile
         context: .
@@ -44,6 +44,7 @@ services:
       replicas: 1
     networks:
       - metadata-network
+      - pgadmin-private
 
   hasura:
     image: hasura/graphql-engine:v2.0.1
@@ -52,7 +53,7 @@ services:
     restart: always
     environment:
       - HASURA_GRAPHQL_DATABASE_URL=postgres://dipdup:${POSTGRES_PASSWORD:-changeme}@db:5432/dipdup
-      - HASURA_GRAPHQL_ENABLE_CONSOLE=false
+      - HASURA_GRAPHQL_ENABLE_CONSOLE=true
       - HASURA_GRAPHQL_DEV_MODE=false
       - HASURA_GRAPHQL_ENABLED_LOG_TYPES=startup, http-log, webhook-log, websocket-log, query-log
       - HASURA_GRAPHQL_ADMIN_SECRET=${ADMIN_SECRET:-changeme}
@@ -63,8 +64,12 @@ services:
       labels:
         - traefik.enable=true
         - traefik.http.services.${METADATA_SERVICE}.loadbalancer.server.port=8080
-        - traefik.http.routers.${METADATA_SERVICE}.rule=Host(`${METADATA_SERVICE}.${METADATA_ROOT_DOMAIN}`)
+        - "traefik.http.routers.${METADATA_SERVICE}.rule=Host(`${METADATA_SERVICE}.${METADATA_ROOT_DOMAIN}`) && (PathPrefix(`/v1`) || PathPrefix(`/api`))"
         - traefik.http.routers.${METADATA_SERVICE}.entrypoints=https
+        - "traefik.http.routers.${METADATA_SERVICE}-console.rule=Host(`${METADATA_SERVICE}.${SWARM_ROOT_DOMAIN}`)"
+        - traefik.http.routers.${METADATA_SERVICE}-console.entrypoints=https
+        - traefik.http.routers.${METADATA_SERVICE}-console.middlewares=authelia@docker
+
     networks:
       - metadata-network
       - traefik-public
@@ -104,4 +109,6 @@ volumes:
 networks:
   metadata-network:
   traefik-public:
+    external: true
+  pgadmin-private:
     external: true
