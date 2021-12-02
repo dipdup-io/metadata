@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	log "github.com/sirupsen/logrus"
@@ -57,6 +58,12 @@ func (s *ContractService) manager(ctx context.Context) {
 				log.Error(err)
 				continue
 			}
+
+			if len(unresolved) == 0 {
+				time.Sleep(time.Second)
+				continue
+			}
+
 			for i := range unresolved {
 				s.workers <- struct{}{}
 				s.wg.Add(1)

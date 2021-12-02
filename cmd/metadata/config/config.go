@@ -13,19 +13,6 @@ type Config struct {
 	Metadata      Metadata `yaml:"metadata"`
 }
 
-// Validate -
-func (c *Config) Validate() error {
-	for network, mempool := range c.Metadata.Indexers {
-		if err := mempool.DataSource.Validate(); err != nil {
-			return errors.Wrap(err, network)
-		}
-		if err := mempool.Filters.Validate(); err != nil {
-			return errors.Wrap(err, network)
-		}
-	}
-	return c.Metadata.Settings.Validate()
-}
-
 // Substitute -
 func (c *Config) Substitute() error {
 	for _, indexer := range c.Metadata.Indexers {
@@ -69,7 +56,7 @@ func Load(filename string) (cfg Config, err error) {
 // Metadata -
 type Metadata struct {
 	Settings Settings            `yaml:"settings"`
-	Indexers map[string]*Indexer `yaml:"indexers"`
+	Indexers map[string]*Indexer `yaml:"indexers" validate:"min=1"`
 }
 
 // indexers -
@@ -80,21 +67,12 @@ type Indexer struct {
 
 // Filters -
 type Filters struct {
-	Accounts []string `yaml:"accounts"`
-}
-
-// Validate -
-func (cfg Filters) Validate() error {
-	if len(cfg.Accounts) > tzktMaxSubscriptions {
-		return errors.Errorf("Maximum accounts in config is %d. You added %d accounts", tzktMaxSubscriptions, len(cfg.Accounts))
-	}
-
-	return nil
+	Accounts []string `yaml:"accounts" validate:"max=50"`
 }
 
 // MetadataDataSource -
 type MetadataDataSource struct {
-	Tzkt string `yaml:"tzkt"`
+	Tzkt string `yaml:"tzkt" validate:"url"`
 }
 
 // Validate -
@@ -107,51 +85,19 @@ func (cfg MetadataDataSource) Validate() error {
 
 // Settings -
 type Settings struct {
-	IPFSGateways         []string `yaml:"ipfs_gateways"`
+	IPFSGateways         []string `yaml:"ipfs_gateways" validate:"min=1,dive,url"`
 	IPFSPinning          []string `yaml:"ipfs_pinning"`
-	IPFSTimeout          uint64   `yaml:"ipfs_timeout"`
-	HTTPTimeout          uint64   `yaml:"http_timeout"`
-	MaxRetryCountOnError uint64   `yaml:"max_retry_count_on_error"`
-	Index                []string `yaml:"index"`
+	IPFSTimeout          uint64   `yaml:"ipfs_timeout" validate:"min=1"`
+	HTTPTimeout          uint64   `yaml:"http_timeout" validate:"min=1"`
+	MaxRetryCountOnError uint64   `yaml:"max_retry_count_on_error" validate:"min=1"`
 	AWS                  AWS      `yaml:"aws"`
-	MaxCPU               uint64   `yaml:"max_cpu,omitempty"`
-}
-
-// Validate -
-func (cfg *Settings) Validate() error {
-	if cfg.IPFSTimeout == 0 {
-		cfg.IPFSTimeout = 10
-	}
-	if cfg.HTTPTimeout == 0 {
-		cfg.HTTPTimeout = 10
-	}
-	if cfg.MaxCPU == 0 {
-		cfg.MaxCPU = 4
-	}
-	if cfg.MaxRetryCountOnError == 0 {
-		cfg.MaxRetryCountOnError = 3
-	}
-	if len(cfg.Index) == 0 {
-		cfg.Index = []string{"token_metadata", "metadata"}
-	}
-
-	if len(cfg.IPFSGateways) == 0 {
-		return errors.New("Empty IPFS gateway list")
-	}
-
-	for i := range cfg.IPFSGateways {
-		if _, err := url.ParseRequestURI(cfg.IPFSGateways[i]); err != nil {
-			return errors.Wrapf(err, "Invalid IPFS gateway url %s", cfg.IPFSGateways[i])
-		}
-	}
-
-	return nil
+	MaxCPU               uint64   `yaml:"max_cpu,omitempty" validate:"omitempty,min=1"`
 }
 
 // AWS -
 type AWS struct {
-	BucketName string `yaml:"bucket_name"`
-	Region     string `yaml:"region"`
-	AccessKey  string `yaml:"access_key_id"`
-	Secret     string `yaml:"secret_access_key"`
+	BucketName string `yaml:"bucket_name" validate:"omitempty"`
+	Region     string `yaml:"region" validate:"omitempty"`
+	AccessKey  string `yaml:"access_key_id" validate:"omitempty"`
+	Secret     string `yaml:"secret_access_key" validate:"omitempty"`
 }

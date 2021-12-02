@@ -53,8 +53,6 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 	}
 	cont := internalContext.NewContext()
 
-	log.Infof("Indices which will be processed: %s", strings.Join(settings.Index, ", "))
-
 	indexer := &Indexer{
 		scanner:                tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
 		network:                network,

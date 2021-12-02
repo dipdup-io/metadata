@@ -9,6 +9,7 @@ metadata:
     ipfs_timeout: 10
     http_timeout: 10
     max_retry_count_on_error: 3
+    max_cpu: 4
     aws:
       bucket_name: dipdup-thumbnails
       region: eu-central-1
