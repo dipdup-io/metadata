@@ -6,19 +6,19 @@ import (
 	"time"
 
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 // TokenService -
 type TokenService struct {
 	repo    models.TokenRepository
-	handler func(ctx context.Context, contract models.TokenMetadata) error
+	handler func(ctx context.Context, token *models.TokenMetadata) error
 	workers chan struct{}
 	wg      sync.WaitGroup
 }
 
 // NewContractService -
-func NewTokenService(repo models.TokenRepository, handler func(context.Context, models.TokenMetadata) error) *TokenService {
+func NewTokenService(repo models.TokenRepository, handler func(context.Context, *models.TokenMetadata) error) *TokenService {
 	return &TokenService{
 		repo:    repo,
 		handler: handler,
@@ -44,7 +44,7 @@ func (s *TokenService) manager(ctx context.Context) {
 	defer s.wg.Done()
 
 	if s.handler == nil {
-		log.Warn("processor token metadata service: service without handler")
+		log.Warn().Msg("processor token metadata service: service without handler")
 		return
 	}
 
@@ -55,7 +55,7 @@ func (s *TokenService) manager(ctx context.Context) {
 		default:
 			unresolved, err := s.repo.GetTokenMetadata(models.StatusNew, 15, 0)
 			if err != nil {
-				log.Error(err)
+				log.Err(err).Msg("")
 				continue
 			}
 
@@ -64,18 +64,30 @@ func (s *TokenService) manager(ctx context.Context) {
 				continue
 			}
 
+			result := make([]*models.TokenMetadata, 0)
 			for i := range unresolved {
 				s.workers <- struct{}{}
 				s.wg.Add(1)
-				go func(contract models.TokenMetadata) {
+				go func(token *models.TokenMetadata) {
 					defer func() {
 						<-s.workers
 						s.wg.Done()
 					}()
-					if err := s.handler(ctx, contract); err != nil {
-						log.Error(err)
+
+					resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+					defer cancel()
+
+					if err := s.handler(resolveCtx, token); err != nil {
+						log.Err(err).Msg("")
+						return
 					}
-				}(unresolved[i])
+					result = append(result, token)
+				}(&unresolved[i])
+			}
+
+			if err := s.repo.UpdateTokenMetadata(ctx, result); err != nil {
+				log.Err(err).Msg("")
+				return
 			}
 		}
 	}

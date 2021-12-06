@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
+	stdJSON "encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
-	"time"
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
@@ -106,14 +107,14 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.T
 }
 
 func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str, level string) {
-	entry := indexer.log().WithField("contract", tm.Contract).WithField("token_id", tm.TokenID).WithField("link", tm.Link)
+	entry := indexer.log().Str("contract", tm.Contract).Uint64("token_id", tm.TokenID).Str("link", tm.Link)
 	switch level {
 	case "info":
-		entry.Info(str)
+		entry.Msg(str)
 	case "warn":
-		entry.Warn(str)
+		entry.Msg(str)
 	case "error":
-		entry.Error(str)
+		entry.Msg(str)
 	}
 }
 
@@ -124,7 +125,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 		switch {
 		case errors.Is(err, resolver.ErrNoIPFSResponse) || errors.Is(err, resolver.ErrTezosStorageKeyNotFound):
 			tm.RetryCount += 1
-			if tm.RetryCount < int(indexer.settings.MaxRetryCountOnError) {
+			if tm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {
 				indexer.logTokenMetadata(*tm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
 			} else {
 				tm.Status = models.StatusFailed
@@ -144,11 +145,19 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 			return err
 		}
 
+		escaped := helpers.Escape(data)
 		if utf8.Valid(metadata) {
-			tm.Metadata = helpers.Escape(metadata)
 			tm.Status = models.StatusApplied
+
+			var dst bytes.Buffer
+			if err := stdJSON.Compact(&dst, escaped); err != nil {
+				tm.Metadata = escaped
+			} else {
+				tm.Metadata = dst.Bytes()
+			}
 		} else {
 			tm.Status = models.StatusFailed
+			tm.Metadata = escaped
 		}
 	}
 
@@ -181,19 +190,4 @@ func mergeTokenMetadata(src, got []byte) ([]byte, error) {
 		}
 	}
 	return json.Marshal(srcMap)
-}
-
-func (indexer *Indexer) tokenWorker(ctx context.Context, token models.TokenMetadata) error {
-	resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	if err := indexer.resolveTokenMetadata(resolveCtx, &token); err != nil {
-		return err
-	}
-	return indexer.db.UpdateTokenMetadata(&token, map[string]interface{}{
-		"status":      token.Status,
-		"metadata":    token.Metadata,
-		"retry_count": token.RetryCount,
-		"update_id":   token.UpdateID,
-	})
 }

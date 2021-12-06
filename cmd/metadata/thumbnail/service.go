@@ -20,7 +20,7 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
 	"github.com/disintegration/imaging"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 // Service -
@@ -32,24 +32,21 @@ type Service struct {
 	db       models.Database
 	prom     *prometheus.Service
 	network  string
-
-	workersCount int
-	tasks        chan models.TokenMetadata
-	wg           sync.WaitGroup
+	workers  chan struct{}
+	wg       sync.WaitGroup
 }
 
 // New -
 func New(storage storage.Storage, db models.Database, prom *prometheus.Service, network string, gateways []string, workersCount int) *Service {
 	return &Service{
-		cursor:       0,
-		limit:        50,
-		storage:      storage,
-		gateways:     gateways,
-		prom:         prom,
-		db:           db,
-		workersCount: workersCount,
-		network:      network,
-		tasks:        make(chan models.TokenMetadata, 1024),
+		cursor:   0,
+		limit:    50,
+		storage:  storage,
+		gateways: gateways,
+		prom:     prom,
+		db:       db,
+		workers:  make(chan struct{}, workersCount),
+		network:  network,
 	}
 }
 
@@ -61,108 +58,101 @@ func (s *Service) Start(ctx context.Context) {
 
 	s.wg.Add(1)
 	go s.dispatch(ctx)
-
-	for i := 0; i < s.workersCount; i++ {
-		s.wg.Add(1)
-		go s.work(ctx)
-	}
 }
 
 func (s *Service) dispatch(ctx context.Context) {
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(time.Second * 2)
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
-			if len(s.tasks) > 0 {
+		default:
+			metadata, err := s.db.GetUnprocessedImage(s.cursor, s.limit)
+			if err != nil {
+				log.Err(err).Msg("")
 				continue
 			}
 
-			metadata, err := s.db.GetUnprocessedImage(s.cursor, s.limit)
-			if err != nil {
-				log.Error(err)
+			if len(metadata) == 0 {
+				time.Sleep(time.Second)
 				continue
 			}
 
 			for _, one := range metadata {
-				s.tasks <- one
+				s.workers <- struct{}{}
 				s.cursor = one.ID
+				s.wg.Add(1)
+
+				go func(metadata models.TokenMetadata) {
+					defer func() {
+						<-s.workers
+						s.wg.Done()
+					}()
+
+					if err := s.work(ctx, metadata); err != nil {
+						log.Err(err).Msg("")
+					}
+				}(one)
 			}
 		}
 	}
 }
 
-func (s *Service) work(ctx context.Context) {
+func (s *Service) work(ctx context.Context, one models.TokenMetadata) error {
 	defer s.wg.Done()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case one := <-s.tasks:
-			filename := fmt.Sprintf("%s/%d.png", one.Contract, one.TokenID)
-			if s.storage.Exists(filename) {
-				continue
-			}
-
-			var raw Metadata
-			if err := json.Unmarshal(one.Metadata, &raw); err != nil {
-				log.Warn(err.Error())
-				continue
-			}
-
-			var found bool
-			for _, format := range raw.Formats {
-				s.incrementMimeCounter(format.MimeType)
-
-				if _, ok := validMimes[format.MimeType]; !ok {
-					continue
-				}
-				found = true
-
-				reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-				defer cancel()
-
-				if err := s.resolve(reqCtx, format.URI, format.MimeType, filename); err != nil {
-					log.Error(err)
-					continue
-				}
-
-				one.ImageProcessed = true
-				break
-			}
-
-			if !found {
-				reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-				defer cancel()
-
-				if err := s.fallback(reqCtx, raw.ThumbnailURI, filename); err != nil {
-					log.Error(err)
-					continue
-				}
-				one.ImageProcessed = true
-			}
-
-			if one.ImageProcessed {
-				if err := s.db.SetImageProcessed(one); err != nil {
-					log.Error(err)
-					continue
-				}
-			}
-		}
+	filename := fmt.Sprintf("%s/%d.png", one.Contract, one.TokenID)
+	if s.storage.Exists(filename) {
+		return nil
 	}
+
+	var raw Metadata
+	if err := json.Unmarshal(one.Metadata, &raw); err != nil {
+		return err
+	}
+
+	var found bool
+	for _, format := range raw.Formats {
+		s.incrementMimeCounter(format.MimeType)
+
+		if _, ok := validMimes[format.MimeType]; !ok {
+			continue
+		}
+		found = true
+
+		reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+
+		if err := s.resolve(reqCtx, format.URI, format.MimeType, filename); err != nil {
+			return err
+		}
+
+		one.ImageProcessed = true
+		break
+	}
+
+	if !found {
+		reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+
+		if err := s.fallback(reqCtx, raw.ThumbnailURI, filename); err != nil {
+			return err
+		}
+		one.ImageProcessed = true
+	}
+
+	if one.ImageProcessed {
+		return s.db.SetImageProcessed(one)
+	}
+	return nil
 }
 
 // Close -
 func (s *Service) Close() error {
 	s.wg.Wait()
 
-	close(s.tasks)
+	close(s.workers)
 	return nil
 }
 
@@ -210,7 +200,10 @@ func (s *Service) fallback(ctx context.Context, link, filename string) error {
 		return nil
 	}
 
-	log.WithField("link", link).WithField("filename", filename).Info("Fallback thumbnail")
+	log.Info().Fields(map[string]interface{}{
+		"link":     link,
+		"filename": filename,
+	}).Msg("Fallback thumbnail")
 	return s.resolve(ctx, link, MimeTypePNG, filename)
 }
 
@@ -226,7 +219,11 @@ func (s *Service) resolve(ctx context.Context, link, mime, filename string) erro
 		for _, gateway := range gateways {
 			link := helpers.IPFSLink(gateway, hash)
 			if err := processLink(ctx, s.storage, link, mime, filename); err != nil {
-				log.WithField("link", link).WithField("mime", mime).WithField("ipfs", gateway).Error(err)
+				log.Err(err).Fields(map[string]interface{}{
+					"link": link,
+					"mime": mime,
+					"ipfs": gateway,
+				}).Msg("")
 				continue
 			}
 			return nil

@@ -19,10 +19,13 @@ const (
 
 // ContextItem -
 type ContextItem struct {
-	ID      uint64 `gorm:"autoIncrement;not null;" json:"-"`
-	Network string `gorm:"primarykey"`
-	Address string `gorm:"primarykey"`
-	Key     string `gorm:"primarykey"`
+	//nolint
+	tableName struct{} `pg:"dipdup_metadata_context"`
+
+	ID      uint64 `gorm:"autoIncrement;not null;" json:"-"  pg:",nopk,notnull"`
+	Network string `gorm:"primarykey" pg:",pk"`
+	Address string `gorm:"primarykey" pg:",pk"`
+	Key     string `gorm:"primarykey" pg:",pk"`
 	Value   []byte
 }
 

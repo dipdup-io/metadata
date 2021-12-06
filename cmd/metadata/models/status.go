@@ -1,7 +1,7 @@
 package models
 
 // Status - metadata status
-type Status int
+type Status int8
 
 const (
 	StatusNew Status = iota + 1
