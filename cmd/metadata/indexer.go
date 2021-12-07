@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	generalConfig "github.com/dipdup-net/go-lib/config"
+	"github.com/dipdup-net/go-lib/database"
 	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	internalContext "github.com/dipdup-net/metadata/cmd/metadata/context"
@@ -29,7 +30,7 @@ import (
 type Indexer struct {
 	network   string
 	indexName string
-	state     models.State
+	state     database.State
 	resolver  resolver.Receiver
 	db        models.Database
 	scanner   *tzkt.Scanner
@@ -135,12 +136,12 @@ func (indexer *Indexer) Close() error {
 }
 
 func (indexer *Indexer) initState() error {
-	current, err := indexer.db.GetState(indexer.indexName)
+	current, err := indexer.db.State(indexer.indexName)
 	if err != nil {
 		if !errors.Is(err, pg.ErrNoRows) {
 			return err
 		}
-		indexer.state = models.State{
+		indexer.state = database.State{
 			IndexType: models.IndexTypeMetadata,
 			IndexName: indexer.indexName,
 		}

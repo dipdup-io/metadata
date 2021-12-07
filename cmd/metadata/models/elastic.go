@@ -13,6 +13,7 @@ import (
 
 	"github.com/cenkalti/backoff"
 	"github.com/dipdup-net/go-lib/config"
+	"github.com/dipdup-net/go-lib/database"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/go-pg/pg/v10"
@@ -451,8 +452,8 @@ func (e *Elastic) DumpContext(action Action, item ContextItem) error {
 	return nil
 }
 
-// GetState -
-func (e *Elastic) GetState(indexName string) (s State, err error) {
+// State -
+func (e *Elastic) State(indexName string) (s database.State, err error) {
 	hits, err := e.search(
 		fmt.Sprintf(`{"query":{"term":{"index_name":"%s"}}}`, indexName),
 		e.Search.WithIndex(s.TableName()),
@@ -470,7 +471,7 @@ func (e *Elastic) GetState(indexName string) (s State, err error) {
 }
 
 // UpdateState -
-func (e *Elastic) UpdateState(s State) error {
+func (e *Elastic) UpdateState(s database.State) error {
 	data, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -497,13 +498,25 @@ func (e *Elastic) UpdateState(s State) error {
 	return nil
 }
 
+// CreateState -
+func (e *Elastic) CreateState(s database.State) error {
+	// TODO: implement
+	return nil
+}
+
+// DeleteState -
+func (e *Elastic) DeleteState(s database.State) error {
+	// TODO: implement
+	return nil
+}
+
 // Close -
 func (e *Elastic) Close() error {
 	return nil
 }
 
 func (e *Elastic) createIndices() error {
-	if err := e.createIndex(State{}.TableName()); err != nil {
+	if err := e.createIndex(database.State{}.TableName()); err != nil {
 		return err
 	}
 	if err := e.createIndex(ContractMetadata{}.TableName()); err != nil {

@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/dipdup-net/go-lib/config"
+	"github.com/dipdup-net/go-lib/database"
 )
 
 // Database -
@@ -12,7 +13,7 @@ type Database interface {
 	ContractRepository
 	TokenRepository
 	ContextRepository
-	StateRepository
+	database.StateRepository
 	io.Closer
 }
 
