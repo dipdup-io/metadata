@@ -8,8 +8,8 @@ import (
 	"github.com/dipdup-net/go-lib/cmdline"
 	"github.com/dipdup-net/go-lib/config"
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
