@@ -1,23 +1,23 @@
 package main
 
 import (
+	"os"
 	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/dipdup-net/go-lib/cmdline"
 	"github.com/dipdup-net/go-lib/config"
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
-	log "github.com/sirupsen/logrus"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var es *elasticsearch.Client
 
 func main() {
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	args := cmdline.Parse()
 	if args.Help {
@@ -26,18 +26,18 @@ func main() {
 
 	cfg, err := config.Load(args.Config)
 	if err != nil {
-		log.Error(err)
+		log.Err(err).Msg("")
 		return
 	}
 
 	if cfg.Database.Kind != "elastic" {
-		log.Errorf("Invalid database kind: want=elastic got=%s", cfg.Database.Kind)
+		log.Error().Msgf("Invalid database kind: want=elastic got=%s", cfg.Database.Kind)
 		return
 	}
 
 	elastic, err := createElastic(cfg.Database.Path)
 	if err != nil {
-		log.Error(err)
+		log.Err(err).Msg("")
 		return
 	}
 	es = elastic

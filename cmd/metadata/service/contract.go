@@ -6,21 +6,21 @@ import (
 	"time"
 
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 // ContractService -
 type ContractService struct {
-	repo    models.ContractRepository
-	handler func(ctx context.Context, contract models.ContractMetadata) error
+	db      models.Database
+	handler func(ctx context.Context, contract *models.ContractMetadata) error
 	workers chan struct{}
 	wg      sync.WaitGroup
 }
 
 // NewContractService -
-func NewContractService(repo models.ContractRepository, handler func(context.Context, models.ContractMetadata) error) *ContractService {
+func NewContractService(db models.Database, handler func(context.Context, *models.ContractMetadata) error) *ContractService {
 	return &ContractService{
-		repo:    repo,
+		db:      db,
 		handler: handler,
 		workers: make(chan struct{}, 10),
 	}
@@ -44,7 +44,7 @@ func (s *ContractService) manager(ctx context.Context) {
 	defer s.wg.Done()
 
 	if s.handler == nil {
-		log.Warn("processor contract metadata service: service without handler")
+		log.Warn().Msg("processor contract metadata service: service without handler")
 		return
 	}
 
@@ -53,9 +53,9 @@ func (s *ContractService) manager(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
-			unresolved, err := s.repo.GetContractMetadata(models.StatusNew, 15, 0)
+			unresolved, err := s.db.GetContractMetadata(models.StatusNew, 15, 0)
 			if err != nil {
-				log.Error(err)
+				log.Err(err).Msg("")
 				continue
 			}
 
@@ -64,18 +64,31 @@ func (s *ContractService) manager(ctx context.Context) {
 				continue
 			}
 
+			result := make([]*models.ContractMetadata, 0)
 			for i := range unresolved {
 				s.workers <- struct{}{}
 				s.wg.Add(1)
-				go func(contract models.ContractMetadata) {
+				go func(contract *models.ContractMetadata) {
 					defer func() {
 						<-s.workers
 						s.wg.Done()
 					}()
-					if err := s.handler(ctx, contract); err != nil {
-						log.Error(err)
+
+					handlerCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+					defer cancel()
+
+					if err := s.handler(handlerCtx, contract); err != nil {
+						log.Err(err).Msg("")
+						return
 					}
-				}(unresolved[i])
+
+					result = append(result, contract)
+				}(&unresolved[i])
+			}
+
+			if err := s.db.UpdateContractMetadata(ctx, result); err != nil {
+				log.Err(err).Msg("")
+				continue
 			}
 		}
 	}

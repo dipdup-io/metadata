@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	stdJSON "encoding/json"
 	"fmt"
-	"time"
+	"unicode/utf8"
 
 	"github.com/dipdup-net/go-lib/tzkt/api"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
@@ -38,25 +40,25 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 }
 
 func (indexer *Indexer) logContractMetadata(cm models.ContractMetadata, str, level string) {
-	entry := indexer.log().WithField("contract", cm.Contract).WithField("link", cm.Link)
+	entry := indexer.log().Str("contract", cm.Contract).Str("link", cm.Link)
 	switch level {
 	case "info":
-		entry.Info(str)
+		entry.Msg(str)
 	case "warn":
-		entry.Warn(str)
+		entry.Msg(str)
 	case "error":
-		entry.Error(str)
+		entry.Msg(str)
 	}
 }
 
-func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.ContractMetadata) {
+func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.ContractMetadata) error {
 	indexer.logContractMetadata(*cm, "Trying to resolve", "info")
 	data, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link)
 	if err != nil {
 		switch {
 		case errors.Is(err, resolver.ErrNoIPFSResponse) || errors.Is(err, resolver.ErrTezosStorageKeyNotFound):
 			cm.RetryCount += 1
-			if cm.RetryCount < int(indexer.settings.MaxRetryCountOnError) {
+			if cm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {
 				indexer.logContractMetadata(*cm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
 			} else {
 				cm.Status = models.StatusFailed
@@ -71,23 +73,23 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 			indexer.incrementErrorCounter(e)
 		}
 	} else {
-		cm.Metadata = helpers.Escape(data)
-		cm.Status = models.StatusApplied
+		escaped := helpers.Escape(data)
+
+		if utf8.Valid(escaped) {
+			cm.Status = models.StatusApplied
+
+			var dst bytes.Buffer
+			if err := stdJSON.Compact(&dst, escaped); err != nil {
+				cm.Metadata = escaped
+			} else {
+				cm.Metadata = dst.Bytes()
+			}
+		} else {
+			cm.Metadata = escaped
+			cm.Status = models.StatusFailed
+		}
 	}
 	cm.UpdateID = indexer.contractActionsCounter.Increment()
 	indexer.incrementCounter("contract", cm.Status)
-}
-
-func (indexer *Indexer) contractWorker(ctx context.Context, contract models.ContractMetadata) error {
-	resolveCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-
-	indexer.resolveContractMetadata(resolveCtx, &contract)
-
-	return indexer.db.UpdateContractMetadata(&contract, map[string]interface{}{
-		"status":      contract.Status,
-		"metadata":    contract.Metadata,
-		"retry_count": contract.RetryCount,
-		"update_id":   contract.UpdateID,
-	})
+	return nil
 }

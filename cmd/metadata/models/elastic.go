@@ -13,11 +13,11 @@ import (
 
 	"github.com/cenkalti/backoff"
 	"github.com/dipdup-net/go-lib/config"
-	"github.com/dipdup-net/go-lib/state"
+	"github.com/dipdup-net/go-lib/database"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
+	"github.com/go-pg/pg/v10"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 
 	jsoniter "github.com/json-iterator/go"
 )
@@ -145,36 +145,45 @@ func (e *Elastic) GetContractMetadata(status Status, limit, offset int) ([]Contr
 }
 
 // UpdateContractMetadata -
-func (e *Elastic) UpdateContractMetadata(metadata *ContractMetadata, fields map[string]interface{}) error {
-	fields["updated_at"] = time.Now().Unix()
-	data, err := json.Marshal(fields)
-	if err != nil {
-		return err
+func (e *Elastic) UpdateContractMetadata(ctx context.Context, metadata []*ContractMetadata) error {
+	if len(metadata) == 0 {
+		return nil
 	}
-	var buf bytes.Buffer
-	if err := stdJSON.Compact(&buf, data); err != nil {
-		return err
-	}
+	bulk := bytes.NewBuffer([]byte{})
+	for i := range metadata {
+		metadata[i].UpdatedAt = metadata[i].CreatedAt
+		meta := fmt.Sprintf(`{"update":{"_id":"%d","_index":"%s"}}`, time.Now().UnixNano(), metadata[i].TableName())
+		if _, err := bulk.WriteString(meta); err != nil {
+			return err
+		}
 
-	response, err := e.Update(
-		metadata.TableName(),
-		fmt.Sprintf("%d", metadata.ID),
-		strings.NewReader(fmt.Sprintf(`{"doc":%s}`, buf.String())),
-		e.Update.WithRefresh("true"),
-	)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
+		if err := bulk.WriteByte('\n'); err != nil {
+			return err
+		}
 
-	if response.IsError() {
-		return errors.New(response.String())
+		data, err := json.Marshal(metadata[i])
+		if err != nil {
+			return err
+		}
+		if err := stdJSON.Compact(bulk, data); err != nil {
+			return err
+		}
+		if err := bulk.WriteByte('\n'); err != nil {
+			return err
+		}
+
+		if (i%1000 == 0 && i > 0) || i == len(metadata)-1 {
+			if err := e.bulk(bulk); err != nil {
+				return err
+			}
+			bulk.Reset()
+		}
 	}
 	return nil
 }
 
 // SaveContractMetadata -
-func (e *Elastic) SaveContractMetadata(metadata []*ContractMetadata) error {
+func (e *Elastic) SaveContractMetadata(ctx context.Context, metadata []*ContractMetadata) error {
 	if len(metadata) == 0 {
 		return nil
 	}
@@ -246,36 +255,45 @@ func (e *Elastic) GetTokenMetadata(status Status, limit, offset int) ([]TokenMet
 }
 
 // UpdateTokenMetadata -
-func (e *Elastic) UpdateTokenMetadata(metadata *TokenMetadata, fields map[string]interface{}) error {
-	fields["updated_at"] = time.Now().Unix()
-	data, err := json.Marshal(fields)
-	if err != nil {
-		return err
+func (e *Elastic) UpdateTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error {
+	if len(metadata) == 0 {
+		return nil
 	}
-	var buf bytes.Buffer
-	if err := stdJSON.Compact(&buf, data); err != nil {
-		return err
-	}
+	bulk := bytes.NewBuffer([]byte{})
+	for i := range metadata {
+		metadata[i].UpdatedAt = metadata[i].CreatedAt
+		meta := fmt.Sprintf(`{"update":{"_id":"%d","_index":"%s"}}`, time.Now().UnixNano(), metadata[i].TableName())
+		if _, err := bulk.WriteString(meta); err != nil {
+			return err
+		}
 
-	response, err := e.Update(
-		metadata.TableName(),
-		fmt.Sprintf("%d", metadata.ID),
-		strings.NewReader(fmt.Sprintf(`{"doc":%s}`, buf.String())),
-		e.Update.WithRefresh("true"),
-	)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
+		if err := bulk.WriteByte('\n'); err != nil {
+			return err
+		}
 
-	if response.IsError() {
-		return errors.New(response.String())
+		data, err := json.Marshal(metadata[i])
+		if err != nil {
+			return err
+		}
+		if err := stdJSON.Compact(bulk, data); err != nil {
+			return err
+		}
+		if err := bulk.WriteByte('\n'); err != nil {
+			return err
+		}
+
+		if (i%1000 == 0 && i > 0) || i == len(metadata)-1 {
+			if err := e.bulk(bulk); err != nil {
+				return err
+			}
+			bulk.Reset()
+		}
 	}
 	return nil
 }
 
 // SaveContractMetadata -
-func (e *Elastic) SaveTokenMetadata(metadata []*TokenMetadata) error {
+func (e *Elastic) SaveTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error {
 	if len(metadata) == 0 {
 		return nil
 	}
@@ -434,8 +452,8 @@ func (e *Elastic) DumpContext(action Action, item ContextItem) error {
 	return nil
 }
 
-// GetState -
-func (e *Elastic) GetState(indexName string) (s state.State, err error) {
+// State -
+func (e *Elastic) State(indexName string) (s database.State, err error) {
 	hits, err := e.search(
 		fmt.Sprintf(`{"query":{"term":{"index_name":"%s"}}}`, indexName),
 		e.Search.WithIndex(s.TableName()),
@@ -446,14 +464,14 @@ func (e *Elastic) GetState(indexName string) (s state.State, err error) {
 	}
 
 	if len(hits.Hits.Hits) != 1 {
-		return s, errors.Wrapf(gorm.ErrRecordNotFound, "%s %s", indexName, s.TableName())
+		return s, errors.Wrapf(pg.ErrNoRows, "%s %s", indexName, s.TableName())
 	}
 	err = json.Unmarshal(hits.Hits.Hits[0].Source, &s)
 	return
 }
 
 // UpdateState -
-func (e *Elastic) UpdateState(s state.State) error {
+func (e *Elastic) UpdateState(s database.State) error {
 	data, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -480,13 +498,25 @@ func (e *Elastic) UpdateState(s state.State) error {
 	return nil
 }
 
+// CreateState -
+func (e *Elastic) CreateState(s database.State) error {
+	// TODO: implement
+	return nil
+}
+
+// DeleteState -
+func (e *Elastic) DeleteState(s database.State) error {
+	// TODO: implement
+	return nil
+}
+
 // Close -
 func (e *Elastic) Close() error {
 	return nil
 }
 
 func (e *Elastic) createIndices() error {
-	if err := e.createIndex(state.State{}.TableName()); err != nil {
+	if err := e.createIndex(database.State{}.TableName()); err != nil {
 		return err
 	}
 	if err := e.createIndex(ContractMetadata{}.TableName()); err != nil {

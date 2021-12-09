@@ -1,21 +1,25 @@
 package models
 
 import (
-	"gorm.io/datatypes"
+	"context"
+	"time"
 )
 
 // ContractMetadata -
 type ContractMetadata struct {
-	ID         uint64         `gorm:"autoIncrement;not null;" json:"-"`
-	CreatedAt  int64          `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt  int64          `gorm:"autoUpdateTime" json:"updated_at"`
-	Network    string         `gorm:"primaryKey" json:"network"`
-	Contract   string         `gorm:"primaryKey" json:"contract"`
-	RetryCount int            `gorm:"type:SMALLINT" json:"retry_count"`
-	Link       string         `json:"link"`
-	Status     Status         `gorm:"type:SMALLINT" json:"status"`
-	Metadata   datatypes.JSON `json:"metadata,omitempty"`
-	UpdateID   int64          `gorm:"type:int4;uniqueIndex:contract_metadata_update_id_key;autoIncrement:false;not null;" json:"-"`
+	//nolint
+	tableName struct{} `pg:"contract_metadata"`
+
+	ID         uint64 `gorm:"autoIncrement;not null;" json:"-" pg:",notnull,nopk"`
+	CreatedAt  int64  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt  int64  `gorm:"autoUpdateTime" json:"updated_at"`
+	UpdateID   int64  `gorm:"type:int4;uniqueIndex:contract_metadata_update_id_key;autoIncrement:false;not null;" json:"-" pg:",use_zero,notnull"`
+	Network    string `gorm:"primaryKey" json:"network" pg:",pk"`
+	Contract   string `gorm:"primaryKey" json:"contract" pg:",pk"`
+	Link       string `json:"link"`
+	Status     Status `gorm:"type:SMALLINT" json:"status"`
+	RetryCount int8   `gorm:"type:SMALLINT" json:"retry_count" pg:",use_zero"`
+	Metadata   JSONB  `json:"metadata,omitempty" pg:",type:jsonb,use_zero"`
 }
 
 // Table -
@@ -23,10 +27,23 @@ func (ContractMetadata) TableName() string {
 	return "contract_metadata"
 }
 
+// BeforeInsert -
+func (cm *ContractMetadata) BeforeInsert(ctx context.Context) (context.Context, error) {
+	cm.UpdatedAt = time.Now().Unix()
+	cm.CreatedAt = cm.UpdatedAt
+	return ctx, nil
+}
+
+// BeforeUpdate -
+func (cm *ContractMetadata) BeforeUpdate(ctx context.Context) (context.Context, error) {
+	cm.UpdatedAt = time.Now().Unix()
+	return ctx, nil
+}
+
 // ContractRepository -
 type ContractRepository interface {
 	GetContractMetadata(status Status, limit, offset int) ([]ContractMetadata, error)
-	UpdateContractMetadata(metadata *ContractMetadata, fields map[string]interface{}) error
-	SaveContractMetadata(metadata []*ContractMetadata) error
+	UpdateContractMetadata(ctx context.Context, metadata []*ContractMetadata) error
+	SaveContractMetadata(ctx context.Context, metadata []*ContractMetadata) error
 	LastContractUpdateID() (int64, error)
 }

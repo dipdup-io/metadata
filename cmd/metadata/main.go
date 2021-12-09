@@ -9,7 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/dipdup-net/go-lib/cmdline"
 	golibConfig "github.com/dipdup-net/go-lib/config"
@@ -31,9 +32,10 @@ type startResult struct {
 }
 
 func main() {
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
+	log.Logger = log.Output(zerolog.ConsoleWriter{
+		Out:        os.Stderr,
+		TimeFormat: "2006-01-02 15:04:05",
+	}).Level(zerolog.InfoLevel)
 
 	args := cmdline.Parse()
 	if args.Help {
@@ -42,7 +44,7 @@ func main() {
 
 	cfg, err := config.Load(args.Config)
 	if err != nil {
-		log.Error(err)
+		log.Err(err).Msg("")
 		return
 	}
 	runtime.GOMAXPROCS(int(cfg.Metadata.Settings.MaxCPU))
@@ -63,13 +65,13 @@ func main() {
 		go func(network string, ind *config.Indexer) {
 			result, err := startIndexer(ctx, cfg, *ind, network, prometheusService)
 			if err != nil {
-				log.Error(err)
+				log.Err(err).Msg("")
 			} else {
 				indexers[network] = result.indexer
 				indexerCancels[network] = result.cancel
 				hasuraInit.Do(func() {
 					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
-						log.Error(err)
+						log.Err(err).Msg("")
 					}
 				})
 				return
@@ -85,13 +87,13 @@ func main() {
 				case <-ticker.C:
 					result, err := startIndexer(ctx, cfg, *ind, network, prometheusService)
 					if err != nil {
-						log.Error(err)
+						log.Err(err).Msg("")
 					} else {
 						indexers[network] = result.indexer
 						indexerCancels[network] = result.cancel
 						hasuraInit.Do(func() {
 							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
-								log.Error(err)
+								log.Err(err).Msg("")
 							}
 						})
 						return
@@ -104,21 +106,21 @@ func main() {
 	<-signals
 
 	for newtork, cancelIndexer := range indexerCancels {
-		log.Infof("stopping %s indexer...", newtork)
+		log.Info().Msgf("stopping %s indexer...", newtork)
 		cancelIndexer()
 	}
 
-	log.Warn("Trying carefully stopping....")
+	log.Warn().Msgf("Trying carefully stopping....")
 	for _, indexer := range indexers {
 		if err := indexer.Close(); err != nil {
-			log.Error(err)
+			log.Err(err).Msg("")
 			return
 		}
 	}
 
 	if prometheusService != nil {
 		if err := prometheusService.Close(); err != nil {
-			log.Error(err)
+			log.Err(err).Msg("")
 		}
 	}
 

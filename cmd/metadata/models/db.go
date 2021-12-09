@@ -3,11 +3,13 @@ package models
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/dipdup-net/go-lib/config"
-	"github.com/dipdup-net/go-lib/state"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
+	"github.com/dipdup-net/go-lib/database"
+	pg "github.com/go-pg/pg/v10"
+	"github.com/go-pg/pg/v10/orm"
+	"github.com/rs/zerolog/log"
 )
 
 // index type
@@ -22,177 +24,175 @@ func IndexName(network string) string {
 
 // RelativeDatabase -
 type RelativeDatabase struct {
-	*gorm.DB
+	*database.PgGo
 }
 
 // NewRelativeDatabase -
 func NewRelativeDatabase(ctx context.Context, cfg config.Database) (*RelativeDatabase, error) {
-	db, err := state.OpenConnection(ctx, cfg)
-	if err != nil {
+	db := database.NewPgGo()
+	if err := db.Connect(ctx, cfg); err != nil {
 		return nil, err
 	}
 
-	sql, err := db.DB()
-	if err != nil {
-		return nil, err
-	}
+	database.Wait(ctx, db, 5*time.Second)
 
-	if cfg.Kind == config.DBKindSqlite {
-		sql.SetMaxOpenConns(1)
-	}
-
-	if err := db.AutoMigrate(&state.State{}, &ContractMetadata{}, &TokenMetadata{}, &ContextItem{}); err != nil {
-		if err := sql.Close(); err != nil {
+	for _, data := range []interface{}{
+		&database.State{}, &ContractMetadata{}, &TokenMetadata{}, &ContextItem{},
+	} {
+		if err := db.DB().WithContext(ctx).Model(data).CreateTable(&orm.CreateTableOptions{
+			IfNotExists: true,
+		}); err != nil {
+			if err := db.Close(); err != nil {
+				return nil, err
+			}
 			return nil, err
 		}
-		return nil, err
 	}
+	db.DB().AddQueryHook(dbLogger{})
+
 	return &RelativeDatabase{db}, nil
+}
+
+type dbLogger struct{}
+
+func (d dbLogger) BeforeQuery(c context.Context, q *pg.QueryEvent) (context.Context, error) {
+	q.StartTime = time.Now()
+	return c, nil
+}
+
+func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
+	duration := time.Since(q.StartTime).Milliseconds()
+	raw, err := q.FormattedQuery()
+	if err != nil {
+		return err
+	}
+	sql := string(raw)
+	log.Debug().Msgf("[%d ms] %+v", duration, sql)
+
+	return nil
 }
 
 // GetContractMetadata -
 func (db *RelativeDatabase) GetContractMetadata(status Status, limit, offset int) (all []ContractMetadata, err error) {
-	query := db.Model(&ContractMetadata{}).Where("status = ?", status)
+	query := db.DB().Model(&all).Where("status = ?", status)
 	if limit > 0 {
 		query.Limit(limit)
 	}
 	if offset > 0 {
 		query.Offset(offset)
 	}
-	err = query.Order("retry_count asc").Find(&all).Error
+	err = query.Order("retry_count asc").Select()
 	return
 }
 
 // UpdateContractMetadata -
-func (db *RelativeDatabase) UpdateContractMetadata(metadata *ContractMetadata, fields map[string]interface{}) error {
-	return db.Model(metadata).Updates(fields).Error
-}
-
-// SaveContractMetadata -
-func (db *RelativeDatabase) SaveContractMetadata(metadata []*ContractMetadata) error {
+func (db *RelativeDatabase) UpdateContractMetadata(ctx context.Context, metadata []*ContractMetadata) error {
 	if len(metadata) == 0 {
 		return nil
 	}
-	for i := range metadata {
-		if err := db.Clauses(clause.OnConflict{
-			Columns: []clause.Column{
-				{Name: "network"},
-				{Name: "contract"},
-			},
-			DoUpdates: clause.AssignmentColumns([]string{"metadata", "link", "update_id", "status"}),
-		}).Create(metadata[i]).Error; err != nil {
-			return err
-		}
+
+	_, err := db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count").WherePK().Update()
+	return err
+}
+
+// SaveContractMetadata -
+func (db *RelativeDatabase) SaveContractMetadata(ctx context.Context, metadata []*ContractMetadata) error {
+	if len(metadata) == 0 {
+		return nil
 	}
-	return nil
+	_, err := db.DB().Model(&metadata).
+		OnConflict("(network, contract) DO UPDATE SET metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
+		Insert()
+	return err
 }
 
 // LastTokenUpdateID -
 func (db *RelativeDatabase) LastContractUpdateID() (updateID int64, err error) {
-	err = db.Model(&ContractMetadata{}).Select("max(update_id)").Scan(&updateID).Error
+	err = db.DB().Model(&ContractMetadata{}).ColumnExpr("max(update_id)").Select(&updateID)
 	return
 }
 
 // GetTokenMetadata -
 func (db *RelativeDatabase) GetTokenMetadata(status Status, limit, offset int) (all []TokenMetadata, err error) {
-	query := db.Model(&TokenMetadata{}).Where("status = ?", status)
+	query := db.DB().Model(&all).Where("status = ?", status)
 	if limit > 0 {
 		query.Limit(limit)
 	}
 	if offset > 0 {
 		query.Offset(offset)
 	}
-	err = query.Order("retry_count asc").Find(&all).Error
+	err = query.Order("retry_count asc").Select()
 	return
 }
 
 // UpdateTokenMetadata -
-func (db *RelativeDatabase) UpdateTokenMetadata(metadata *TokenMetadata, fields map[string]interface{}) error {
-	return db.Model(metadata).
-		Where("network = ?", metadata.Network).
-		Where("contract = ?", metadata.Contract).
-		Where("token_id = ?", metadata.TokenID).
-		Updates(fields).Error
-}
-
-// SaveTokenMetadata -
-func (db *RelativeDatabase) SaveTokenMetadata(metadata []*TokenMetadata) error {
+func (db *RelativeDatabase) UpdateTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error {
 	if len(metadata) == 0 {
 		return nil
 	}
-	for i := range metadata {
-		if err := db.Clauses(clause.OnConflict{
-			Columns: []clause.Column{
-				{Name: "network"},
-				{Name: "contract"},
-				{Name: "token_id"},
-			},
-			DoUpdates: clause.AssignmentColumns([]string{"metadata", "link", "update_id", "status"}),
-		}).Create(metadata[i]).Error; err != nil {
-			return err
-		}
+
+	_, err := db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "link").WherePK().Update()
+	return err
+}
+
+// SaveTokenMetadata -
+func (db *RelativeDatabase) SaveTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error {
+	if len(metadata) == 0 {
+		return nil
 	}
-	return nil
+
+	_, err := db.DB().Model(&metadata).
+		OnConflict("(network, contract, token_id) DO UPDATE SET metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
+		Insert()
+	return err
 }
 
 // SetImageProcessed -
 func (db *RelativeDatabase) SetImageProcessed(token TokenMetadata) error {
-	return db.Model(&token).Update("image_processed", true).Error
+	_, err := db.DB().Model(&token).Set("image_processed", true).WherePK().Update()
+	return err
 }
 
 // GetUnprocessedImage -
 func (db *RelativeDatabase) GetUnprocessedImage(from uint64, limit int) (all []TokenMetadata, err error) {
-	query := db.Model(&TokenMetadata{}).Where("status = 3 AND image_processed = false")
+	query := db.DB().Model(&all).Where("status = 3 AND image_processed = false")
 	if from > 0 {
 		query.Where("id > ?", from)
 	}
-	err = query.Limit(limit).Order("id asc").Find(&all).Error
+	err = query.Limit(limit).Order("id asc").Select()
 	return
 }
 
 // CurrentContext -
 func (db *RelativeDatabase) CurrentContext() (updates []ContextItem, err error) {
-	err = db.Model(&ContextItem{}).Find(&updates).Error
+	err = db.DB().Model(&updates).Select()
 	return
 }
 
 // LastTokenUpdateID -
 func (db *RelativeDatabase) LastTokenUpdateID() (updateID int64, err error) {
-	err = db.Model(&TokenMetadata{}).Select("max(update_id)").Scan(&updateID).Error
+	err = db.DB().Model(&TokenMetadata{}).ColumnExpr("max(update_id)").Select(&updateID)
 	return
 }
 
 // DumpContext -
 func (db *RelativeDatabase) DumpContext(action Action, item ContextItem) error {
 	switch action {
-	case ActionCreate, ActionUpdate:
-		if err := db.Save(&item).Error; err != nil {
-			return err
-		}
+	case ActionUpdate:
+		_, err := db.DB().Model(&item).WherePK().Update()
+		return err
+
+	case ActionCreate:
+		_, err := db.DB().Model(&item).Insert()
+		return err
 	case ActionDelete:
-		if err := db.Delete(&item).Error; err != nil {
-			return err
-		}
+		_, err := db.DB().Model(&item).Delete()
+		return err
 	}
 	return nil
 }
 
-// GetState -
-func (db *RelativeDatabase) GetState(indexName string) (s state.State, err error) {
-	err = db.Where("index_name = ?", indexName).First(&s).Error
-	return
-}
-
-// UpdateState -
-func (db *RelativeDatabase) UpdateState(s state.State) error {
-	return s.Update(db.DB)
-}
-
 // Close -
 func (db *RelativeDatabase) Close() error {
-	sql, err := db.DB.DB()
-	if err != nil {
-		return err
-	}
-	return sql.Close()
+	return db.PgGo.Close()
 }

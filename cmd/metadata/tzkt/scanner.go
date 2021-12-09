@@ -10,7 +10,7 @@ import (
 	"github.com/dipdup-net/go-lib/tzkt/api"
 	"github.com/dipdup-net/go-lib/tzkt/events"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -55,12 +55,12 @@ func (scanner *Scanner) Start(ctx context.Context, level uint64) {
 
 func (scanner *Scanner) start(ctx context.Context) {
 	if err := scanner.client.Connect(); err != nil {
-		log.Error(err)
+		log.Err(err).Msg("")
 		return
 	}
 
 	if err := scanner.subscribe(); err != nil {
-		log.Error(err)
+		log.Err(err).Msg("")
 		return
 	}
 
@@ -73,10 +73,10 @@ func (scanner *Scanner) synchronization(ctx context.Context, level uint64) {
 
 	head, err := scanner.api.GetHead(ctx)
 	if err != nil {
-		log.Error(err)
+		log.Err(err).Msg("")
 		return
 	}
-	log.Infof("Current TzKT head is %d. Indexer state is %d.", head.Level, level)
+	log.Info().Msgf("Current TzKT head is %d. Indexer state is %d.", head.Level, level)
 
 	scanner.level = level
 
@@ -91,13 +91,13 @@ func (scanner *Scanner) synchronization(ctx context.Context, level uint64) {
 			}
 
 			if err := scanner.sync(ctx, head.Level); err != nil {
-				log.Error(err)
+				log.Err(err).Msg("")
 				return
 			}
 
 			head, err = scanner.api.GetHead(ctx)
 			if err != nil {
-				log.Error(err)
+				log.Err(err).Msg("")
 				return
 			}
 		}
@@ -157,17 +157,21 @@ func (scanner *Scanner) listen(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case msg := <-scanner.client.Listen():
-			switch msg.Channel {
-			case events.ChannelBlocks:
-				if err := scanner.handleBlocks(msg); err != nil {
-					log.Error(err)
+			switch msg.Type {
+			case events.MessageTypeData:
+				switch msg.Channel {
+				case events.ChannelBlocks:
+					if err := scanner.handleBlocks(msg); err != nil {
+						log.Err(err).Msg("")
+					}
+				case events.ChannelBigMap:
+					if err := scanner.handleBigMaps(msg); err != nil {
+						log.Err(err).Msg("")
+					}
+				default:
+					log.Error().Msgf("Unknown channel %s", msg.Channel)
 				}
-			case events.ChannelBigMap:
-				if err := scanner.handleBigMaps(msg); err != nil {
-					log.Error(err)
-				}
-			default:
-				log.Errorf("Unknown channel %s", msg.Channel)
+			case events.MessageTypeState, events.MessageTypeReorg, events.MessageTypeSubscribed:
 			}
 		}
 	}
@@ -244,51 +248,52 @@ func (scanner *Scanner) processSyncUpdates(ctx context.Context, updates []api.Bi
 }
 
 func (scanner *Scanner) handleBlocks(msg events.Message) error {
-	switch msg.Type {
-	case events.MessageTypeData:
-		body, ok := msg.Body.([]interface{})
-		if !ok {
-			return errors.Errorf("Invalid body type: %T", msg.Body)
-		}
-		if len(body) == 0 {
-			return errors.Errorf("Empty body: %v", body)
-		}
-		m, ok := body[0].(map[string]interface{})
-		if !ok {
-			return errors.Errorf("Invalid message type: %T", body[0])
-		}
-		value, ok := m["level"]
-		if !ok {
-			return errors.Errorf("Unknown block level: %v", m)
-		}
-		level, ok := value.(float64)
-		if !ok {
-			return errors.Errorf("Invalid level type: %T", value)
-		}
-
-		scanner.blocks <- uint64(level)
-	case events.MessageTypeReorg, events.MessageTypeSubscribed, events.MessageTypeState:
+	body, ok := msg.Body.([]events.Block)
+	if !ok {
+		return errors.Errorf("Invalid body type: %T", msg.Body)
 	}
+	if len(body) == 0 {
+		return errors.Errorf("Empty body: %v", body)
+	}
+
+	scanner.blocks <- body[0].Level
 	return nil
 }
 
 func (scanner *Scanner) handleBigMaps(msg events.Message) error {
-	switch msg.Type {
-	case events.MessageTypeData:
-		b, err := json.Marshal(msg.Body)
-		if err != nil {
-			return err
+	body, ok := msg.Body.([]events.BigMapUpdate)
+	if !ok {
+		return errors.Errorf("Invalid body type: %T", msg.Body)
+	}
+	if len(body) == 0 {
+		return nil
+	}
+
+	diffs := make([]api.BigMapUpdate, len(body))
+	for i := range body {
+		diffs[i] = api.BigMapUpdate{
+			ID:        body[i].ID,
+			Level:     body[i].Level,
+			Timestamp: body[i].Timestamp,
+			Bigmap:    body[i].Bigmap,
+			Contract:  api.Address(body[i].Contract),
+			Path:      body[i].Path,
+			Action:    body[i].Action,
 		}
-		var diffs []api.BigMapUpdate
-		if err := json.Unmarshal(b, &diffs); err != nil {
-			return err
+
+		if body[i].Content != nil {
+			diffs[i].Content = &api.BigMapUpdateContent{
+				Hash:  body[i].Content.Hash,
+				Key:   json.RawMessage(body[i].Content.Key),
+				Value: body[i].Content.Value,
+			}
 		}
-		scanner.diffs <- Message{
-			Type:  msg.Type,
-			Body:  diffs,
-			Level: msg.State,
-		}
-	case events.MessageTypeReorg, events.MessageTypeSubscribed, events.MessageTypeState:
+	}
+
+	scanner.diffs <- Message{
+		Type:  msg.Type,
+		Body:  diffs,
+		Level: msg.State,
 	}
 	return nil
 }
