@@ -15,6 +15,10 @@ metadata:
       region: eu-central-1
       access_key_id: ${AWS_ACCESS_KEY_ID}
       secret_access_key: ${AWS_SECRET_ACCESS_KEY}
+    thumbnail:
+      max_file_size_mb: 100
+      workers: 20
+      size: 100
   indexers:
     mainnet:
       datasources:

@@ -69,7 +69,13 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 	}
 
 	if aws := storage.NewAWS(settings.AWS.AccessKey, settings.AWS.Secret, settings.AWS.Region, settings.AWS.BucketName); aws != nil {
-		indexer.thumbnail = thumbnail.New(aws, db, prom, network, settings.IPFSGateways, 10)
+		indexer.thumbnail = thumbnail.New(
+			aws, db, network, settings.IPFSGateways,
+			thumbnail.WithPrometheus(prom),
+			thumbnail.WithWorkers(settings.Thumbnail.Workers),
+			thumbnail.WithFileSizeLimit(settings.Thumbnail.MaxFileSize),
+			thumbnail.WithSize(settings.Thumbnail.Size),
+		)
 	}
 	indexer.contracts = service.NewContractService(db, indexer.resolveContractMetadata)
 	indexer.tokens = service.NewTokenService(db, indexer.resolveTokenMetadata)

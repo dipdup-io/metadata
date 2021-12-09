@@ -31,23 +31,37 @@ type Service struct {
 	storage  storage.Storage
 	db       models.Database
 	prom     *prometheus.Service
-	network  string
-	workers  chan struct{}
-	wg       sync.WaitGroup
+
+	maxFileSizeMB int64
+	size          int
+
+	network string
+	workers chan struct{}
+	wg      sync.WaitGroup
 }
 
 // New -
-func New(storage storage.Storage, db models.Database, prom *prometheus.Service, network string, gateways []string, workersCount int) *Service {
-	return &Service{
-		cursor:   0,
-		limit:    50,
-		storage:  storage,
-		gateways: gateways,
-		prom:     prom,
-		db:       db,
-		workers:  make(chan struct{}, workersCount),
-		network:  network,
+func New(storage storage.Storage, db models.Database, network string, gateways []string, opts ...ThumbnailOption) *Service {
+	service := &Service{
+		cursor:        0,
+		limit:         50,
+		maxFileSizeMB: defaultMaxFileSize,
+		size:          defaultThumbnailSize,
+		storage:       storage,
+		gateways:      gateways,
+		db:            db,
+		network:       network,
 	}
+
+	for i := range opts {
+		opts[i](service)
+	}
+
+	if service.workers == nil {
+		service.workers = make(chan struct{}, 10)
+	}
+
+	return service
 }
 
 // Start -
@@ -121,7 +135,7 @@ func (s *Service) work(ctx context.Context, one models.TokenMetadata) error {
 		}
 		found = true
 
-		reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
 		if err := s.resolve(reqCtx, format.URI, format.MimeType, filename); err != nil {
@@ -133,7 +147,7 @@ func (s *Service) work(ctx context.Context, one models.TokenMetadata) error {
 	}
 
 	if !found {
-		reqCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
 		if err := s.fallback(reqCtx, raw.ThumbnailURI, filename); err != nil {
@@ -156,7 +170,7 @@ func (s *Service) Close() error {
 	return nil
 }
 
-func processLink(ctx context.Context, thumbnailStorage storage.Storage, link, mime, filename string) error {
+func (s *Service) processLink(ctx context.Context, link, mime, filename string) error {
 	if _, err := url.ParseRequestURI(link); err != nil {
 		return errors.Errorf("Invalid file link: %s", link)
 	}
@@ -175,11 +189,11 @@ func processLink(ctx context.Context, thumbnailStorage storage.Storage, link, mi
 		return errors.Errorf("Invalid status code: %s", resp.Status)
 	}
 
-	reader := io.LimitReader(resp.Body, maxFileSize)
-	return createThumbnail(thumbnailStorage, reader, mime, filename)
+	reader := io.LimitReader(resp.Body, s.maxFileSizeMB*1048576)
+	return s.createThumbnail(reader, mime, filename)
 }
 
-func createThumbnail(thumbnailStorage storage.Storage, reader io.Reader, mime, filename string) error {
+func (s *Service) createThumbnail(reader io.Reader, mime, filename string) error {
 	switch mime {
 	case MimeTypePNG, MimeTypeJPEG, MimeTypeGIF:
 		img, _, err := image.Decode(reader)
@@ -187,10 +201,10 @@ func createThumbnail(thumbnailStorage storage.Storage, reader io.Reader, mime, f
 			return err
 		}
 		var buf bytes.Buffer
-		if err := png.Encode(&buf, imaging.Thumbnail(img, thumbnailSize, thumbnailSize, imaging.NearestNeighbor)); err != nil {
+		if err := png.Encode(&buf, imaging.Thumbnail(img, s.size, s.size, imaging.NearestNeighbor)); err != nil {
 			return err
 		}
-		return thumbnailStorage.Upload(&buf, filename)
+		return s.storage.Upload(&buf, filename)
 	}
 	return nil
 }
@@ -218,7 +232,7 @@ func (s *Service) resolve(ctx context.Context, link, mime, filename string) erro
 		gateways := helpers.ShuffleGateways(s.gateways)
 		for _, gateway := range gateways {
 			link := helpers.IPFSLink(gateway, hash)
-			if err := processLink(ctx, s.storage, link, mime, filename); err != nil {
+			if err := s.processLink(ctx, link, mime, filename); err != nil {
 				log.Err(err).Fields(map[string]interface{}{
 					"link": link,
 					"mime": mime,
@@ -231,7 +245,7 @@ func (s *Service) resolve(ctx context.Context, link, mime, filename string) erro
 		return errors.Wrapf(ErrThumbnailCreating, "link=%s mime=%s", link, mime)
 
 	case strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://"):
-		return processLink(ctx, s.storage, link, mime, filename)
+		return s.processLink(ctx, link, mime, filename)
 
 	default:
 		return errors.Wrapf(ErrInvalidThumbnailLink, "link=%s", link)

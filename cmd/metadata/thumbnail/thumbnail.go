@@ -25,8 +25,8 @@ const (
 )
 
 const (
-	maxFileSize   = 52428800 // 50 MB
-	thumbnailSize = 100
+	defaultMaxFileSize   = 50
+	defaultThumbnailSize = 100
 )
 
 var validMimes = map[string]struct{}{
