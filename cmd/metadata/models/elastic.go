@@ -118,7 +118,7 @@ func (e *Elastic) bulk(buf *bytes.Buffer) error {
 }
 
 // GetContractMetadata -
-func (e *Elastic) GetContractMetadata(status Status, limit, offset int) ([]ContractMetadata, error) {
+func (e *Elastic) GetContractMetadata(status Status, limit, offset, retryCount int) ([]ContractMetadata, error) {
 	hits, err := e.search(
 		fmt.Sprintf(`{"query":{"term":{"status": %d}}}`, status),
 		e.Search.WithIndex(ContractMetadata{}.TableName()),
@@ -228,7 +228,7 @@ func (e *Elastic) LastContractUpdateID() (value int64, err error) {
 }
 
 // GetContractMetadata -
-func (e *Elastic) GetTokenMetadata(status Status, limit, offset int) ([]TokenMetadata, error) {
+func (e *Elastic) GetTokenMetadata(status Status, limit, offset, retryCount int) ([]TokenMetadata, error) {
 	hits, err := e.search(
 		fmt.Sprintf(`{"query":{"term":{"status": %d}}}`, status),
 		e.Search.WithIndex(TokenMetadata{}.TableName()),

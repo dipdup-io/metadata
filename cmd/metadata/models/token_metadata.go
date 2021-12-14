@@ -13,15 +13,15 @@ type TokenMetadata struct {
 	ID             uint64 `gorm:"autoIncrement;not null;" json:"-"`
 	CreatedAt      int64  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt      int64  `gorm:"autoUpdateTime" json:"updated_at"`
-	UpdateID       int64  `gorm:"type:int4;uniqueIndex:token_metadata_update_id_key;autoIncrement:false;not null;" json:"-"  pg:",use_zero,notnull"`
-	TokenID        uint64 `gorm:"primaryKey" json:"token_id"`
-	Network        string `gorm:"primaryKey" json:"network"`
-	Contract       string `gorm:"primaryKey" json:"contract"`
+	UpdateID       int64  `gorm:"type:int4;uniqueIndex:token_metadata_update_id_key;autoIncrement:false;not null;" json:"-" pg:",use_zero,notnull"`
+	TokenID        uint64 `gorm:"primaryKey" json:"token_id" pg:",unique:token,use_zero"`
+	Network        string `gorm:"primaryKey" json:"network" pg:",unique:token"`
+	Contract       string `gorm:"primaryKey" json:"contract" pg:",unique:token"`
 	Link           string `json:"link"`
 	Metadata       JSONB  `json:"metadata,omitempty" pg:",type:jsonb,use_zero"`
 	RetryCount     int8   `gorm:"type:SMALLINT;default:0" json:"retry_count" pg:",use_zero"`
 	Status         Status `gorm:"type:SMALLINT" json:"status"`
-	ImageProcessed bool   `json:"image_processed"`
+	ImageProcessed bool   `json:"image_processed" pg:",use_zero,notnull"`
 }
 
 // Table -
@@ -44,7 +44,7 @@ func (tm *TokenMetadata) BeforeUpdate(ctx context.Context) (context.Context, err
 
 // TokenRepository -
 type TokenRepository interface {
-	GetTokenMetadata(status Status, limit, offset int) ([]TokenMetadata, error)
+	GetTokenMetadata(status Status, limit, offset, retryCount int) ([]TokenMetadata, error)
 	SetImageProcessed(token TokenMetadata) error
 	GetUnprocessedImage(from uint64, limit int) ([]TokenMetadata, error)
 	UpdateTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error

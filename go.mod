@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.42.20
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/dipdup-net/go-lib v0.1.44
+	github.com/dipdup-net/go-lib v0.1.45
 	github.com/disintegration/imaging v1.6.2
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20211123103400-5f8a17a2322f
 	github.com/go-pg/pg/v10 v10.10.6
@@ -26,11 +26,9 @@ require (
 	github.com/multiformats/go-multihash v0.1.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.0
-	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/whyrusleeping/tar-utils v0.0.0-20201201191210-20a61371de5b // indirect
 	golang.org/x/image v0.0.0-20211028202545-6944b10bf410 // indirect
 	golang.org/x/net v0.0.0-20211206223403-eba003a116a9 // indirect
-	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )

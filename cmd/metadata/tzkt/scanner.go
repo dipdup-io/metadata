@@ -184,7 +184,7 @@ func (scanner *Scanner) sync(ctx context.Context, headLevel uint64) error {
 			return ctx.Err()
 		default:
 			if headLevel <= scanner.level {
-				if scanner.level < scanner.msg.Level {
+				if scanner.msg.Level > 0 {
 					scanner.level = scanner.msg.Level
 					scanner.diffs <- scanner.msg.copy()
 					scanner.msg.clear()

@@ -77,8 +77,8 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 			thumbnail.WithSize(settings.Thumbnail.Size),
 		)
 	}
-	indexer.contracts = service.NewContractService(db, indexer.resolveContractMetadata)
-	indexer.tokens = service.NewTokenService(db, indexer.resolveTokenMetadata)
+	indexer.contracts = service.NewContractService(db, indexer.resolveContractMetadata, int64(settings.MaxRetryCountOnError))
+	indexer.tokens = service.NewTokenService(db, indexer.resolveTokenMetadata, int64(settings.MaxRetryCountOnError))
 
 	return indexer, nil
 }
@@ -151,6 +151,10 @@ func (indexer *Indexer) initState() error {
 			IndexType: models.IndexTypeMetadata,
 			IndexName: indexer.indexName,
 		}
+
+		if err := indexer.db.CreateState(indexer.state); err != nil {
+			return err
+		}
 	} else {
 		indexer.state = current
 
@@ -190,7 +194,7 @@ func (indexer *Indexer) listen(ctx context.Context) {
 			return
 		case msg := <-indexer.scanner.BigMaps():
 			if err := indexer.handlerUpdate(ctx, msg); err != nil {
-				log.Err(err)
+				log.Err(err).Msg("handlerUpdate")
 			} else {
 				indexer.log().Msg("New level")
 			}
@@ -236,8 +240,15 @@ func (indexer *Indexer) handlerUpdate(ctx context.Context, msg tzkt.Message) err
 	if err := indexer.db.SaveContractMetadata(ctx, contracts); err != nil {
 		return err
 	}
+	for i := range contracts {
+		indexer.contracts.ToProcessQueue(contracts[i])
+	}
+
 	if err := indexer.db.SaveTokenMetadata(ctx, tokens); err != nil {
 		return err
+	}
+	for i := range tokens {
+		indexer.tokens.ToProcessQueue(tokens[i])
 	}
 
 	indexer.state.Level = msg.Level

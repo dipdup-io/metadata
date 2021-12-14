@@ -73,13 +73,16 @@ func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
 }
 
 // GetContractMetadata -
-func (db *RelativeDatabase) GetContractMetadata(status Status, limit, offset int) (all []ContractMetadata, err error) {
+func (db *RelativeDatabase) GetContractMetadata(status Status, limit, offset, retryCount int) (all []ContractMetadata, err error) {
 	query := db.DB().Model(&all).Where("status = ?", status)
 	if limit > 0 {
 		query.Limit(limit)
 	}
 	if offset > 0 {
 		query.Offset(offset)
+	}
+	if retryCount > 0 {
+		query.Where("retry_count < ?", retryCount)
 	}
 	err = query.Order("retry_count asc").Select()
 	return
@@ -101,7 +104,8 @@ func (db *RelativeDatabase) SaveContractMetadata(ctx context.Context, metadata [
 		return nil
 	}
 	_, err := db.DB().Model(&metadata).
-		OnConflict("(network, contract) DO UPDATE SET metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
+		OnConflict("(network, contract) DO UPDATE").
+		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
 		Insert()
 	return err
 }
@@ -113,13 +117,16 @@ func (db *RelativeDatabase) LastContractUpdateID() (updateID int64, err error) {
 }
 
 // GetTokenMetadata -
-func (db *RelativeDatabase) GetTokenMetadata(status Status, limit, offset int) (all []TokenMetadata, err error) {
+func (db *RelativeDatabase) GetTokenMetadata(status Status, limit, offset, retryCount int) (all []TokenMetadata, err error) {
 	query := db.DB().Model(&all).Where("status = ?", status)
 	if limit > 0 {
 		query.Limit(limit)
 	}
 	if offset > 0 {
 		query.Offset(offset)
+	}
+	if retryCount > 0 {
+		query.Where("retry_count < ?", retryCount)
 	}
 	err = query.Order("retry_count asc").Select()
 	return
@@ -142,7 +149,8 @@ func (db *RelativeDatabase) SaveTokenMetadata(ctx context.Context, metadata []*T
 	}
 
 	_, err := db.DB().Model(&metadata).
-		OnConflict("(network, contract, token_id) DO UPDATE SET metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
+		OnConflict("(network, contract, token_id) DO UPDATE").
+		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
 		Insert()
 	return err
 }

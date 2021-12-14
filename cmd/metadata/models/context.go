@@ -22,10 +22,10 @@ type ContextItem struct {
 	//nolint
 	tableName struct{} `pg:"dipdup_metadata_context"`
 
-	ID      uint64 `gorm:"autoIncrement;not null;" json:"-"  pg:",nopk,notnull"`
-	Network string `gorm:"primarykey" pg:",pk"`
-	Address string `gorm:"primarykey" pg:",pk"`
-	Key     string `gorm:"primarykey" pg:",pk"`
+	ID      uint64 `gorm:"autoIncrement;not null;" json:"-"  pg:",notnull"`
+	Network string `gorm:"primarykey" pg:",unique:context_item"`
+	Address string `gorm:"primarykey" pg:",unique:context_item"`
+	Key     string `gorm:"primarykey" pg:",unique:context_item"`
 	Value   []byte
 }
 
