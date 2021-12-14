@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/pkg/errors"
 )
 
@@ -19,18 +20,19 @@ type AWS struct {
 }
 
 // NewAWS -
-func NewAWS(id, secret, region, bucket string) *AWS {
-	if id == "" || secret == "" || region == "" || bucket == "" {
+func NewAWS(settings config.AWS) *AWS {
+	if settings.AccessKey == "" || settings.BucketName == "" || settings.Region == "" || settings.Secret == "" {
 		return nil
 	}
 
 	return &AWS{
 		Session: session.Must(session.NewSession(&aws.Config{
-			Region:      aws.String(region),
-			Credentials: credentials.NewStaticCredentials(id, secret, ""),
+			Endpoint:    &settings.Endpoint,
+			Region:      aws.String(settings.Region),
+			Credentials: credentials.NewStaticCredentials(settings.AccessKey, settings.Secret, ""),
 			MaxRetries:  aws.Int(3),
 		})),
-		Bucket: aws.String(bucket),
+		Bucket: aws.String(settings.BucketName),
 	}
 }
 
