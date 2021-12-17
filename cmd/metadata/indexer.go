@@ -68,7 +68,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		tokenActionsCounter:    helpers.NewCounter(0),
 	}
 
-	if aws := storage.NewAWS(settings.AWS.AccessKey, settings.AWS.Secret, settings.AWS.Region, settings.AWS.BucketName); aws != nil {
+	if aws := storage.NewAWS(settings.AWS); aws != nil {
 		indexer.thumbnail = thumbnail.New(
 			aws, db, network, settings.IPFSGateways,
 			thumbnail.WithPrometheus(prom),

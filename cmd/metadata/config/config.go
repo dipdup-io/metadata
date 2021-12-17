@@ -97,6 +97,7 @@ type Settings struct {
 
 // AWS -
 type AWS struct {
+	Endpoint   string `yaml:"endpoint" validate:"omitempty,url"`
 	BucketName string `yaml:"bucket_name" validate:"omitempty"`
 	Region     string `yaml:"region" validate:"omitempty"`
 	AccessKey  string `yaml:"access_key_id" validate:"omitempty"`
