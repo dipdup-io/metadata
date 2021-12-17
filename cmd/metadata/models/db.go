@@ -157,7 +157,7 @@ func (db *RelativeDatabase) SaveTokenMetadata(ctx context.Context, metadata []*T
 
 // SetImageProcessed -
 func (db *RelativeDatabase) SetImageProcessed(token TokenMetadata) error {
-	_, err := db.DB().Model(&token).Set("image_processed", true).WherePK().Update()
+	_, err := db.DB().Model(&token).Set("image_processed = true").WherePK().Update()
 	return err
 }
 
