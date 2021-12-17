@@ -114,8 +114,6 @@ func (s *Service) dispatch(ctx context.Context) {
 }
 
 func (s *Service) work(ctx context.Context, one models.TokenMetadata) error {
-	defer s.wg.Done()
-
 	filename := fmt.Sprintf("%s/%d.png", one.Contract, one.TokenID)
 	if s.storage.Exists(filename) {
 		return nil
