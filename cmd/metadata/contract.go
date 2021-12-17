@@ -55,6 +55,11 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 	indexer.logContractMetadata(*cm, "Trying to resolve", "info")
 	data, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link)
 	if err != nil {
+		if e, ok := err.(resolver.ResolvingError); ok {
+			indexer.incrementErrorCounter(e)
+			err = e.Err
+		}
+
 		switch {
 		case errors.Is(err, resolver.ErrNoIPFSResponse) || errors.Is(err, resolver.ErrTezosStorageKeyNotFound):
 			cm.RetryCount += 1
@@ -67,10 +72,6 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 		default:
 			cm.Status = models.StatusFailed
 			indexer.logContractMetadata(*cm, "Failed", "warn")
-		}
-
-		if e, ok := err.(resolver.ResolvingError); ok {
-			indexer.incrementErrorCounter(e)
 		}
 	} else {
 		escaped := helpers.Escape(data)
