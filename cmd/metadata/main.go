@@ -133,7 +133,7 @@ func initPrometheus(cfg *golibConfig.Prometheus) *prometheus.Service {
 	prometheusService.RegisterGoBuildMetrics()
 	prometheusService.RegisterCounter(metricMetadataCounter, "Count of metadata", "type", "status", "network")
 	prometheusService.RegisterCounter(metricsMetadataHttpErrors, "Count of HTTP errors in metadata", "network", "code", "type")
-	prometheusService.RegisterCounter(metricsMetadataMimeType, "Count of metadata mime types", "network", "type", "mime")
+	prometheusService.RegisterCounter(metricsMetadataMimeType, "Count of metadata mime types", "network", "mime")
 
 	prometheusService.Start()
 	return prometheusService
