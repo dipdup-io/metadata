@@ -11,8 +11,9 @@ metadata:
     max_retry_count_on_error: 3
     max_cpu: 4
     aws:
-      bucket_name: dipdup-thumbnails
-      region: eu-central-1
+      endpoint: ${AWS_ENDPOINT}
+      bucket_name: ${AWS_BUCKET_NAME}
+      region: ${AWS_REGION}
       access_key_id: ${AWS_ACCESS_KEY_ID}
       secret_access_key: ${AWS_SECRET_ACCESS_KEY}
     thumbnail:
