@@ -11,7 +11,6 @@ import (
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 
 	"github.com/dipdup-net/go-lib/tzkt/api"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
@@ -120,24 +119,20 @@ func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str, level str
 
 func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.TokenMetadata) error {
 	indexer.logTokenMetadata(*tm, "Trying to resolve", "info")
+	tm.RetryCount += 1
+
 	data, err := indexer.resolver.Resolve(ctx, tm.Network, tm.Contract, tm.Link)
 	if err != nil {
-		switch {
-		case errors.Is(err, resolver.ErrNoIPFSResponse) || errors.Is(err, resolver.ErrTezosStorageKeyNotFound):
-			tm.RetryCount += 1
-			if tm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {
-				indexer.logTokenMetadata(*tm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
-			} else {
-				tm.Status = models.StatusFailed
-				indexer.logTokenMetadata(*tm, "Failed", "warn")
-			}
-		default:
-			tm.Status = models.StatusFailed
-			indexer.logTokenMetadata(*tm, "Failed", "warn")
-		}
-
 		if e, ok := err.(resolver.ResolvingError); ok {
 			indexer.incrementErrorCounter(e)
+			err = e.Err
+		}
+
+		if tm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {
+			indexer.logTokenMetadata(*tm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
+		} else {
+			tm.Status = models.StatusFailed
+			indexer.logTokenMetadata(*tm, "Failed", "warn")
 		}
 	} else {
 		metadata, err := mergeTokenMetadata(tm.Metadata, data)

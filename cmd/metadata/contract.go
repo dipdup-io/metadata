@@ -11,7 +11,6 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
-	"github.com/pkg/errors"
 )
 
 func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*models.ContractMetadata, error) {
@@ -53,6 +52,8 @@ func (indexer *Indexer) logContractMetadata(cm models.ContractMetadata, str, lev
 
 func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.ContractMetadata) error {
 	indexer.logContractMetadata(*cm, "Trying to resolve", "info")
+	cm.RetryCount += 1
+
 	data, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link)
 	if err != nil {
 		if e, ok := err.(resolver.ResolvingError); ok {
@@ -60,16 +61,9 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 			err = e.Err
 		}
 
-		switch {
-		case errors.Is(err, resolver.ErrNoIPFSResponse) || errors.Is(err, resolver.ErrTezosStorageKeyNotFound):
-			cm.RetryCount += 1
-			if cm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {
-				indexer.logContractMetadata(*cm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
-			} else {
-				cm.Status = models.StatusFailed
-				indexer.logContractMetadata(*cm, "Failed", "warn")
-			}
-		default:
+		if cm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {
+			indexer.logContractMetadata(*cm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
+		} else {
 			cm.Status = models.StatusFailed
 			indexer.logContractMetadata(*cm, "Failed", "warn")
 		}
