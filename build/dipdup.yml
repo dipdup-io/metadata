@@ -10,20 +10,13 @@ metadata:
     http_timeout: 10
     max_retry_count_on_error: 3
     max_cpu: 4
-    aws:
-      endpoint: ${AWS_ENDPOINT}
-      bucket_name: ${AWS_BUCKET_NAME}
-      region: ${AWS_REGION}
-      access_key_id: ${AWS_ACCESS_KEY_ID}
-      secret_access_key: ${AWS_SECRET_ACCESS_KEY}
-    thumbnail:
-      max_file_size_mb: 100
-      workers: 20
-      size: 100
   indexers:
     mainnet:
       datasources:
-          tzkt: https://api.tzkt.io
+        tzkt: https://api.tzkt.io
+    hangzhounet:
+      datasources:
+        tzkt: https://api.hangzhou2net.tzkt.io
 
 database:
   kind: postgres
@@ -36,7 +29,7 @@ database:
 hasura:
   url: http://${HASURA_HOST:-hasura}:8080
   admin_secret: ${ADMIN_SECRET:-changeme}
-  select_limit: 100
+  select_limit: 10000
   allow_aggregation: false
   rest: true
 
