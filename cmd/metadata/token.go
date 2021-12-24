@@ -7,10 +7,10 @@ import (
 	stdJSON "encoding/json"
 	"fmt"
 	"net/url"
-	"strconv"
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
+	"github.com/shopspring/decimal"
 
 	"github.com/dipdup-net/go-lib/tzkt/api"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
@@ -22,7 +22,7 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // TokenInfo -
 type TokenInfo struct {
-	TokenID   uint64            `json:"token_id"`
+	TokenID   decimal.Decimal   `json:"token_id"`
 	TokenInfo map[string]string `json:"token_info"`
 	Link      string            `json:"-"`
 }
@@ -39,7 +39,7 @@ func (tokenInfo *TokenInfo) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	tokenID, err := strconv.ParseUint(ti.TokenID, 10, 64)
+	tokenID, err := decimal.NewFromString(ti.TokenID)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.T
 }
 
 func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str, level string) {
-	entry := indexer.log().Str("contract", tm.Contract).Uint64("token_id", tm.TokenID).Str("link", tm.Link)
+	entry := indexer.log().Str("contract", tm.Contract).Str("token_id", tm.TokenID.String()).Str("link", tm.Link)
 	switch level {
 	case "info":
 		entry.Msg(str)
