@@ -24,6 +24,12 @@ metadata:
     mainnet:
       datasources:
           tzkt: https://api.tzkt.io
+    # hangzhou:
+    #   datasources:
+    #       tzkt: https://api.hangzhou2net.tzkt.io
+    # granada:
+    #   datasources:
+    #       tzkt: https://api.granadanet.tzkt.io
 
 database:
   kind: postgres

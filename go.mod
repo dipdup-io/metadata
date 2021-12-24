@@ -26,6 +26,7 @@ require (
 	github.com/multiformats/go-multihash v0.1.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.0
+	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.7.0
 	github.com/whyrusleeping/tar-utils v0.0.0-20201201191210-20a61371de5b // indirect
 	golang.org/x/image v0.0.0-20211028202545-6944b10bf410 // indirect
