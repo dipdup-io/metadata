@@ -124,7 +124,10 @@ func (s *TokenService) saver(ctx context.Context) {
 }
 
 func (s *TokenService) worker(ctx context.Context, token *models.TokenMetadata) {
-	defer s.wg.Done()
+	defer func() {
+		s.wg.Done()
+		<-s.workers
+	}()
 
 	resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -139,5 +142,5 @@ func (s *TokenService) worker(ctx context.Context, token *models.TokenMetadata) 
 	if token.Status != models.StatusApplied && int64(token.RetryCount) < s.maxRetryCount {
 		s.tasks <- token
 	}
-	<-s.workers
+
 }

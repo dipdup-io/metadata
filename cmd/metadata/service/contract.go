@@ -125,7 +125,10 @@ func (s *ContractService) saver(ctx context.Context) {
 }
 
 func (s *ContractService) worker(ctx context.Context, contract *models.ContractMetadata) {
-	defer s.wg.Done()
+	defer func() {
+		s.wg.Done()
+		<-s.workers
+	}()
 
 	resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -140,6 +143,4 @@ func (s *ContractService) worker(ctx context.Context, contract *models.ContractM
 	if contract.Status != models.StatusApplied && int64(contract.RetryCount) < s.maxRetryCount {
 		s.tasks <- contract
 	}
-
-	<-s.workers
 }
