@@ -3,11 +3,13 @@ version: 0.0.1
 metadata:
   settings:
     ipfs_gateways:
+      - https://gateway.pinata.cloud
+      - https://ipfs.infura.io
       - https://ipfs.baking-bad.org
       - https://dweb.link
       - https://ipfs.io
     ipfs_timeout: 3
-    http_timeout: 10
+    http_timeout: 3
     max_retry_count_on_error: 3
     max_cpu: 4
     aws:
