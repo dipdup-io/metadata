@@ -75,6 +75,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 			thumbnail.WithWorkers(settings.Thumbnail.Workers),
 			thumbnail.WithFileSizeLimit(settings.Thumbnail.MaxFileSize),
 			thumbnail.WithSize(settings.Thumbnail.Size),
+			thumbnail.WithTimeout(settings.Thumbnail.Timeout),
 		)
 	}
 	indexer.contracts = service.NewContractService(db, indexer.resolveContractMetadata, int64(settings.MaxRetryCountOnError))

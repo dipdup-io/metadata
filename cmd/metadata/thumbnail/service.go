@@ -34,6 +34,7 @@ type Service struct {
 
 	maxFileSizeMB int64
 	size          int
+	timeout       time.Duration
 
 	network string
 	workers chan struct{}
@@ -51,6 +52,7 @@ func New(storage storage.Storage, db models.Database, network string, gateways [
 		gateways:      gateways,
 		db:            db,
 		network:       network,
+		timeout:       time.Second * 10,
 	}
 
 	for i := range opts {
@@ -133,7 +135,7 @@ func (s *Service) work(ctx context.Context, one models.TokenMetadata) error {
 		}
 		found = true
 
-		reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		reqCtx, cancel := context.WithTimeout(ctx, s.timeout)
 		defer cancel()
 
 		if err := s.resolve(reqCtx, format.URI, format.MimeType, filename); err != nil {
@@ -145,7 +147,7 @@ func (s *Service) work(ctx context.Context, one models.TokenMetadata) error {
 	}
 
 	if !found {
-		reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		reqCtx, cancel := context.WithTimeout(ctx, s.timeout)
 		defer cancel()
 
 		if err := s.fallback(reqCtx, raw.ThumbnailURI, filename); err != nil {

@@ -6,7 +6,7 @@ metadata:
       - https://ipfs.baking-bad.org
       - https://dweb.link
       - https://ipfs.io
-    ipfs_timeout: 10
+    ipfs_timeout: 3
     http_timeout: 10
     max_retry_count_on_error: 3
     max_cpu: 4
@@ -15,6 +15,7 @@ metadata:
       max_file_size_mb: 100
       workers: 20
       size: 100
+      timeout: 20
   indexers:
     mainnet:
       datasources:

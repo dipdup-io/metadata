@@ -95,7 +95,9 @@ func (s *TokenService) saver(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
-	tokens := make([]*models.TokenMetadata, 0, 8)
+	bulkSize := 8
+
+	tokens := make([]*models.TokenMetadata, 0, bulkSize)
 	for {
 		select {
 		case <-ctx.Done():
@@ -105,17 +107,21 @@ func (s *TokenService) saver(ctx context.Context) {
 				log.Err(err).Msg("UpdateTokenMetadata")
 				return
 			}
-			tokens = make([]*models.TokenMetadata, 0, 8)
+			tokens = make([]*models.TokenMetadata, 0, bulkSize)
 
 		case token := <-s.result:
+			if token.Status != models.StatusApplied && int64(token.RetryCount) < s.maxRetryCount {
+				s.tasks <- token
+			}
+
 			tokens = append(tokens, token)
 
-			if len(tokens) == cap(tokens) {
+			if len(tokens) == bulkSize {
 				if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
 					log.Err(err).Msg("UpdateTokenMetadata")
 					return
 				}
-				tokens = make([]*models.TokenMetadata, 0, 8)
+				tokens = make([]*models.TokenMetadata, 0, bulkSize)
 				ticker.Reset(time.Second * 15)
 			}
 		}
@@ -138,9 +144,4 @@ func (s *TokenService) worker(ctx context.Context, token *models.TokenMetadata) 
 	}
 
 	s.result <- token
-
-	if token.Status != models.StatusApplied && int64(token.RetryCount) < s.maxRetryCount {
-		s.tasks <- token
-	}
-
 }

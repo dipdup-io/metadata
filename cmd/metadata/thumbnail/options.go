@@ -1,6 +1,10 @@
 package thumbnail
 
-import "github.com/dipdup-net/go-lib/prometheus"
+import (
+	"time"
+
+	"github.com/dipdup-net/go-lib/prometheus"
+)
 
 // ThumbnailOption -
 type ThumbnailOption func(*Service)
@@ -39,5 +43,15 @@ func WithSize(thumbnailSize int) ThumbnailOption {
 			thumbnailSize = defaultThumbnailSize
 		}
 		m.size = thumbnailSize
+	}
+}
+
+// WithTimeout -
+func WithTimeout(seconds int) ThumbnailOption {
+	return func(m *Service) {
+		if seconds == 0 {
+			seconds = 10
+		}
+		m.timeout = time.Duration(seconds) * time.Second
 	}
 }

@@ -109,4 +109,5 @@ type Thumbnail struct {
 	MaxFileSize int64 `yaml:"max_file_size_mb" validate:"min=1"`
 	Size        int   `yaml:"size" validate:"min=1"`
 	Workers     int   `yaml:"workers" validate:"min=1"`
+	Timeout     int   `yaml:"timeout" validate:"min=1"`
 }

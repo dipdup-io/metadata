@@ -92,10 +92,12 @@ func (s *ContractService) manager(ctx context.Context) {
 func (s *ContractService) saver(ctx context.Context) {
 	defer s.wg.Done()
 
+	bulkSize := 8
+
 	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
-	contracts := make([]*models.ContractMetadata, 0, 8)
+	contracts := make([]*models.ContractMetadata, 0, bulkSize)
 	for {
 		select {
 		case <-ctx.Done():
@@ -106,17 +108,21 @@ func (s *ContractService) saver(ctx context.Context) {
 				log.Err(err).Msg("UpdateContractMetadata")
 				return
 			}
-			contracts = make([]*models.ContractMetadata, 0, 8)
+			contracts = make([]*models.ContractMetadata, 0, bulkSize)
 
 		case contract := <-s.result:
+			if contract.Status != models.StatusApplied && int64(contract.RetryCount) < s.maxRetryCount {
+				s.tasks <- contract
+			}
+
 			contracts = append(contracts, contract)
 
-			if len(contracts) == cap(contracts) {
+			if len(contracts) == bulkSize {
 				if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 					log.Err(err).Msg("UpdateContractMetadata")
 					return
 				}
-				contracts = make([]*models.ContractMetadata, 0, 8)
+				contracts = make([]*models.ContractMetadata, 0, bulkSize)
 				ticker.Reset(time.Second * 15)
 			}
 		}
@@ -139,8 +145,4 @@ func (s *ContractService) worker(ctx context.Context, contract *models.ContractM
 	}
 
 	s.result <- contract
-
-	if contract.Status != models.StatusApplied && int64(contract.RetryCount) < s.maxRetryCount {
-		s.tasks <- contract
-	}
 }

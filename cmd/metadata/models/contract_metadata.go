@@ -22,7 +22,7 @@ type ContractMetadata struct {
 	Metadata   JSONB  `json:"metadata,omitempty" pg:",type:jsonb,use_zero"`
 }
 
-// Table -
+// TableName -
 func (ContractMetadata) TableName() string {
 	return "contract_metadata"
 }

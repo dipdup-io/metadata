@@ -204,3 +204,27 @@ func (db *RelativeDatabase) DumpContext(action Action, item ContextItem) error {
 func (db *RelativeDatabase) Close() error {
 	return db.PgGo.Close()
 }
+
+// IPFSLink -
+func (db *RelativeDatabase) IPFSLink(id int64) (link IPFSLink, err error) {
+	err = db.DB().Model(&link).Where("id = ?", id).First()
+	return
+}
+
+// IPFSLinks -
+func (db *RelativeDatabase) IPFSLinks(limit, offset int) (links []IPFSLink, err error) {
+	err = db.DB().Model(&links).Limit(limit).Offset(offset).Select(&links)
+	return
+}
+
+// SaveIPFSLink -
+func (db *RelativeDatabase) SaveIPFSLink(link IPFSLink) error {
+	_, err := db.DB().Model(&link).WherePK().SelectOrInsert(&link)
+	return err
+}
+
+// UpdateIPFSLink -
+func (db *RelativeDatabase) UpdateIPFSLink(link IPFSLink) error {
+	_, err := db.DB().Model(&link).WherePK().Update()
+	return err
+}
