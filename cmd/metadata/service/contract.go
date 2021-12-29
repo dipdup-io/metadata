@@ -11,6 +11,7 @@ import (
 
 // ContractService -
 type ContractService struct {
+	network       string
 	maxRetryCount int64
 	db            models.Database
 	handler       func(ctx context.Context, contract *models.ContractMetadata) error
@@ -21,7 +22,7 @@ type ContractService struct {
 }
 
 // NewContractService -
-func NewContractService(db models.Database, handler func(context.Context, *models.ContractMetadata) error, maxRetryCount int64) *ContractService {
+func NewContractService(db models.Database, handler func(context.Context, *models.ContractMetadata) error, network string, maxRetryCount int64) *ContractService {
 	return &ContractService{
 		maxRetryCount: maxRetryCount,
 		db:            db,
@@ -29,6 +30,7 @@ func NewContractService(db models.Database, handler func(context.Context, *model
 		tasks:         make(chan *models.ContractMetadata, 1024*128),
 		result:        make(chan *models.ContractMetadata, 15),
 		workers:       make(chan struct{}, 10),
+		network:       network,
 	}
 }
 
@@ -43,7 +45,7 @@ func (s *ContractService) Start(ctx context.Context) {
 	var offset int
 	var end bool
 	for !end {
-		contracts, err := s.db.GetContractMetadata(models.StatusNew, 100, offset, int(s.maxRetryCount))
+		contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 100, offset, int(s.maxRetryCount))
 		if err != nil {
 			log.Err(err).Msg("GetContractMetadata")
 			continue

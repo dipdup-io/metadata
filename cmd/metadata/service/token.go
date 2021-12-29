@@ -11,6 +11,7 @@ import (
 
 // TokenService -
 type TokenService struct {
+	network       string
 	maxRetryCount int64
 	repo          models.TokenRepository
 	handler       func(ctx context.Context, token *models.TokenMetadata) error
@@ -21,9 +22,10 @@ type TokenService struct {
 }
 
 // NewContractService -
-func NewTokenService(repo models.TokenRepository, handler func(context.Context, *models.TokenMetadata) error, maxRetryCount int64) *TokenService {
+func NewTokenService(repo models.TokenRepository, handler func(context.Context, *models.TokenMetadata) error, network string, maxRetryCount int64) *TokenService {
 	return &TokenService{
 		maxRetryCount: maxRetryCount,
+		network:       network,
 		repo:          repo,
 		handler:       handler,
 		tasks:         make(chan *models.TokenMetadata, 1024*128),
@@ -43,7 +45,7 @@ func (s *TokenService) Start(ctx context.Context) {
 	var offset int
 	var end bool
 	for !end {
-		tokens, err := s.repo.GetTokenMetadata(models.StatusNew, 100, offset, int(s.maxRetryCount))
+		tokens, err := s.repo.GetTokenMetadata(s.network, models.StatusNew, 100, offset, int(s.maxRetryCount))
 		if err != nil {
 			log.Err(err).Msg("GetTokenMetadata")
 			continue

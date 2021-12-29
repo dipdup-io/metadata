@@ -46,7 +46,7 @@ func (tm *TokenMetadata) BeforeUpdate(ctx context.Context) (context.Context, err
 
 // TokenRepository -
 type TokenRepository interface {
-	GetTokenMetadata(status Status, limit, offset, retryCount int) ([]TokenMetadata, error)
+	GetTokenMetadata(network string, status Status, limit, offset, retryCount int) ([]TokenMetadata, error)
 	SetImageProcessed(token TokenMetadata) error
 	GetUnprocessedImage(from uint64, limit int) ([]TokenMetadata, error)
 	UpdateTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error

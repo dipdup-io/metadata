@@ -42,7 +42,7 @@ func (cm *ContractMetadata) BeforeUpdate(ctx context.Context) (context.Context, 
 
 // ContractRepository -
 type ContractRepository interface {
-	GetContractMetadata(status Status, limit, offset, retryCount int) ([]ContractMetadata, error)
+	GetContractMetadata(network string, status Status, limit, offset, retryCount int) ([]ContractMetadata, error)
 	UpdateContractMetadata(ctx context.Context, metadata []*ContractMetadata) error
 	SaveContractMetadata(ctx context.Context, metadata []*ContractMetadata) error
 	LastContractUpdateID() (int64, error)
