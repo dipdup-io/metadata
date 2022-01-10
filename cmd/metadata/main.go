@@ -18,9 +18,6 @@ import (
 	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
-
-	"net/http"
-	_ "net/http/pprof"
 )
 
 const (
@@ -39,10 +36,6 @@ func main() {
 		Out:        os.Stderr,
 		TimeFormat: "2006-01-02 15:04:05",
 	}).Level(zerolog.InfoLevel)
-
-	go func() {
-		log.Print(http.ListenAndServe("localhost:6060", nil))
-	}()
 
 	args := cmdline.Parse()
 	if args.Help {
