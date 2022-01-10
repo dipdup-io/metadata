@@ -17,9 +17,10 @@ WORKDIR $GOPATH/src/github.com/dipdup-net/metadata
 RUN go mod download
 
 COPY cmd/metadata cmd/metadata
+COPY internal internal
 
 WORKDIR $GOPATH/src/github.com/dipdup-net/metadata/cmd/metadata/
-RUN go build -a -installsuffix cgo -o /go/bin/dipdup-metadata .
+RUN go build -a -o /go/bin/dipdup-metadata .
 
 # ---------------------------------------------------------------------
 #  The second stage container, for running the application
