@@ -56,7 +56,7 @@ func NewIPFS(gateways []string, opts ...IpfsOption) (Ipfs, error) {
 	s := Ipfs{
 		pinning: make([]*shell.Shell, 0),
 		pool:    pool,
-		cache:   ccache.New(ccache.Configure().MaxSize(1000)),
+		cache:   ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(100)),
 	}
 
 	for i := range opts {

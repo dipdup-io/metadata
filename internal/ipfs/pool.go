@@ -16,6 +16,7 @@ import (
 type Pool struct {
 	gateways []string
 	limit    int64
+	client   *http.Client
 }
 
 // NewPool -
@@ -32,6 +33,11 @@ func NewPool(gateways []string, limit int64) (*Pool, error) {
 	return &Pool{
 		gateways: gateways,
 		limit:    limit,
+		client: &http.Client{
+			Transport: &http.Transport{
+				DisableKeepAlives: true,
+			},
+		},
 	}, nil
 }
 
@@ -86,7 +92,7 @@ func (pool *Pool) request(ctx context.Context, link, node string) ([]byte, error
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := pool.client.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(ErrHTTPRequest, err.Error())
 	}

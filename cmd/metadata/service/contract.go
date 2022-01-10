@@ -17,7 +17,6 @@ type ContractService struct {
 	handler       func(ctx context.Context, contract *models.ContractMetadata) error
 	tasks         chan *models.ContractMetadata
 	result        chan *models.ContractMetadata
-	workers       chan struct{}
 	wg            sync.WaitGroup
 }
 
@@ -29,7 +28,6 @@ func NewContractService(db models.Database, handler func(context.Context, *model
 		handler:       handler,
 		tasks:         make(chan *models.ContractMetadata, 512),
 		result:        make(chan *models.ContractMetadata, 16),
-		workers:       make(chan struct{}, 5),
 		network:       network,
 	}
 }
@@ -47,7 +45,6 @@ func (s *ContractService) Start(ctx context.Context) {
 func (s *ContractService) Close() error {
 	s.wg.Wait()
 
-	close(s.workers)
 	return nil
 }
 
@@ -67,10 +64,16 @@ func (s *ContractService) manager(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
+	for i := 0; i < 5; i++ {
+		s.wg.Add(1)
+		go s.worker(ctx)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
+
 		case <-ticker.C:
 			if len(s.tasks) > 100 {
 				continue
@@ -83,11 +86,6 @@ func (s *ContractService) manager(ctx context.Context) {
 			for i := range contracts {
 				s.tasks <- &contracts[i]
 			}
-
-		case unresolved := <-s.tasks:
-			s.workers <- struct{}{}
-			s.wg.Add(1)
-			go s.worker(ctx, unresolved)
 		}
 	}
 }
@@ -105,6 +103,9 @@ func (s *ContractService) saver(ctx context.Context) {
 			return
 
 		case <-ticker.C:
+			if len(contracts) == 0 {
+				continue
+			}
 			if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 				log.Err(err).Msg("UpdateContractMetadata")
 				continue
@@ -127,19 +128,24 @@ func (s *ContractService) saver(ctx context.Context) {
 
 }
 
-func (s *ContractService) worker(ctx context.Context, contract *models.ContractMetadata) {
-	defer func() {
-		s.wg.Done()
-		<-s.workers
-	}()
+func (s *ContractService) worker(ctx context.Context) {
+	defer s.wg.Done()
 
-	resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case unresolved := <-s.tasks:
+			resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
 
-	if err := s.handler(resolveCtx, contract); err != nil {
-		log.Err(err).Msg("resolve contract")
-		return
+			if err := s.handler(resolveCtx, unresolved); err != nil {
+				log.Err(err).Msg("resolve contract")
+				continue
+			}
+
+			s.result <- unresolved
+		}
 	}
 
-	s.result <- contract
 }

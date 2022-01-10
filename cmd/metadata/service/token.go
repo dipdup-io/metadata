@@ -17,7 +17,6 @@ type TokenService struct {
 	handler       func(ctx context.Context, token *models.TokenMetadata) error
 	tasks         chan *models.TokenMetadata
 	result        chan *models.TokenMetadata
-	workers       chan struct{}
 	wg            sync.WaitGroup
 }
 
@@ -30,7 +29,6 @@ func NewTokenService(repo models.TokenRepository, handler func(context.Context, 
 		handler:       handler,
 		tasks:         make(chan *models.TokenMetadata, 512),
 		result:        make(chan *models.TokenMetadata, 16),
-		workers:       make(chan struct{}, 5),
 	}
 }
 
@@ -47,7 +45,6 @@ func (s *TokenService) Start(ctx context.Context) {
 func (s *TokenService) Close() error {
 	s.wg.Wait()
 
-	close(s.workers)
 	return nil
 }
 
@@ -67,6 +64,11 @@ func (s *TokenService) manager(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
+	for i := 0; i < 5; i++ {
+		s.wg.Add(1)
+		go s.worker(ctx)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -84,10 +86,6 @@ func (s *TokenService) manager(ctx context.Context) {
 			for i := range tokens {
 				s.tasks <- &tokens[i]
 			}
-		case unresolved := <-s.tasks:
-			s.workers <- struct{}{}
-			s.wg.Add(1)
-			go s.worker(ctx, unresolved)
 		}
 	}
 }
@@ -103,12 +101,6 @@ func (s *TokenService) saver(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
-			if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
-				log.Err(err).Msg("UpdateTokenMetadata")
-				continue
-			}
-			tokens = nil
 
 		case token := <-s.result:
 			tokens = append(tokens, token)
@@ -121,24 +113,39 @@ func (s *TokenService) saver(ctx context.Context) {
 				tokens = nil
 				ticker.Reset(time.Second * 15)
 			}
+
+		case <-ticker.C:
+			if len(tokens) == 0 {
+				continue
+			}
+			if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
+				log.Err(err).Msg("UpdateTokenMetadata")
+				continue
+			}
+			tokens = nil
+
 		}
 	}
 
 }
 
-func (s *TokenService) worker(ctx context.Context, token *models.TokenMetadata) {
-	defer func() {
-		s.wg.Done()
-		<-s.workers
-	}()
+func (s *TokenService) worker(ctx context.Context) {
+	defer s.wg.Done()
 
-	resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case unresolved := <-s.tasks:
+			resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
 
-	if err := s.handler(resolveCtx, token); err != nil {
-		log.Err(err).Msg("resolve token")
-		return
+			if err := s.handler(resolveCtx, unresolved); err != nil {
+				log.Err(err).Msg("resolve token")
+				return
+			}
+
+			s.result <- unresolved
+		}
 	}
-
-	s.result <- token
 }

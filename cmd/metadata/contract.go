@@ -24,16 +24,15 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 		return nil, err
 	}
 
-	metadata := models.ContractMetadata{
+	indexer.incrementCounter("contract", models.StatusNew)
+
+	return &models.ContractMetadata{
 		Network:  indexer.network,
 		Contract: update.Contract.Address,
 		Status:   models.StatusNew,
 		Link:     string(link),
 		UpdateID: indexer.contractActionsCounter.Increment(),
-	}
-	indexer.incrementCounter("contract", metadata.Status)
-
-	return &metadata, nil
+	}, nil
 }
 
 func (indexer *Indexer) logContractMetadata(cm models.ContractMetadata, str, level string) {
