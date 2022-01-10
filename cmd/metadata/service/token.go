@@ -28,9 +28,9 @@ func NewTokenService(repo models.TokenRepository, handler func(context.Context, 
 		network:       network,
 		repo:          repo,
 		handler:       handler,
-		tasks:         make(chan *models.TokenMetadata, 1024*128),
-		result:        make(chan *models.TokenMetadata, 15),
-		workers:       make(chan struct{}, 10),
+		tasks:         make(chan *models.TokenMetadata, 512),
+		result:        make(chan *models.TokenMetadata, 16),
+		workers:       make(chan struct{}, 5),
 	}
 }
 
@@ -41,21 +41,6 @@ func (s *TokenService) Start(ctx context.Context) {
 
 	s.wg.Add(1)
 	go s.manager(ctx)
-
-	var offset int
-	var end bool
-	for !end {
-		tokens, err := s.repo.GetTokenMetadata(s.network, models.StatusNew, 100, offset, int(s.maxRetryCount))
-		if err != nil {
-			log.Err(err).Msg("GetTokenMetadata")
-			continue
-		}
-		for i := range tokens {
-			s.tasks <- &tokens[i]
-		}
-		offset += len(tokens)
-		end = len(tokens) < 100
-	}
 }
 
 // Close -
@@ -79,10 +64,26 @@ func (s *TokenService) manager(ctx context.Context) {
 		return
 	}
 
+	ticker := time.NewTicker(time.Second * 15)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-ticker.C:
+			if len(s.tasks) > 100 {
+				continue
+			}
+
+			tokens, err := s.repo.GetTokenMetadata(s.network, models.StatusNew, 100, 0, int(s.maxRetryCount))
+			if err != nil {
+				log.Err(err).Msg("GetTokenMetadata")
+				continue
+			}
+			for i := range tokens {
+				s.tasks <- &tokens[i]
+			}
 		case unresolved := <-s.tasks:
 			s.workers <- struct{}{}
 			s.wg.Add(1)
@@ -97,9 +98,7 @@ func (s *TokenService) saver(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
-	bulkSize := 8
-
-	tokens := make([]*models.TokenMetadata, 0, bulkSize)
+	tokens := make([]*models.TokenMetadata, 0)
 	for {
 		select {
 		case <-ctx.Done():
@@ -107,23 +106,19 @@ func (s *TokenService) saver(ctx context.Context) {
 		case <-ticker.C:
 			if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
 				log.Err(err).Msg("UpdateTokenMetadata")
-				return
+				continue
 			}
-			tokens = make([]*models.TokenMetadata, 0, bulkSize)
+			tokens = nil
 
 		case token := <-s.result:
-			if token.Status != models.StatusApplied && int64(token.RetryCount) < s.maxRetryCount {
-				s.tasks <- token
-			}
-
 			tokens = append(tokens, token)
 
-			if len(tokens) == bulkSize {
+			if len(tokens) == 8 {
 				if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
 					log.Err(err).Msg("UpdateTokenMetadata")
-					return
+					continue
 				}
-				tokens = make([]*models.TokenMetadata, 0, bulkSize)
+				tokens = nil
 				ticker.Reset(time.Second * 15)
 			}
 		}

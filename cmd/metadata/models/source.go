@@ -13,6 +13,7 @@ type Database interface {
 	ContractRepository
 	TokenRepository
 	ContextRepository
+	IPFSLinkRepository
 	database.StateRepository
 	io.Closer
 }

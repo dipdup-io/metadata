@@ -121,7 +121,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 	indexer.logTokenMetadata(*tm, "Trying to resolve", "info")
 	tm.RetryCount += 1
 
-	data, err := indexer.resolver.Resolve(ctx, tm.Network, tm.Contract, tm.Link)
+	resolved, err := indexer.resolver.Resolve(ctx, tm.Network, tm.Contract, tm.Link)
 	if err != nil {
 		if e, ok := err.(resolver.ResolvingError); ok {
 			indexer.incrementErrorCounter(e)
@@ -135,29 +135,29 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 			indexer.logTokenMetadata(*tm, "Failed", "warn")
 		}
 	} else {
-		metadata, err := mergeTokenMetadata(tm.Metadata, data)
+		metadata, err := mergeTokenMetadata(tm.Metadata, resolved.Data)
 		if err != nil {
 			return err
 		}
 
-		escaped := helpers.Escape(data)
+		tm.Metadata = helpers.Escape(metadata)
 		if utf8.Valid(metadata) {
 			tm.Status = models.StatusApplied
-
-			var dst bytes.Buffer
-			if err := stdJSON.Compact(&dst, escaped); err != nil {
-				tm.Metadata = escaped
-			} else {
-				tm.Metadata = dst.Bytes()
-			}
 		} else {
 			tm.Status = models.StatusFailed
-			tm.Metadata = escaped
 		}
 	}
 
 	indexer.incrementCounter("token", tm.Status)
 	tm.UpdateID = indexer.tokenActionsCounter.Increment()
+
+	if resolved.By == resolver.ResolverTypeIPFS && tm.Status == models.StatusApplied {
+		return indexer.db.SaveIPFSLink(models.IPFSLink{
+			Link: tm.Link,
+			Node: resolved.Node,
+			Data: resolved.Data,
+		})
+	}
 	return nil
 }
 
@@ -184,5 +184,11 @@ func mergeTokenMetadata(src, got []byte) ([]byte, error) {
 			srcMap[key] = value
 		}
 	}
-	return json.Marshal(srcMap)
+	data, err := json.Marshal(srcMap)
+	if err != nil {
+		return nil, err
+	}
+	var dst bytes.Buffer
+	err = stdJSON.Compact(&dst, data)
+	return dst.Bytes(), err
 }

@@ -7,8 +7,8 @@ type IPFSLink struct {
 
 	ID   int64
 	Node string
-	Link string
-	Data JSONB `pg:",type:jsonb,use_zero"`
+	Link string `pg:",unique:ipfs"`
+	Data JSONB  `pg:",type:jsonb,use_zero"`
 }
 
 // TableName -

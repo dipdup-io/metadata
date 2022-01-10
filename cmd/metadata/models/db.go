@@ -37,7 +37,7 @@ func NewRelativeDatabase(ctx context.Context, cfg config.Database) (*RelativeDat
 	database.Wait(ctx, db, 5*time.Second)
 
 	for _, data := range []interface{}{
-		&database.State{}, &ContractMetadata{}, &TokenMetadata{}, &ContextItem{},
+		&database.State{}, &ContractMetadata{}, &TokenMetadata{}, &ContextItem{}, &IPFSLink{},
 	} {
 		if err := db.DB().WithContext(ctx).Model(data).CreateTable(&orm.CreateTableOptions{
 			IfNotExists: true,
@@ -213,13 +213,13 @@ func (db *RelativeDatabase) IPFSLink(id int64) (link IPFSLink, err error) {
 
 // IPFSLinks -
 func (db *RelativeDatabase) IPFSLinks(limit, offset int) (links []IPFSLink, err error) {
-	err = db.DB().Model(&links).Limit(limit).Offset(offset).Select(&links)
+	err = db.DB().Model(&links).Limit(limit).Offset(offset).Order("id desc").Select(&links)
 	return
 }
 
 // SaveIPFSLink -
 func (db *RelativeDatabase) SaveIPFSLink(link IPFSLink) error {
-	_, err := db.DB().Model(&link).WherePK().SelectOrInsert(&link)
+	_, err := db.DB().Model(&link).Where("link = ?link").SelectOrInsert(&link)
 	return err
 }
 

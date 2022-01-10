@@ -1,4 +1,4 @@
-package helpers
+package ipfs
 
 import (
 	"fmt"
@@ -11,9 +11,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// IPFSHash - separate IPFS hash from link
-func IPFSHash(link string) (string, error) {
-	hash := FindAllIPFSLinks([]byte(link))
+// Hash - separate IPFS hash from link
+func Hash(link string) (string, error) {
+	hash := FindAllLinks([]byte(link))
 	if len(hash) != 1 {
 		return "", errors.Errorf("invalid IPFS link: %s", link)
 	}
@@ -21,20 +21,20 @@ func IPFSHash(link string) (string, error) {
 	return hash[0], err
 }
 
-// IPFSLink - get gateway link
-func IPFSLink(gateway, hash string) string {
+// Link - get gateway link
+func Link(gateway, hash string) string {
 	return fmt.Sprintf("%s/ipfs/%s", gateway, hash)
 }
 
-// IPFSPath - get path without protocol
-func IPFSPath(link string) string {
+// Path - get path without protocol
+func Path(link string) string {
 	return strings.TrimPrefix(link, "ipfs://")
 }
 
 var ipfsURL = regexp.MustCompile(`ipfs:\/\/(?P<hash>(baf[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{56})|Qm[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{44})`)
 
-// FindAllIPFSLinks -
-func FindAllIPFSLinks(data []byte) []string {
+// FindAllLinks -
+func FindAllLinks(data []byte) []string {
 	matches := ipfsURL.FindAllSubmatch(data, -1)
 	if len(matches) == 0 {
 		return nil

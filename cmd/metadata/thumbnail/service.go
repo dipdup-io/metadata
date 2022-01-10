@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/dipdup-net/go-lib/prometheus"
-	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
+	"github.com/dipdup-net/metadata/internal/ipfs"
 	"github.com/disintegration/imaging"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -224,14 +224,14 @@ func (s *Service) fallback(ctx context.Context, link, filename string) error {
 func (s *Service) resolve(ctx context.Context, link, mime, filename string) error {
 	switch {
 	case strings.HasPrefix(link, "ipfs://"):
-		hash, err := helpers.IPFSHash(link)
+		hash, err := ipfs.Hash(link)
 		if err != nil {
 			return err
 		}
 
-		gateways := helpers.ShuffleGateways(s.gateways)
+		gateways := ipfs.ShuffleGateways(s.gateways)
 		for _, gateway := range gateways {
-			link := helpers.IPFSLink(gateway, hash)
+			link := ipfs.Link(gateway, hash)
 			if err := s.processLink(ctx, link, mime, filename); err != nil {
 				log.Err(err).Fields(map[string]interface{}{
 					"link": link,

@@ -27,9 +27,9 @@ func NewContractService(db models.Database, handler func(context.Context, *model
 		maxRetryCount: maxRetryCount,
 		db:            db,
 		handler:       handler,
-		tasks:         make(chan *models.ContractMetadata, 1024*128),
-		result:        make(chan *models.ContractMetadata, 15),
-		workers:       make(chan struct{}, 10),
+		tasks:         make(chan *models.ContractMetadata, 512),
+		result:        make(chan *models.ContractMetadata, 16),
+		workers:       make(chan struct{}, 5),
 		network:       network,
 	}
 }
@@ -41,21 +41,6 @@ func (s *ContractService) Start(ctx context.Context) {
 
 	s.wg.Add(1)
 	go s.saver(ctx)
-
-	var offset int
-	var end bool
-	for !end {
-		contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 100, offset, int(s.maxRetryCount))
-		if err != nil {
-			log.Err(err).Msg("GetContractMetadata")
-			continue
-		}
-		for i := range contracts {
-			s.tasks <- &contracts[i]
-		}
-		offset += len(contracts)
-		end = len(contracts) < 100
-	}
 }
 
 // Close -
@@ -79,10 +64,26 @@ func (s *ContractService) manager(ctx context.Context) {
 		return
 	}
 
+	ticker := time.NewTicker(time.Second * 15)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-ticker.C:
+			if len(s.tasks) > 100 {
+				continue
+			}
+			contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 100, 0, int(s.maxRetryCount))
+			if err != nil {
+				log.Err(err).Msg("GetContractMetadata")
+				continue
+			}
+			for i := range contracts {
+				s.tasks <- &contracts[i]
+			}
+
 		case unresolved := <-s.tasks:
 			s.workers <- struct{}{}
 			s.wg.Add(1)
@@ -94,12 +95,10 @@ func (s *ContractService) manager(ctx context.Context) {
 func (s *ContractService) saver(ctx context.Context) {
 	defer s.wg.Done()
 
-	bulkSize := 8
-
 	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
-	contracts := make([]*models.ContractMetadata, 0, bulkSize)
+	contracts := make([]*models.ContractMetadata, 0)
 	for {
 		select {
 		case <-ctx.Done():
@@ -108,23 +107,19 @@ func (s *ContractService) saver(ctx context.Context) {
 		case <-ticker.C:
 			if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 				log.Err(err).Msg("UpdateContractMetadata")
-				return
+				continue
 			}
-			contracts = make([]*models.ContractMetadata, 0, bulkSize)
+			contracts = nil
 
 		case contract := <-s.result:
-			if contract.Status != models.StatusApplied && int64(contract.RetryCount) < s.maxRetryCount {
-				s.tasks <- contract
-			}
-
 			contracts = append(contracts, contract)
 
-			if len(contracts) == bulkSize {
+			if len(contracts) == 8 {
 				if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 					log.Err(err).Msg("UpdateContractMetadata")
-					return
+					continue
 				}
-				contracts = make([]*models.ContractMetadata, 0, bulkSize)
+				contracts = nil
 				ticker.Reset(time.Second * 15)
 			}
 		}

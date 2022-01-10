@@ -18,6 +18,9 @@ import (
 	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
+
+	"net/http"
+	_ "net/http/pprof"
 )
 
 const (
@@ -36,6 +39,10 @@ func main() {
 		Out:        os.Stderr,
 		TimeFormat: "2006-01-02 15:04:05",
 	}).Level(zerolog.InfoLevel)
+
+	go func() {
+		log.Print(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	args := cmdline.Parse()
 	if args.Help {
@@ -57,8 +64,8 @@ func main() {
 
 	prometheusService := initPrometheus(cfg.Prometheus)
 
-	indexers := make(map[string]*Indexer)
-	indexerCancels := make(map[string]context.CancelFunc)
+	var indexers sync.Map
+	var indexerCancels sync.Map
 
 	var hasuraInit sync.Once
 	for network, indexer := range cfg.Metadata.Indexers {
@@ -67,8 +74,8 @@ func main() {
 			if err != nil {
 				log.Err(err).Msg("")
 			} else {
-				indexers[network] = result.indexer
-				indexerCancels[network] = result.cancel
+				indexers.Store(network, result.indexer)
+				indexerCancels.Store(network, result.cancel)
 				hasuraInit.Do(func() {
 					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
 						log.Err(err).Msg("")
@@ -89,8 +96,8 @@ func main() {
 					if err != nil {
 						log.Err(err).Msg("")
 					} else {
-						indexers[network] = result.indexer
-						indexerCancels[network] = result.cancel
+						indexers.Store(network, result.indexer)
+						indexerCancels.Store(network, result.cancel)
 						hasuraInit.Do(func() {
 							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
 								log.Err(err).Msg("")
@@ -105,18 +112,20 @@ func main() {
 
 	<-signals
 
-	for newtork, cancelIndexer := range indexerCancels {
-		log.Info().Msgf("stopping %s indexer...", newtork)
+	indexerCancels.Range(func(key, value interface{}) bool {
+		log.Info().Msgf("stopping %s indexer...", key.(string))
+		cancelIndexer := value.(context.CancelFunc)
 		cancelIndexer()
-	}
+		return true
+	})
 
 	log.Warn().Msgf("Trying carefully stopping....")
-	for _, indexer := range indexers {
-		if err := indexer.Close(); err != nil {
+	indexers.Range(func(key, value interface{}) bool {
+		if err := value.(*Indexer).Close(); err != nil {
 			log.Err(err).Msg("")
-			return
 		}
-	}
+		return err == nil
+	})
 
 	if prometheusService != nil {
 		if err := prometheusService.Close(); err != nil {
