@@ -5,8 +5,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-pg/pg/v10"
+	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -24,6 +26,7 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
 	"github.com/dipdup-net/metadata/cmd/metadata/thumbnail"
 	"github.com/dipdup-net/metadata/cmd/metadata/tzkt"
+	"github.com/dipdup-net/metadata/internal/ipfs"
 )
 
 // Indexer -
@@ -55,11 +58,16 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 	}
 	cont := internalContext.NewContext()
 
+	metadataResolver, err := resolver.New(settings, cont)
+	if err != nil {
+		return nil, err
+	}
+
 	indexer := &Indexer{
 		scanner:                tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
 		network:                network,
 		indexName:              models.IndexName(network),
-		resolver:               resolver.New(settings, cont),
+		resolver:               metadataResolver,
 		settings:               settings,
 		ctx:                    cont,
 		db:                     db,
@@ -90,6 +98,10 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 		return err
 	}
 
+	if err := indexer.resolver.Init(indexer.initResolverCache); err != nil {
+		return err
+	}
+
 	if err := indexer.ctx.Load(indexer.db); err != nil {
 		return err
 	}
@@ -106,6 +118,20 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 
 	indexer.scanner.Start(ctx, indexer.state.Level)
 
+	return nil
+}
+
+func (indexer *Indexer) initResolverCache(c *ccache.Cache) error {
+	links, err := indexer.db.IPFSLinks(1000, 0)
+	if err != nil {
+		return err
+	}
+	for i := range links {
+		c.Set(links[i].Link, ipfs.Data{
+			Raw:  links[i].Data,
+			Node: links[i].Node,
+		}, time.Hour)
+	}
 	return nil
 }
 

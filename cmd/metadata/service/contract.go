@@ -17,7 +17,6 @@ type ContractService struct {
 	handler       func(ctx context.Context, contract *models.ContractMetadata) error
 	tasks         chan *models.ContractMetadata
 	result        chan *models.ContractMetadata
-	workers       chan struct{}
 	wg            sync.WaitGroup
 }
 
@@ -27,9 +26,8 @@ func NewContractService(db models.Database, handler func(context.Context, *model
 		maxRetryCount: maxRetryCount,
 		db:            db,
 		handler:       handler,
-		tasks:         make(chan *models.ContractMetadata, 1024*128),
-		result:        make(chan *models.ContractMetadata, 15),
-		workers:       make(chan struct{}, 10),
+		tasks:         make(chan *models.ContractMetadata, 512),
+		result:        make(chan *models.ContractMetadata, 16),
 		network:       network,
 	}
 }
@@ -41,28 +39,12 @@ func (s *ContractService) Start(ctx context.Context) {
 
 	s.wg.Add(1)
 	go s.saver(ctx)
-
-	var offset int
-	var end bool
-	for !end {
-		contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 100, offset, int(s.maxRetryCount))
-		if err != nil {
-			log.Err(err).Msg("GetContractMetadata")
-			continue
-		}
-		for i := range contracts {
-			s.tasks <- &contracts[i]
-		}
-		offset += len(contracts)
-		end = len(contracts) < 100
-	}
 }
 
 // Close -
 func (s *ContractService) Close() error {
 	s.wg.Wait()
 
-	close(s.workers)
 	return nil
 }
 
@@ -79,14 +61,31 @@ func (s *ContractService) manager(ctx context.Context) {
 		return
 	}
 
+	ticker := time.NewTicker(time.Second * 15)
+	defer ticker.Stop()
+
+	for i := 0; i < 5; i++ {
+		s.wg.Add(1)
+		go s.worker(ctx)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case unresolved := <-s.tasks:
-			s.workers <- struct{}{}
-			s.wg.Add(1)
-			go s.worker(ctx, unresolved)
+
+		case <-ticker.C:
+			if len(s.tasks) > 100 {
+				continue
+			}
+			contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 100, 0, int(s.maxRetryCount))
+			if err != nil {
+				log.Err(err).Msg("GetContractMetadata")
+				continue
+			}
+			for i := range contracts {
+				s.tasks <- &contracts[i]
+			}
 		}
 	}
 }
@@ -94,37 +93,34 @@ func (s *ContractService) manager(ctx context.Context) {
 func (s *ContractService) saver(ctx context.Context) {
 	defer s.wg.Done()
 
-	bulkSize := 8
-
 	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
-	contracts := make([]*models.ContractMetadata, 0, bulkSize)
+	contracts := make([]*models.ContractMetadata, 0)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
 		case <-ticker.C:
+			if len(contracts) == 0 {
+				continue
+			}
 			if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 				log.Err(err).Msg("UpdateContractMetadata")
-				return
+				continue
 			}
-			contracts = make([]*models.ContractMetadata, 0, bulkSize)
+			contracts = nil
 
 		case contract := <-s.result:
-			if contract.Status != models.StatusApplied && int64(contract.RetryCount) < s.maxRetryCount {
-				s.tasks <- contract
-			}
-
 			contracts = append(contracts, contract)
 
-			if len(contracts) == bulkSize {
+			if len(contracts) == 8 {
 				if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 					log.Err(err).Msg("UpdateContractMetadata")
-					return
+					continue
 				}
-				contracts = make([]*models.ContractMetadata, 0, bulkSize)
+				contracts = nil
 				ticker.Reset(time.Second * 15)
 			}
 		}
@@ -132,19 +128,24 @@ func (s *ContractService) saver(ctx context.Context) {
 
 }
 
-func (s *ContractService) worker(ctx context.Context, contract *models.ContractMetadata) {
-	defer func() {
-		s.wg.Done()
-		<-s.workers
-	}()
+func (s *ContractService) worker(ctx context.Context) {
+	defer s.wg.Done()
 
-	resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case unresolved := <-s.tasks:
+			resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
 
-	if err := s.handler(resolveCtx, contract); err != nil {
-		log.Err(err).Msg("resolve contract")
-		return
+			if err := s.handler(resolveCtx, unresolved); err != nil {
+				log.Err(err).Msg("resolve contract")
+				continue
+			}
+
+			s.result <- unresolved
+		}
 	}
 
-	s.result <- contract
 }

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	stdJSON "encoding/json"
 	"fmt"
 	"unicode/utf8"
 
@@ -26,16 +24,15 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 		return nil, err
 	}
 
-	metadata := models.ContractMetadata{
+	indexer.incrementCounter("contract", models.StatusNew)
+
+	return &models.ContractMetadata{
 		Network:  indexer.network,
 		Contract: update.Contract.Address,
 		Status:   models.StatusNew,
 		Link:     string(link),
 		UpdateID: indexer.contractActionsCounter.Increment(),
-	}
-	indexer.incrementCounter("contract", metadata.Status)
-
-	return &metadata, nil
+	}, nil
 }
 
 func (indexer *Indexer) logContractMetadata(cm models.ContractMetadata, str, level string) {
@@ -54,7 +51,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 	indexer.logContractMetadata(*cm, "Trying to resolve", "info")
 	cm.RetryCount += 1
 
-	data, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link)
+	resolved, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link)
 	if err != nil {
 		if e, ok := err.(resolver.ResolvingError); ok {
 			indexer.incrementErrorCounter(e)
@@ -68,23 +65,22 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 			indexer.logContractMetadata(*cm, "Failed", "warn")
 		}
 	} else {
-		escaped := helpers.Escape(data)
-
-		if utf8.Valid(escaped) {
+		cm.Metadata = helpers.Escape(resolved.Data)
+		if utf8.Valid(cm.Metadata) {
 			cm.Status = models.StatusApplied
-
-			var dst bytes.Buffer
-			if err := stdJSON.Compact(&dst, escaped); err != nil {
-				cm.Metadata = escaped
-			} else {
-				cm.Metadata = dst.Bytes()
-			}
 		} else {
-			cm.Metadata = escaped
 			cm.Status = models.StatusFailed
 		}
 	}
 	cm.UpdateID = indexer.contractActionsCounter.Increment()
 	indexer.incrementCounter("contract", cm.Status)
+
+	if resolved.By == resolver.ResolverTypeIPFS && cm.Status == models.StatusApplied {
+		return indexer.db.SaveIPFSLink(models.IPFSLink{
+			Link: cm.Link,
+			Node: resolved.Node,
+			Data: resolved.Data,
+		})
+	}
 	return nil
 }

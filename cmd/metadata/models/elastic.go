@@ -571,3 +571,27 @@ func (e *Elastic) createIndex(name string) error {
 	}
 	return nil
 }
+
+// IPFSLink -
+func (e *Elastic) IPFSLink(id int64) (link IPFSLink, err error) {
+	// TODO: implement
+	return
+}
+
+// IPFSLinks -
+func (e *Elastic) IPFSLinks(limit, offset int) (links []IPFSLink, err error) {
+	// TODO: implement
+	return
+}
+
+// SaveIPFSLink -
+func (e *Elastic) SaveIPFSLink(link IPFSLink) error {
+	// TODO: implement
+	return nil
+}
+
+// UpdateIPFSLink -
+func (e *Elastic) UpdateIPFSLink(link IPFSLink) error {
+	// TODO: implement
+	return nil
+}

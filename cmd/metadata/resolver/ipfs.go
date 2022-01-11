@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
+	"github.com/dipdup-net/metadata/internal/ipfs"
 	"github.com/karlseguin/ccache"
 
 	shell "github.com/ipfs/go-ipfs-api"
@@ -17,22 +17,14 @@ const (
 
 // Ipfs -
 type Ipfs struct {
-	Http
-
-	cache    *ccache.Cache
-	pinning  []*shell.Shell
-	gateways []string
+	cache   *ccache.Cache
+	pinning []*shell.Shell
+	pool    *ipfs.Pool
+	timeout time.Duration
 }
 
 // IpfsOption -
 type IpfsOption func(*Ipfs)
-
-// WithTimeoutIpfs -
-func WithTimeoutIpfs(timeout uint64) IpfsOption {
-	return func(s *Ipfs) {
-		WithTimeoutHttp(timeout)(&s.Http)
-	}
-}
 
 // WithPinningIpfs -
 func WithPinningIpfs(urls []string) IpfsOption {
@@ -48,49 +40,53 @@ func WithPinningIpfs(urls []string) IpfsOption {
 	}
 }
 
+// WithTimeoutIpfs -
+func WithTimeoutIpfs(timeout uint64) IpfsOption {
+	return func(s *Ipfs) {
+		s.timeout = time.Duration(timeout) * time.Second
+	}
+}
+
 // NewIPFS -
-func NewIPFS(gateways []string, opts ...IpfsOption) Ipfs {
+func NewIPFS(gateways []string, opts ...IpfsOption) (Ipfs, error) {
+	pool, err := ipfs.NewPool(gateways, 1024*1024)
+	if err != nil {
+		return Ipfs{}, err
+	}
 	s := Ipfs{
-		Http:     NewHttp(),
-		pinning:  make([]*shell.Shell, 0),
-		gateways: gateways,
-		cache:    ccache.New(ccache.Configure().MaxSize(30000)),
+		pinning: make([]*shell.Shell, 0),
+		pool:    pool,
+		cache:   ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(100)),
 	}
 
 	for i := range opts {
 		opts[i](&s)
 	}
 
-	return s
+	return s, nil
 }
 
 // Resolve -
-func (s Ipfs) Resolve(ctx context.Context, network, address, link string) ([]byte, error) {
-	if len(s.gateways) == 0 {
-		return nil, ErrEmptyIPFSGatewayList
-	}
-
-	path := helpers.IPFSPath(link)
+func (s Ipfs) Resolve(ctx context.Context, network, address, link string) (ipfs.Data, error) {
+	path := ipfs.Path(link)
 	for _, sh := range s.pinning {
 		_ = sh.Pin(path)
 	}
 
-	gateways := helpers.ShuffleGateways(s.gateways)
-	for i := range gateways {
-		url := helpers.IPFSLink(gateways[i], path)
-		data, err := s.cache.Fetch(path, time.Hour, func() (interface{}, error) {
-			return s.Http.Resolve(ctx, network, address, url)
-		})
-		if err == nil {
-			contents := data.Value().([]byte)
-			if len(s.pinning) > 0 {
-				s.pinContents(contents)
-			}
-			return contents, nil
-		}
-	}
+	data, err := s.cache.Fetch(link, time.Hour, func() (interface{}, error) {
+		requestCtx, cancel := context.WithTimeout(ctx, s.timeout)
+		defer cancel()
 
-	return nil, ErrNoIPFSResponse
+		return s.pool.Get(requestCtx, link)
+	})
+	if err != nil {
+		return ipfs.Data{}, newResolvingError(0, ErrorTypeHttpRequest, err)
+	}
+	content := data.Value().(ipfs.Data)
+	if len(s.pinning) > 0 {
+		s.pinContent(content.Raw)
+	}
+	return content, nil
 }
 
 // Is -
@@ -98,8 +94,8 @@ func (s Ipfs) Is(link string) bool {
 	return strings.HasPrefix(link, prefixIpfs)
 }
 
-func (s Ipfs) pinContents(data []byte) {
-	hash := helpers.FindAllIPFSLinks(data)
+func (s Ipfs) pinContent(data []byte) {
+	hash := ipfs.FindAllLinks(data)
 
 	for i := range hash {
 		for _, sh := range s.pinning {
