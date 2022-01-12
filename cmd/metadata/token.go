@@ -27,24 +27,31 @@ type TokenInfo struct {
 	Link      string            `json:"-"`
 }
 
-type tokenMetadataBigMap struct {
-	TokenID   string            `json:"token_id"`
-	TokenInfo map[string]string `json:"token_info"`
-}
-
 // UnmarshalJSON -
 func (tokenInfo *TokenInfo) UnmarshalJSON(data []byte) error {
-	var ti tokenMetadataBigMap
-	if err := json.Unmarshal(data, &ti); err != nil {
+	var generalTokenInfo map[string]interface{}
+	if err := json.Unmarshal(data, &generalTokenInfo); err != nil {
 		return err
 	}
-
-	tokenID, err := decimal.NewFromString(ti.TokenID)
-	if err != nil {
-		return err
+	for _, value := range generalTokenInfo {
+		switch typedValue := value.(type) {
+		case string:
+			tokenID, err := decimal.NewFromString(typedValue)
+			if err != nil {
+				return err
+			}
+			tokenInfo.TokenID = tokenID
+		case map[string]interface{}:
+			tokenInfo.TokenInfo = make(map[string]string)
+			for infoKey, infoValue := range typedValue {
+				stringValue, ok := infoValue.(string)
+				if !ok {
+					continue
+				}
+				tokenInfo.TokenInfo[infoKey] = stringValue
+			}
+		}
 	}
-	tokenInfo.TokenID = tokenID
-	tokenInfo.TokenInfo = ti.TokenInfo
 
 	if link, ok := tokenInfo.TokenInfo[""]; ok {
 		b, err := hex.DecodeString(link)
