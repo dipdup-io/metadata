@@ -45,6 +45,9 @@ func (s *ContractService) Start(ctx context.Context) {
 func (s *ContractService) Close() error {
 	s.wg.Wait()
 
+	close(s.tasks)
+	close(s.result)
+
 	return nil
 }
 

@@ -19,10 +19,9 @@ func WithPrometheus(prom *prometheus.Service) ThumbnailOption {
 // WithWorkers -
 func WithWorkers(workersCount int) ThumbnailOption {
 	return func(m *Service) {
-		if workersCount < 1 {
-			workersCount = 1
+		if workersCount > 0 {
+			m.workersCount = workersCount
 		}
-		m.workers = make(chan struct{}, workersCount)
 	}
 }
 

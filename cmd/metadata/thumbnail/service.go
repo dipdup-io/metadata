@@ -36,9 +36,10 @@ type Service struct {
 	size          int
 	timeout       time.Duration
 
-	network string
-	workers chan struct{}
-	wg      sync.WaitGroup
+	network      string
+	workersCount int
+	tasks        chan models.TokenMetadata
+	wg           sync.WaitGroup
 }
 
 // New -
@@ -53,14 +54,12 @@ func New(storage storage.Storage, db models.Database, network string, gateways [
 		db:            db,
 		network:       network,
 		timeout:       time.Second * 10,
+		workersCount:  10,
+		tasks:         make(chan models.TokenMetadata, 512),
 	}
 
 	for i := range opts {
 		opts[i](service)
-	}
-
-	if service.workers == nil {
-		service.workers = make(chan struct{}, 10)
 	}
 
 	return service
@@ -70,6 +69,11 @@ func New(storage storage.Storage, db models.Database, network string, gateways [
 func (s *Service) Start(ctx context.Context) {
 	if s.storage == nil || s.db == nil {
 		return
+	}
+
+	for i := 0; i < s.workersCount; i++ {
+		s.wg.Add(1)
+		go s.worker(ctx)
 	}
 
 	s.wg.Add(1)
@@ -84,6 +88,9 @@ func (s *Service) dispatch(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
+			if len(s.tasks) > 450 {
+				continue
+			}
 			metadata, err := s.db.GetUnprocessedImage(s.cursor, s.limit)
 			if err != nil {
 				log.Err(err).Msg("")
@@ -96,20 +103,23 @@ func (s *Service) dispatch(ctx context.Context) {
 			}
 
 			for _, one := range metadata {
-				s.workers <- struct{}{}
 				s.cursor = one.ID
-				s.wg.Add(1)
+				s.tasks <- one
+			}
+		}
+	}
+}
 
-				go func(metadata models.TokenMetadata) {
-					defer func() {
-						<-s.workers
-						s.wg.Done()
-					}()
+func (s *Service) worker(ctx context.Context) {
+	defer s.wg.Done()
 
-					if err := s.work(ctx, metadata); err != nil {
-						log.Err(err).Msg("")
-					}
-				}(one)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case task := <-s.tasks:
+			if err := s.work(ctx, task); err != nil {
+				log.Err(err).Msg("thumbnail worker")
 			}
 		}
 	}
@@ -166,7 +176,7 @@ func (s *Service) work(ctx context.Context, one models.TokenMetadata) error {
 func (s *Service) Close() error {
 	s.wg.Wait()
 
-	close(s.workers)
+	close(s.tasks)
 	return nil
 }
 
