@@ -85,14 +85,16 @@ func (cfg MetadataDataSource) Validate() error {
 
 // Settings -
 type Settings struct {
-	IPFSGateways         []string  `yaml:"ipfs_gateways" validate:"min=1,dive,url"`
-	IPFSPinning          []string  `yaml:"ipfs_pinning"`
-	IPFSTimeout          uint64    `yaml:"ipfs_timeout" validate:"min=1"`
-	HTTPTimeout          uint64    `yaml:"http_timeout" validate:"min=1"`
-	MaxRetryCountOnError uint64    `yaml:"max_retry_count_on_error" validate:"min=1"`
-	Thumbnail            Thumbnail `yaml:"thumbnail"`
-	AWS                  AWS       `yaml:"aws"`
-	MaxCPU               uint64    `yaml:"max_cpu,omitempty" validate:"omitempty,min=1"`
+	IPFSGateways           []string  `yaml:"ipfs_gateways" validate:"min=1,dive,url"`
+	IPFSPinning            []string  `yaml:"ipfs_pinning"`
+	IPFSTimeout            uint64    `yaml:"ipfs_timeout" validate:"min=1"`
+	HTTPTimeout            uint64    `yaml:"http_timeout" validate:"min=1"`
+	MaxRetryCountOnError   int       `yaml:"max_retry_count_on_error" validate:"min=1"`
+	ContractServiceWorkers int       `yaml:"contract_service_workers" validate:"min=1"`
+	TokenServiceWorkers    int       `yaml:"token_service_workers" validate:"min=1"`
+	Thumbnail              Thumbnail `yaml:"thumbnail"`
+	AWS                    AWS       `yaml:"aws"`
+	MaxCPU                 int       `yaml:"max_cpu,omitempty" validate:"omitempty,min=1"`
 }
 
 // AWS -
