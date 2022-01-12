@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/dipdup-net/metadata/internal/ipfs"
-	"github.com/karlseguin/ccache"
 
 	shell "github.com/ipfs/go-ipfs-api"
 )
@@ -17,10 +16,10 @@ const (
 
 // Ipfs -
 type Ipfs struct {
-	cache   *ccache.Cache
-	pinning []*shell.Shell
-	pool    *ipfs.Pool
-	timeout time.Duration
+	pinning  []*shell.Shell
+	pool     *ipfs.Pool
+	timeout  time.Duration
+	fallback string
 }
 
 // IpfsOption -
@@ -47,6 +46,13 @@ func WithTimeoutIpfs(timeout uint64) IpfsOption {
 	}
 }
 
+// WithFallbackIpfs -
+func WithFallbackIpfs(fallback string) IpfsOption {
+	return func(s *Ipfs) {
+		s.fallback = fallback
+	}
+}
+
 // NewIPFS -
 func NewIPFS(gateways []string, opts ...IpfsOption) (Ipfs, error) {
 	pool, err := ipfs.NewPool(gateways, 1024*1024)
@@ -56,7 +62,6 @@ func NewIPFS(gateways []string, opts ...IpfsOption) (Ipfs, error) {
 	s := Ipfs{
 		pinning: make([]*shell.Shell, 0),
 		pool:    pool,
-		cache:   ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(100)),
 	}
 
 	for i := range opts {
@@ -73,20 +78,28 @@ func (s Ipfs) Resolve(ctx context.Context, network, address, link string) (ipfs.
 		_ = sh.Pin(path)
 	}
 
-	data, err := s.cache.Fetch(link, time.Hour, func() (interface{}, error) {
+	requestCtx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+
+	data, err := s.pool.GetFromRandomGateway(requestCtx, link)
+	if err != nil {
+		if s.fallback == "" {
+			return data, newResolvingError(0, ErrorTypeHttpRequest, err)
+		}
+
 		requestCtx, cancel := context.WithTimeout(ctx, s.timeout)
 		defer cancel()
 
-		return s.pool.Get(requestCtx, link)
-	})
-	if err != nil {
-		return ipfs.Data{}, newResolvingError(0, ErrorTypeHttpRequest, err)
+		data, err = s.pool.GetFromNode(requestCtx, link, s.fallback)
+		if err != nil {
+			return data, err
+		}
 	}
-	content := data.Value().(ipfs.Data)
+
 	if len(s.pinning) > 0 {
-		s.pinContent(content.Raw)
+		s.pinContent(data.Raw)
 	}
-	return content, nil
+	return data, nil
 }
 
 // Is -

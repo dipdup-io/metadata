@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
+	"github.com/dipdup-net/metadata/internal/ipfs"
+	"github.com/go-pg/pg/v10"
 	"github.com/rs/zerolog/log"
 )
 
@@ -14,7 +17,7 @@ type TokenService struct {
 	network       string
 	maxRetryCount int
 	workersCount  int
-	repo          models.TokenRepository
+	repo          models.Database
 	handler       func(ctx context.Context, token *models.TokenMetadata) error
 	tasks         chan *models.TokenMetadata
 	result        chan *models.TokenMetadata
@@ -22,7 +25,7 @@ type TokenService struct {
 }
 
 // NewContractService -
-func NewTokenService(repo models.TokenRepository, handler func(context.Context, *models.TokenMetadata) error, network string, opts ...TokenServiceOption) *TokenService {
+func NewTokenService(repo models.Database, handler func(context.Context, *models.TokenMetadata) error, network string, opts ...TokenServiceOption) *TokenService {
 	ts := &TokenService{
 		maxRetryCount: 3,
 		workersCount:  5,
@@ -62,11 +65,6 @@ func (s *TokenService) Close() error {
 	return nil
 }
 
-// ToProcessQueue -
-func (s *TokenService) ToProcessQueue(token *models.TokenMetadata) {
-	s.tasks <- token
-}
-
 func (s *TokenService) manager(ctx context.Context) {
 	defer s.wg.Done()
 
@@ -75,7 +73,7 @@ func (s *TokenService) manager(ctx context.Context) {
 		return
 	}
 
-	ticker := time.NewTicker(time.Second * 15)
+	ticker := time.NewTicker(time.Millisecond * 10)
 	defer ticker.Stop()
 
 	for {
@@ -93,6 +91,21 @@ func (s *TokenService) manager(ctx context.Context) {
 				continue
 			}
 			for i := range tokens {
+				if ipfs.Is(tokens[i].Link) {
+					link, err := s.repo.IPFSLinkByURL(tokens[i].Link)
+					if err == nil {
+						tokens[i].Status = models.StatusApplied
+						tokens[i].Metadata = link.Data
+						tokens[i].RetryCount += 1
+						s.result <- &tokens[i]
+						continue
+					}
+
+					if !errors.Is(err, pg.ErrNoRows) {
+						log.Err(err).Msg("token IPFSLinkByURL")
+					}
+				}
+
 				s.tasks <- &tokens[i]
 			}
 		}
@@ -102,7 +115,7 @@ func (s *TokenService) manager(ctx context.Context) {
 func (s *TokenService) saver(ctx context.Context) {
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(time.Second * 15)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	tokens := make([]*models.TokenMetadata, 0)

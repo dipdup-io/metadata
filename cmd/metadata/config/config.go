@@ -85,9 +85,7 @@ func (cfg MetadataDataSource) Validate() error {
 
 // Settings -
 type Settings struct {
-	IPFSGateways           []string  `yaml:"ipfs_gateways" validate:"min=1,dive,url"`
-	IPFSPinning            []string  `yaml:"ipfs_pinning"`
-	IPFSTimeout            uint64    `yaml:"ipfs_timeout" validate:"min=1"`
+	IPFS                   IPFS      `yaml:"ipfs"`
 	HTTPTimeout            uint64    `yaml:"http_timeout" validate:"min=1"`
 	MaxRetryCountOnError   int       `yaml:"max_retry_count_on_error" validate:"min=1"`
 	ContractServiceWorkers int       `yaml:"contract_service_workers" validate:"min=1"`
@@ -112,4 +110,12 @@ type Thumbnail struct {
 	Size        int   `yaml:"size" validate:"min=1"`
 	Workers     int   `yaml:"workers" validate:"min=1"`
 	Timeout     int   `yaml:"timeout" validate:"min=1"`
+}
+
+// IPFS -
+type IPFS struct {
+	Gateways []string `yaml:"gateways" validate:"min=1,dive,url"`
+	Pinning  []string `yaml:"pinning"`
+	Timeout  uint64   `yaml:"timeout" validate:"min=1"`
+	Fallback string   `yaml:"fallback" validate:"url"`
 }

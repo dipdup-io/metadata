@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
+	"github.com/dipdup-net/metadata/internal/ipfs"
+	"github.com/go-pg/pg/v10"
 	"github.com/rs/zerolog/log"
 )
 
@@ -64,11 +67,6 @@ func (s *ContractService) Close() error {
 	return nil
 }
 
-// ToProcessQueue -
-func (s *ContractService) ToProcessQueue(contract *models.ContractMetadata) {
-	s.tasks <- contract
-}
-
 func (s *ContractService) manager(ctx context.Context) {
 	defer s.wg.Done()
 
@@ -77,7 +75,7 @@ func (s *ContractService) manager(ctx context.Context) {
 		return
 	}
 
-	ticker := time.NewTicker(time.Second * 15)
+	ticker := time.NewTicker(time.Millisecond * 10)
 	defer ticker.Stop()
 
 	for {
@@ -95,6 +93,20 @@ func (s *ContractService) manager(ctx context.Context) {
 				continue
 			}
 			for i := range contracts {
+				if ipfs.Is(contracts[i].Link) {
+					link, err := s.db.IPFSLinkByURL(contracts[i].Link)
+					if err == nil {
+						contracts[i].Status = models.StatusApplied
+						contracts[i].Metadata = link.Data
+						contracts[i].RetryCount += 1
+						s.result <- &contracts[i]
+						continue
+					}
+
+					if !errors.Is(err, pg.ErrNoRows) {
+						log.Err(err).Msg("contract IPFSLinkByURL")
+					}
+				}
 				s.tasks <- &contracts[i]
 			}
 		}
@@ -104,7 +116,7 @@ func (s *ContractService) manager(ctx context.Context) {
 func (s *ContractService) saver(ctx context.Context) {
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(time.Second * 15)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	contracts := make([]*models.ContractMetadata, 0)

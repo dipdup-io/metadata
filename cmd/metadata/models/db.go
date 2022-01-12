@@ -74,7 +74,7 @@ func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
 
 // GetContractMetadata -
 func (db *RelativeDatabase) GetContractMetadata(network string, status Status, limit, offset, retryCount int) (all []ContractMetadata, err error) {
-	query := db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network)
+	query := db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("updated_at - extract(epoch from now()) > 60")
 	if limit > 0 {
 		query.Limit(limit)
 	}
@@ -84,7 +84,7 @@ func (db *RelativeDatabase) GetContractMetadata(network string, status Status, l
 	if retryCount > 0 {
 		query.Where("retry_count < ?", retryCount)
 	}
-	err = query.Order("retry_count asc").Select()
+	err = query.OrderExpr("retry_count desc, updated_at desc").Select()
 	return
 }
 
@@ -128,7 +128,7 @@ func (db *RelativeDatabase) GetTokenMetadata(network string, status Status, limi
 	if retryCount > 0 {
 		query.Where("retry_count < ?", retryCount)
 	}
-	err = query.Order("retry_count asc").Select()
+	err = query.OrderExpr("retry_count desc, updated_at desc").Select()
 	return
 }
 
@@ -225,6 +225,12 @@ func (db *RelativeDatabase) SaveIPFSLink(link IPFSLink) error {
 
 // UpdateIPFSLink -
 func (db *RelativeDatabase) UpdateIPFSLink(link IPFSLink) error {
-	_, err := db.DB().Model(&link).WherePK().Update()
+	_, err := db.DB().Model(&link).WherePK().Column("data", "node").Update()
 	return err
+}
+
+// IPFSLinkByURL -
+func (db *RelativeDatabase) IPFSLinkByURL(url string) (link IPFSLink, err error) {
+	err = db.DB().Model(&link).Where("link = ?", url).First()
+	return
 }

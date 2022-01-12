@@ -5,10 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/go-pg/pg/v10"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -26,7 +24,6 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
 	"github.com/dipdup-net/metadata/cmd/metadata/thumbnail"
 	"github.com/dipdup-net/metadata/cmd/metadata/tzkt"
-	"github.com/dipdup-net/metadata/internal/ipfs"
 )
 
 // Indexer -
@@ -78,7 +75,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 
 	if aws := storage.NewAWS(settings.AWS); aws != nil {
 		indexer.thumbnail = thumbnail.New(
-			aws, db, network, settings.IPFSGateways,
+			aws, db, network, settings.IPFS.Gateways,
 			thumbnail.WithPrometheus(prom),
 			thumbnail.WithWorkers(settings.Thumbnail.Workers),
 			thumbnail.WithFileSizeLimit(settings.Thumbnail.MaxFileSize),
@@ -106,10 +103,6 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 		return err
 	}
 
-	if err := indexer.resolver.Init(indexer.initResolverCache); err != nil {
-		return err
-	}
-
 	if err := indexer.ctx.Load(indexer.db); err != nil {
 		return err
 	}
@@ -126,20 +119,6 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 
 	indexer.scanner.Start(ctx, indexer.state.Level)
 
-	return nil
-}
-
-func (indexer *Indexer) initResolverCache(c *ccache.Cache) error {
-	links, err := indexer.db.IPFSLinks(1000, 0)
-	if err != nil {
-		return err
-	}
-	for i := range links {
-		c.Set(links[i].Link, ipfs.Data{
-			Raw:  links[i].Data,
-			Node: links[i].Node,
-		}, time.Hour)
-	}
 	return nil
 }
 
@@ -275,15 +254,9 @@ func (indexer *Indexer) handlerUpdate(ctx context.Context, msg tzkt.Message) err
 	if err := indexer.db.SaveContractMetadata(ctx, contracts); err != nil {
 		return err
 	}
-	for i := range contracts {
-		indexer.contracts.ToProcessQueue(contracts[i])
-	}
 
 	if err := indexer.db.SaveTokenMetadata(ctx, tokens); err != nil {
 		return err
-	}
-	for i := range tokens {
-		indexer.tokens.ToProcessQueue(tokens[i])
 	}
 
 	indexer.state.Level = msg.Level
@@ -310,4 +283,14 @@ func (indexer *Indexer) incrementErrorCounter(err resolver.ResolvingError) {
 		"type":    string(err.Type),
 		"code":    strconv.FormatInt(int64(err.Code), 10),
 	})
+}
+
+func (indexer *Indexer) addHistogramResponseTime(data resolver.Resolved) {
+	if indexer.prom == nil {
+		return
+	}
+	indexer.prom.AddHistogramValue(metricsMetadataIPFSResponseTime, map[string]string{
+		"network": indexer.network,
+		"node":    data.Node,
+	}, float64(len(data.Data))/float64(data.ResponseTime))
 }

@@ -159,11 +159,15 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 	tm.UpdateID = indexer.tokenActionsCounter.Increment()
 
 	if resolved.By == resolver.ResolverTypeIPFS && tm.Status == models.StatusApplied {
-		return indexer.db.SaveIPFSLink(models.IPFSLink{
+		link := models.IPFSLink{
 			Link: tm.Link,
 			Node: resolved.Node,
 			Data: resolved.Data,
-		})
+		}
+		if resolved.ResponseTime > 0 {
+			indexer.addHistogramResponseTime(resolved)
+		}
+		return indexer.db.SaveIPFSLink(link)
 	}
 	return nil
 }

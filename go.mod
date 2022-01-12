@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.42.20
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/dipdup-net/go-lib v0.1.49
+	github.com/dipdup-net/go-lib v0.1.50
 	github.com/disintegration/imaging v1.6.2
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20211123103400-5f8a17a2322f
 	github.com/go-pg/pg/v10 v10.10.6
@@ -16,8 +16,6 @@ require (
 	github.com/ipfs/go-cid v0.1.0
 	github.com/ipfs/go-ipfs-api v0.3.0
 	github.com/json-iterator/go v1.1.12
-	github.com/karlseguin/ccache v2.0.3+incompatible
-	github.com/karlseguin/expect v1.0.8 // indirect
 	github.com/labstack/echo/v4 v4.6.1
 	github.com/labstack/gommon v0.3.1 // indirect
 	github.com/libp2p/go-libp2p-core v0.12.0 // indirect

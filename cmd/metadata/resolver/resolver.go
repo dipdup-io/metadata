@@ -7,7 +7,6 @@ import (
 
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	internalContext "github.com/dipdup-net/metadata/cmd/metadata/context"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 )
 
@@ -55,9 +54,10 @@ func newResolvingError(code int, typ ErrorType, err error) ResolvingError {
 
 // Resolved -
 type Resolved struct {
-	By   ResolverType
-	Node string
-	Data []byte
+	By           ResolverType
+	Node         string
+	Data         []byte
+	ResponseTime int64
 }
 
 // Receiver -
@@ -70,7 +70,10 @@ type Receiver struct {
 
 // New -
 func New(settings config.Settings, ctx *internalContext.Context) (Receiver, error) {
-	ipfs, err := NewIPFS(settings.IPFSGateways, WithTimeoutIpfs(settings.IPFSTimeout), WithPinningIpfs(settings.IPFSPinning))
+	ipfs, err := NewIPFS(settings.IPFS.Gateways,
+		WithTimeoutIpfs(settings.IPFS.Timeout),
+		WithPinningIpfs(settings.IPFS.Pinning),
+		WithFallbackIpfs(settings.IPFS.Fallback))
 	if err != nil {
 		return Receiver{}, err
 	}
@@ -80,11 +83,6 @@ func New(settings config.Settings, ctx *internalContext.Context) (Receiver, erro
 		http:  NewHttp(WithTimeoutHttp(settings.HTTPTimeout)),
 		sha:   NewSha256(WithTimeoutSha256(settings.HTTPTimeout)),
 	}, nil
-}
-
-// Init -
-func (r Receiver) Init(initFunc func(*ccache.Cache) error) error {
-	return initFunc(r.ipfs.cache)
 }
 
 // Resolve -
@@ -102,6 +100,7 @@ func (r Receiver) Resolve(ctx context.Context, network, address, link string) (r
 		}
 		resolved.Data = data.Raw
 		resolved.Node = data.Node
+		resolved.ResponseTime = data.ResponseTime
 
 	case r.tezos.Is(link):
 		resolved.By = ResolverTypeTezos
