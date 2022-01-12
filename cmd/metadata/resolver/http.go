@@ -21,6 +21,7 @@ const (
 // HTTPStorage -
 type Http struct {
 	timeout time.Duration
+	client  http.Client
 }
 
 // HttpOption -
@@ -45,6 +46,16 @@ func NewHttp(opts ...HttpOption) Http {
 		opts[i](&s)
 	}
 
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.MaxIdleConns = 10
+	t.MaxConnsPerHost = 10
+	t.MaxIdleConnsPerHost = 10
+
+	s.client = http.Client{
+		Timeout:   s.timeout,
+		Transport: t,
+	}
+
 	return s
 }
 
@@ -53,15 +64,13 @@ func (s Http) Resolve(ctx context.Context, network, address, link string) ([]byt
 	if _, err := url.ParseRequestURI(link); err != nil {
 		return nil, ErrInvalidURI
 	}
-	client := http.Client{
-		Timeout: s.timeout,
-	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		return nil, newResolvingError(0, ErrorTypeReceiving, errors.Wrap(ErrHTTPRequest, err.Error()))
 	}

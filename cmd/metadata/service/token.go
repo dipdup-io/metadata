@@ -57,6 +57,8 @@ func (s *TokenService) Start(ctx context.Context) {
 func (s *TokenService) Close() error {
 	s.wg.Wait()
 
+	close(s.tasks)
+	close(s.result)
 	return nil
 }
 

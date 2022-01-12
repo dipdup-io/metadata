@@ -106,7 +106,7 @@ func main() {
 	<-signals
 
 	indexerCancels.Range(func(key, value interface{}) bool {
-		log.Info().Msgf("stopping %s indexer...", key.(string))
+		log.Info().Msgf("stopping %s indexer...", key)
 		cancelIndexer := value.(context.CancelFunc)
 		cancelIndexer()
 		return true
