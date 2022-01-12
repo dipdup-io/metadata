@@ -47,7 +47,7 @@ func main() {
 		log.Err(err).Msg("")
 		return
 	}
-	runtime.GOMAXPROCS(int(cfg.Metadata.Settings.MaxCPU))
+	runtime.GOMAXPROCS(cfg.Metadata.Settings.MaxCPU)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

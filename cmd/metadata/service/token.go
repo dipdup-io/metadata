@@ -12,7 +12,8 @@ import (
 // TokenService -
 type TokenService struct {
 	network       string
-	maxRetryCount int64
+	maxRetryCount int
+	workersCount  int
 	repo          models.TokenRepository
 	handler       func(ctx context.Context, token *models.TokenMetadata) error
 	tasks         chan *models.TokenMetadata
@@ -21,24 +22,35 @@ type TokenService struct {
 }
 
 // NewContractService -
-func NewTokenService(repo models.TokenRepository, handler func(context.Context, *models.TokenMetadata) error, network string, maxRetryCount int64) *TokenService {
-	return &TokenService{
-		maxRetryCount: maxRetryCount,
+func NewTokenService(repo models.TokenRepository, handler func(context.Context, *models.TokenMetadata) error, network string, opts ...TokenServiceOption) *TokenService {
+	ts := &TokenService{
+		maxRetryCount: 3,
+		workersCount:  5,
 		network:       network,
 		repo:          repo,
 		handler:       handler,
 		tasks:         make(chan *models.TokenMetadata, 512),
 		result:        make(chan *models.TokenMetadata, 16),
 	}
+	for i := range opts {
+		opts[i](ts)
+	}
+	return ts
 }
 
 // Start -
 func (s *TokenService) Start(ctx context.Context) {
 	s.wg.Add(1)
-	go s.saver(ctx)
+	go s.manager(ctx)
+
+	for i := 0; i < s.workersCount; i++ {
+		s.wg.Add(1)
+		go s.worker(ctx)
+	}
 
 	s.wg.Add(1)
-	go s.manager(ctx)
+	go s.saver(ctx)
+
 }
 
 // Close -
@@ -64,11 +76,6 @@ func (s *TokenService) manager(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
-	for i := 0; i < 5; i++ {
-		s.wg.Add(1)
-		go s.worker(ctx)
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -78,7 +85,7 @@ func (s *TokenService) manager(ctx context.Context) {
 				continue
 			}
 
-			tokens, err := s.repo.GetTokenMetadata(s.network, models.StatusNew, 100, 0, int(s.maxRetryCount))
+			tokens, err := s.repo.GetTokenMetadata(s.network, models.StatusNew, 100, 0, s.maxRetryCount)
 			if err != nil {
 				log.Err(err).Msg("GetTokenMetadata")
 				continue

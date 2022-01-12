@@ -12,7 +12,8 @@ import (
 // ContractService -
 type ContractService struct {
 	network       string
-	maxRetryCount int64
+	maxRetryCount int
+	workersCount  int
 	db            models.Database
 	handler       func(ctx context.Context, contract *models.ContractMetadata) error
 	tasks         chan *models.ContractMetadata
@@ -21,19 +22,31 @@ type ContractService struct {
 }
 
 // NewContractService -
-func NewContractService(db models.Database, handler func(context.Context, *models.ContractMetadata) error, network string, maxRetryCount int64) *ContractService {
-	return &ContractService{
-		maxRetryCount: maxRetryCount,
+func NewContractService(db models.Database, handler func(context.Context, *models.ContractMetadata) error, network string, opts ...ContractServiceOption) *ContractService {
+	cs := &ContractService{
+		maxRetryCount: 3,
+		workersCount:  5,
 		db:            db,
 		handler:       handler,
 		tasks:         make(chan *models.ContractMetadata, 512),
 		result:        make(chan *models.ContractMetadata, 16),
 		network:       network,
 	}
+
+	for i := range opts {
+		opts[i](cs)
+	}
+
+	return cs
 }
 
 // Start -
 func (s *ContractService) Start(ctx context.Context) {
+	for i := 0; i < s.workersCount; i++ {
+		s.wg.Add(1)
+		go s.worker(ctx)
+	}
+
 	s.wg.Add(1)
 	go s.manager(ctx)
 
@@ -64,11 +77,6 @@ func (s *ContractService) manager(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 15)
 	defer ticker.Stop()
 
-	for i := 0; i < 5; i++ {
-		s.wg.Add(1)
-		go s.worker(ctx)
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -78,7 +86,7 @@ func (s *ContractService) manager(ctx context.Context) {
 			if len(s.tasks) > 100 {
 				continue
 			}
-			contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 100, 0, int(s.maxRetryCount))
+			contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 100, 0, s.maxRetryCount)
 			if err != nil {
 				log.Err(err).Msg("GetContractMetadata")
 				continue

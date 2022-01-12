@@ -86,8 +86,16 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 			thumbnail.WithTimeout(settings.Thumbnail.Timeout),
 		)
 	}
-	indexer.contracts = service.NewContractService(db, indexer.resolveContractMetadata, network, int64(settings.MaxRetryCountOnError))
-	indexer.tokens = service.NewTokenService(db, indexer.resolveTokenMetadata, network, int64(settings.MaxRetryCountOnError))
+	indexer.contracts = service.NewContractService(
+		db, indexer.resolveContractMetadata, network,
+		service.WithMaxRetryCountContract(settings.MaxRetryCountOnError),
+		service.WithWorkersCountContract(settings.ContractServiceWorkers),
+	)
+	indexer.tokens = service.NewTokenService(
+		db, indexer.resolveTokenMetadata, network,
+		service.WithMaxRetryCountToken(settings.MaxRetryCountOnError),
+		service.WithWorkersCountToken(settings.TokenServiceWorkers),
+	)
 
 	return indexer, nil
 }
