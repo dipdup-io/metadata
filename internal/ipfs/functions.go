@@ -62,3 +62,8 @@ func ShuffleGateways(gateways []string) []string {
 	rand.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
 	return shuffled
 }
+
+// Is -
+func Is(link string) bool {
+	return ipfsURL.MatchString(link)
+}

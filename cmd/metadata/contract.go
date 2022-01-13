@@ -76,6 +76,9 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 	indexer.incrementCounter("contract", cm.Status)
 
 	if resolved.By == resolver.ResolverTypeIPFS && cm.Status == models.StatusApplied {
+		if resolved.ResponseTime > 0 {
+			indexer.addHistogramResponseTime(resolved)
+		}
 		return indexer.db.SaveIPFSLink(models.IPFSLink{
 			Link: cm.Link,
 			Node: resolved.Node,

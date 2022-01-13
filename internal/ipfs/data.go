@@ -2,6 +2,7 @@ package ipfs
 
 // Data -
 type Data struct {
-	Raw  []byte
-	Node string
+	Raw          []byte
+	Node         string
+	ResponseTime int64
 }

@@ -58,13 +58,17 @@ func (pool *Pool) Get(ctx context.Context, link string) (Data, error) {
 func (pool *Pool) GetFromRandomGateway(ctx context.Context, link string) (Data, error) {
 	rand.Seed(time.Now().UnixNano())
 	index := rand.Intn(len(pool.gateways))
+	start := time.Now()
 	data, err := pool.request(ctx, link, pool.gateways[index])
 	if err != nil {
-		return Data{}, err
+		return Data{
+			Node: pool.gateways[index],
+		}, err
 	}
 	return Data{
-		Raw:  data,
-		Node: pool.gateways[index],
+		Raw:          data,
+		Node:         pool.gateways[index],
+		ResponseTime: time.Since(start).Milliseconds(),
 	}, nil
 }
 
