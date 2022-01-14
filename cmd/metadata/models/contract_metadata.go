@@ -46,4 +46,5 @@ type ContractRepository interface {
 	UpdateContractMetadata(ctx context.Context, metadata []*ContractMetadata) error
 	SaveContractMetadata(ctx context.Context, metadata []*ContractMetadata) error
 	LastContractUpdateID() (int64, error)
+	CountContractsByStatus(network string, status Status) (int, error)
 }

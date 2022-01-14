@@ -24,7 +24,7 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 		return nil, err
 	}
 
-	indexer.incrementCounter("contract", models.StatusNew)
+	indexer.incrementNewMetadataGauge("contract")
 
 	return &models.ContractMetadata{
 		Network:  indexer.network,
@@ -73,7 +73,6 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 		}
 	}
 	cm.UpdateID = indexer.contractActionsCounter.Increment()
-	indexer.incrementCounter("contract", cm.Status)
 
 	if resolved.By == resolver.ResolverTypeIPFS && cm.Status == models.StatusApplied {
 		if resolved.ResponseTime > 0 {

@@ -1,5 +1,7 @@
 package service
 
+import "github.com/dipdup-net/go-lib/prometheus"
+
 // ContractServiceOption -
 type ContractServiceOption func(*ContractService)
 
@@ -21,6 +23,13 @@ func WithWorkersCountContract(count int) ContractServiceOption {
 	}
 }
 
+// WithWorkersCountContract -
+func WithPrometheusContract(prom *prometheus.Service) ContractServiceOption {
+	return func(cs *ContractService) {
+		cs.prom = prom
+	}
+}
+
 // TokenServiceOption -
 type TokenServiceOption func(*TokenService)
 
@@ -39,5 +48,12 @@ func WithWorkersCountToken(count int) TokenServiceOption {
 		if count > 0 {
 			ts.workersCount = count
 		}
+	}
+}
+
+// WithPrometheusToken -
+func WithPrometheusToken(prom *prometheus.Service) TokenServiceOption {
+	return func(ts *TokenService) {
+		ts.prom = prom
 	}
 }

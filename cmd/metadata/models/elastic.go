@@ -228,6 +228,12 @@ func (e *Elastic) LastContractUpdateID() (value int64, err error) {
 	return
 }
 
+// CountContractsByStatus -
+func (e *Elastic) CountContractsByStatus(network string, status Status) (int, error) {
+	// TODO: realize CountContractsByStatus
+	return 0, nil
+}
+
 // GetContractMetadata -
 // TODO: filter network
 func (e *Elastic) GetTokenMetadata(network string, status Status, limit, offset, retryCount int) ([]TokenMetadata, error) {
@@ -337,6 +343,12 @@ func (e *Elastic) SaveTokenMetadata(ctx context.Context, metadata []*TokenMetada
 func (e *Elastic) LastTokenUpdateID() (value int64, err error) {
 	// TODO: realize LastTokenUpdateID
 	return
+}
+
+// CountTokensByStatus -
+func (e *Elastic) CountTokensByStatus(network string, status Status) (int, error) {
+	// TODO: realize CountTokensByStatus
+	return 0, nil
 }
 
 // SetImageProcessed -
