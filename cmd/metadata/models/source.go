@@ -16,6 +16,8 @@ type Database interface {
 	IPFSLinkRepository
 	database.StateRepository
 	io.Closer
+
+	CreateIndices() error
 }
 
 // NewDatabase -

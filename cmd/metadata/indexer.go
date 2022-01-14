@@ -26,6 +26,8 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/tzkt"
 )
 
+var createIndex sync.Once
+
 // Indexer -
 type Indexer struct {
 	network   string
@@ -101,6 +103,11 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 
 // Start -
 func (indexer *Indexer) Start(ctx context.Context) error {
+	createIndex.Do(func() {
+		if err := indexer.db.CreateIndices(); err != nil {
+			log.Err(err).Msg("create indices")
+		}
+	})
 	if err := indexer.initState(); err != nil {
 		return err
 	}

@@ -244,3 +244,28 @@ func (db *RelativeDatabase) IPFSLinkByURL(url string) (link IPFSLink, err error)
 	err = db.DB().Model(&link).Where("link = ?", url).First()
 	return
 }
+
+// CreateIndices -
+func (db *RelativeDatabase) CreateIndices() error {
+	if _, err := db.DB().Exec(`
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS contract_metadata_network_status_idx ON contract_metadata (network, status)
+	`); err != nil {
+		return err
+	}
+	if _, err := db.DB().Exec(`
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS contract_metadata_sort_idx ON contract_metadata (retry_count, updated_at)
+	`); err != nil {
+		return err
+	}
+	if _, err := db.DB().Exec(`
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS token_metadata_network_status_idx ON token_metadata (network, status)
+	`); err != nil {
+		return err
+	}
+	if _, err := db.DB().Exec(`
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS token_metadata_sort_idx ON token_metadata (retry_count, updated_at)
+	`); err != nil {
+		return err
+	}
+	return nil
+}

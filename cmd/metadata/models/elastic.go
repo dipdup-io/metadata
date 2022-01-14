@@ -613,3 +613,9 @@ func (e *Elastic) IPFSLinkByURL(url string) (link IPFSLink, err error) {
 	// TODO: implement
 	return
 }
+
+// CreateIndices -
+func (e *Elastic) CreateIndices() error {
+	// TODO: implement
+	return nil
+}
