@@ -86,7 +86,7 @@ func (s *ContractService) manager(ctx context.Context) {
 			return
 
 		case <-ticker.C:
-			if len(s.tasks) > 100 {
+			if len(s.tasks) > 0 {
 				continue
 			}
 			contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 100, 0, s.maxRetryCount)

@@ -83,7 +83,7 @@ func (s *TokenService) manager(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if len(s.tasks) > 100 {
+			if len(s.tasks) > 0 {
 				continue
 			}
 
