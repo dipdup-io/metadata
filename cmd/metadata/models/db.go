@@ -74,7 +74,7 @@ func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
 
 // GetContractMetadata -
 func (db *RelativeDatabase) GetContractMetadata(network string, status Status, limit, offset, retryCount int) (all []ContractMetadata, err error) {
-	query := db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("extract(epoch from now()) - updated_at > 60")
+	query := db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("extract(epoch from now()) - updated_at > 10")
 	if limit > 0 {
 		query.Limit(limit)
 	}
@@ -123,7 +123,7 @@ func (db *RelativeDatabase) CountContractsByStatus(network string, status Status
 
 // GetTokenMetadata -
 func (db *RelativeDatabase) GetTokenMetadata(network string, status Status, limit, offset, retryCount int) (all []TokenMetadata, err error) {
-	query := db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("extract(epoch from now()) - updated_at > 60")
+	query := db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("extract(epoch from now()) - updated_at > 10")
 	if limit > 0 {
 		query.Limit(limit)
 	}
