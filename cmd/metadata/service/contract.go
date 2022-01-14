@@ -164,7 +164,6 @@ func (s *ContractService) worker(ctx context.Context) {
 
 			if err := s.handler(resolveCtx, unresolved); err != nil {
 				log.Err(err).Msg("resolve contract")
-				continue
 			}
 
 			s.result <- unresolved
