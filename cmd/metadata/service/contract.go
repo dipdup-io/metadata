@@ -23,6 +23,7 @@ type ContractService struct {
 	prom          *prometheus.Service
 	tasks         chan *models.ContractMetadata
 	result        chan *models.ContractMetadata
+	queue         *Queue
 	wg            sync.WaitGroup
 }
 
@@ -36,6 +37,7 @@ func NewContractService(db models.Database, handler func(context.Context, *model
 		tasks:         make(chan *models.ContractMetadata, 512),
 		result:        make(chan *models.ContractMetadata, 16),
 		network:       network,
+		queue:         NewQueue(),
 	}
 
 	for i := range opts {
@@ -86,15 +88,19 @@ func (s *ContractService) manager(ctx context.Context) {
 			return
 
 		case <-ticker.C:
-			if len(s.tasks) > 0 {
+			if len(s.tasks) > s.workersCount {
 				continue
 			}
-			contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 100, 0, s.maxRetryCount)
+			contracts, err := s.db.GetContractMetadata(s.network, models.StatusNew, 200, 0, s.maxRetryCount)
 			if err != nil {
 				log.Err(err).Msg("GetContractMetadata")
 				continue
 			}
 			for i := range contracts {
+				if s.queue.Contains(contracts[i].ID) {
+					continue
+				}
+
 				if ipfs.Is(contracts[i].Link) {
 					link, err := s.db.IPFSLinkByURL(contracts[i].Link)
 					if err == nil {
@@ -109,6 +115,8 @@ func (s *ContractService) manager(ctx context.Context) {
 						log.Err(err).Msg("contract IPFSLinkByURL")
 					}
 				}
+
+				s.queue.Add(contracts[i].ID)
 				s.tasks <- &contracts[i]
 			}
 		}
@@ -135,6 +143,9 @@ func (s *ContractService) saver(ctx context.Context) {
 				log.Err(err).Msg("UpdateContractMetadata")
 				continue
 			}
+			for i := range contracts {
+				s.queue.Delete(contracts[i].ID)
+			}
 			contracts = nil
 
 		case contract := <-s.result:
@@ -155,10 +166,13 @@ func (s *ContractService) saver(ctx context.Context) {
 				}
 			}
 
-			if len(contracts) == 8 {
+			if len(contracts) == 32 {
 				if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 					log.Err(err).Msg("UpdateContractMetadata")
 					continue
+				}
+				for i := range contracts {
+					s.queue.Delete(contracts[i].ID)
 				}
 				contracts = nil
 				ticker.Reset(time.Second * 15)

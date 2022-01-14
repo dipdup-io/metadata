@@ -275,6 +275,7 @@ func (indexer *Indexer) handlerUpdate(ctx context.Context, msg tzkt.Message) err
 				return errors.Wrap(err, "contract_metadata")
 			}
 			if contract != nil {
+				indexer.incrementNewMetadataGauge("contract")
 				contracts = append(contracts, contract)
 			}
 		}
@@ -329,16 +330,6 @@ func (indexer *Indexer) incrementNewMetadataGauge(typ string) {
 		return
 	}
 	indexer.prom.IncGaugeValue(metricMetadataNew, map[string]string{
-		"network": indexer.network,
-		"type":    typ,
-	})
-}
-
-func (indexer *Indexer) decrementNewMetadataGauge(typ string) {
-	if indexer.prom == nil {
-		return
-	}
-	indexer.prom.DecGaugeValue(metricMetadataNew, map[string]string{
 		"network": indexer.network,
 		"type":    typ,
 	})

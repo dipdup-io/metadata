@@ -21,9 +21,12 @@ type TokenService struct {
 	repo          models.Database
 	handler       func(ctx context.Context, token *models.TokenMetadata) error
 	prom          *prometheus.Service
-	tasks         chan *models.TokenMetadata
-	result        chan *models.TokenMetadata
-	wg            sync.WaitGroup
+
+	queue *Queue
+
+	tasks  chan *models.TokenMetadata
+	result chan *models.TokenMetadata
+	wg     sync.WaitGroup
 }
 
 // NewContractService -
@@ -36,6 +39,7 @@ func NewTokenService(repo models.Database, handler func(context.Context, *models
 		handler:       handler,
 		tasks:         make(chan *models.TokenMetadata, 512),
 		result:        make(chan *models.TokenMetadata, 16),
+		queue:         NewQueue(),
 	}
 	for i := range opts {
 		opts[i](ts)
@@ -83,16 +87,20 @@ func (s *TokenService) manager(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if len(s.tasks) > 0 {
+			if len(s.tasks) > s.workersCount {
 				continue
 			}
 
-			tokens, err := s.repo.GetTokenMetadata(s.network, models.StatusNew, 100, 0, s.maxRetryCount)
+			tokens, err := s.repo.GetTokenMetadata(s.network, models.StatusNew, 200, 0, s.maxRetryCount)
 			if err != nil {
 				log.Err(err).Msg("GetTokenMetadata")
 				continue
 			}
 			for i := range tokens {
+				if s.queue.Contains(tokens[i].ID) {
+					continue
+				}
+
 				if ipfs.Is(tokens[i].Link) {
 					link, err := s.repo.IPFSLinkByURL(tokens[i].Link)
 					if err == nil {
@@ -108,6 +116,7 @@ func (s *TokenService) manager(ctx context.Context) {
 					}
 				}
 
+				s.queue.Add(tokens[i].ID)
 				s.tasks <- &tokens[i]
 			}
 		}
@@ -144,10 +153,13 @@ func (s *TokenService) saver(ctx context.Context) {
 				}
 			}
 
-			if len(tokens) == 8 {
+			if len(tokens) == 32 {
 				if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
 					log.Err(err).Msg("UpdateTokenMetadata")
 					continue
+				}
+				for i := range tokens {
+					s.queue.Delete(tokens[i].ID)
 				}
 				tokens = nil
 				ticker.Reset(time.Second * 15)
@@ -160,6 +172,9 @@ func (s *TokenService) saver(ctx context.Context) {
 			if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
 				log.Err(err).Msg("UpdateTokenMetadata")
 				continue
+			}
+			for i := range tokens {
+				s.queue.Delete(tokens[i].ID)
 			}
 			tokens = nil
 

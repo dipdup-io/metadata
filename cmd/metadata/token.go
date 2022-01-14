@@ -101,14 +101,12 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.T
 		UpdateID: indexer.tokenActionsCounter.Increment(),
 	}
 
-	indexer.incrementNewMetadataGauge("token")
-
 	if _, err := url.ParseRequestURI(tokenInfo.Link); err != nil {
 		token.Status = models.StatusApplied
 		indexer.incrementCounter("token", token.Status)
-		indexer.decrementNewMetadataGauge("token")
 	} else {
 		token.Link = tokenInfo.Link
+		indexer.incrementNewMetadataGauge("token")
 	}
 
 	return &token, nil

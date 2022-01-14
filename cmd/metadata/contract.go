@@ -24,8 +24,6 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 		return nil, err
 	}
 
-	indexer.incrementNewMetadataGauge("contract")
-
 	return &models.ContractMetadata{
 		Network:  indexer.network,
 		Contract: update.Contract.Address,
