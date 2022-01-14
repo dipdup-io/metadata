@@ -52,4 +52,5 @@ type TokenRepository interface {
 	UpdateTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error
 	SaveTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error
 	LastTokenUpdateID() (int64, error)
+	CountTokensByStatus(network string, status Status) (int, error)
 }

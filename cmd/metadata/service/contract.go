@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/internal/ipfs"
 	"github.com/go-pg/pg/v10"
@@ -19,6 +20,7 @@ type ContractService struct {
 	workersCount  int
 	db            models.Database
 	handler       func(ctx context.Context, contract *models.ContractMetadata) error
+	prom          *prometheus.Service
 	tasks         chan *models.ContractMetadata
 	result        chan *models.ContractMetadata
 	wg            sync.WaitGroup
@@ -137,6 +139,21 @@ func (s *ContractService) saver(ctx context.Context) {
 
 		case contract := <-s.result:
 			contracts = append(contracts, contract)
+
+			if s.prom != nil {
+				switch contract.Status {
+				case models.StatusApplied, models.StatusFailed:
+					s.prom.DecGaugeValue("metadata_new", map[string]string{
+						"network": s.network,
+						"type":    "contract",
+					})
+					s.prom.IncrementCounter("metadata_counter", map[string]string{
+						"network": s.network,
+						"type":    "contract",
+						"status":  contract.Status.String(),
+					})
+				}
+			}
 
 			if len(contracts) == 8 {
 				if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {

@@ -116,6 +116,11 @@ func (db *RelativeDatabase) LastContractUpdateID() (updateID int64, err error) {
 	return
 }
 
+// CountContractsByStatus -
+func (db *RelativeDatabase) CountContractsByStatus(network string, status Status) (int, error) {
+	return db.DB().Model(&ContractMetadata{}).Where("status = ?", status).Where("network = ?", network).Count()
+}
+
 // GetTokenMetadata -
 func (db *RelativeDatabase) GetTokenMetadata(network string, status Status, limit, offset, retryCount int) (all []TokenMetadata, err error) {
 	query := db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network)
@@ -169,6 +174,11 @@ func (db *RelativeDatabase) GetUnprocessedImage(from uint64, limit int) (all []T
 	}
 	err = query.Limit(limit).Order("id asc").Select()
 	return
+}
+
+// CountTokensByStatus -
+func (db *RelativeDatabase) CountTokensByStatus(network string, status Status) (int, error) {
+	return db.DB().Model(&TokenMetadata{}).Where("status = ?", status).Where("network = ?", network).Count()
 }
 
 // CurrentContext -

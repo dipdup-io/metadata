@@ -87,11 +87,13 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		db, indexer.resolveContractMetadata, network,
 		service.WithMaxRetryCountContract(settings.MaxRetryCountOnError),
 		service.WithWorkersCountContract(settings.ContractServiceWorkers),
+		service.WithPrometheusContract(prom),
 	)
 	indexer.tokens = service.NewTokenService(
 		db, indexer.resolveTokenMetadata, network,
 		service.WithMaxRetryCountToken(settings.MaxRetryCountOnError),
 		service.WithWorkersCountToken(settings.TokenServiceWorkers),
+		service.WithPrometheusToken(prom),
 	)
 
 	return indexer, nil
@@ -109,6 +111,26 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 
 	if indexer.thumbnail != nil {
 		indexer.thumbnail.Start(ctx)
+	}
+
+	if indexer.prom != nil {
+		newContractCount, err := indexer.db.CountContractsByStatus(indexer.network, models.StatusNew)
+		if err != nil {
+			return err
+		}
+		indexer.prom.SetGaugeValue(metricMetadataNew, map[string]string{
+			"network": indexer.network,
+			"type":    "contract",
+		}, float64(newContractCount))
+
+		newTokenCount, err := indexer.db.CountTokensByStatus(indexer.network, models.StatusNew)
+		if err != nil {
+			return err
+		}
+		indexer.prom.SetGaugeValue(metricMetadataNew, map[string]string{
+			"network": indexer.network,
+			"type":    "token",
+		}, float64(newTokenCount))
 	}
 
 	indexer.contracts.Start(ctx)
@@ -293,4 +315,24 @@ func (indexer *Indexer) addHistogramResponseTime(data resolver.Resolved) {
 		"network": indexer.network,
 		"node":    data.Node,
 	}, float64(len(data.Data))/float64(data.ResponseTime))
+}
+
+func (indexer *Indexer) incrementNewMetadataGauge(typ string) {
+	if indexer.prom == nil {
+		return
+	}
+	indexer.prom.IncGaugeValue(metricMetadataNew, map[string]string{
+		"network": indexer.network,
+		"type":    typ,
+	})
+}
+
+func (indexer *Indexer) decrementNewMetadataGauge(typ string) {
+	if indexer.prom == nil {
+		return
+	}
+	indexer.prom.DecGaugeValue(metricMetadataNew, map[string]string{
+		"network": indexer.network,
+		"type":    typ,
+	})
 }

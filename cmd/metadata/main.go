@@ -22,6 +22,7 @@ import (
 
 const (
 	metricMetadataCounter           = "metadata_counter"
+	metricMetadataNew               = "metadata_new"
 	metricsMetadataHttpErrors       = "metadata_http_errors"
 	metricsMetadataMimeType         = "metadata_mime_type"
 	metricsMetadataIPFSResponseTime = "metadata_ipfs_response_time"
@@ -134,6 +135,7 @@ func initPrometheus(cfg *golibConfig.Prometheus) *prometheus.Service {
 	prometheusService := prometheus.NewService(cfg)
 
 	prometheusService.RegisterGoBuildMetrics()
+	prometheusService.RegisterGauge(metricMetadataNew, "Count of new metadata", "type", "network")
 	prometheusService.RegisterCounter(metricMetadataCounter, "Count of metadata", "type", "status", "network")
 	prometheusService.RegisterCounter(metricsMetadataHttpErrors, "Count of HTTP errors in metadata", "network", "code", "type")
 	prometheusService.RegisterCounter(metricsMetadataMimeType, "Count of metadata mime types", "network", "mime")

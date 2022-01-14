@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/internal/ipfs"
 	"github.com/go-pg/pg/v10"
@@ -19,6 +20,7 @@ type TokenService struct {
 	workersCount  int
 	repo          models.Database
 	handler       func(ctx context.Context, token *models.TokenMetadata) error
+	prom          *prometheus.Service
 	tasks         chan *models.TokenMetadata
 	result        chan *models.TokenMetadata
 	wg            sync.WaitGroup
@@ -126,6 +128,21 @@ func (s *TokenService) saver(ctx context.Context) {
 
 		case token := <-s.result:
 			tokens = append(tokens, token)
+
+			if s.prom != nil {
+				switch token.Status {
+				case models.StatusApplied, models.StatusFailed:
+					s.prom.DecGaugeValue("metadata_new", map[string]string{
+						"network": s.network,
+						"type":    "token",
+					})
+					s.prom.IncrementCounter("metadata_counter", map[string]string{
+						"network": s.network,
+						"type":    "token",
+						"status":  token.Status.String(),
+					})
+				}
+			}
 
 			if len(tokens) == 8 {
 				if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
