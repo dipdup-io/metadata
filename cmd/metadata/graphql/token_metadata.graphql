@@ -1,0 +1,11 @@
+query TokenMetadataQuery(
+  $network: String!, 
+  $contract: String!,
+  $token_id: numeric) {
+  token_metadata(where: {
+    network: {_eq: $network}, 
+    contract: {_eq: $contract},
+    token_id: {_eq: $token_id}}) {
+    metadata
+  }
+}
