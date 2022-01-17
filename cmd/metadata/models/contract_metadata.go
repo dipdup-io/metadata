@@ -10,15 +10,15 @@ type ContractMetadata struct {
 	//nolint
 	tableName struct{} `pg:"contract_metadata"`
 
-	ID         uint64 `gorm:"autoIncrement;not null;" json:"-" pg:",notnull"`
-	CreatedAt  int64  `gorm:"autoCreateTime" json:"created_at" pg:",use_zero"`
-	UpdatedAt  int64  `gorm:"autoUpdateTime" json:"updated_at" pg:",use_zero"`
-	UpdateID   int64  `gorm:"type:int4;uniqueIndex:contract_metadata_update_id_key;autoIncrement:false;not null;" json:"-" pg:",use_zero,notnull"`
-	Network    string `gorm:"primaryKey" json:"network" pg:",unique:contract"`
-	Contract   string `gorm:"primaryKey" json:"contract" pg:",unique:contract"`
+	ID         uint64 `json:"-" pg:",notnull"`
+	CreatedAt  int64  `json:"created_at" pg:",use_zero"`
+	UpdatedAt  int64  `json:"updated_at" pg:",use_zero"`
+	UpdateID   int64  `json:"-" pg:",use_zero,notnull"`
+	Network    string `json:"network" pg:",unique:contract"`
+	Contract   string `json:"contract" pg:",unique:contract"`
 	Link       string `json:"link"`
-	Status     Status `gorm:"type:SMALLINT" json:"status"`
-	RetryCount int8   `gorm:"type:SMALLINT" json:"retry_count" pg:",use_zero"`
+	Status     Status `json:"status"`
+	RetryCount int8   `json:"retry_count" pg:",use_zero"`
 	Metadata   JSONB  `json:"metadata,omitempty" pg:",type:jsonb,use_zero"`
 }
 

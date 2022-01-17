@@ -253,7 +253,17 @@ func (db *RelativeDatabase) CreateIndices() error {
 		return err
 	}
 	if _, err := db.DB().Exec(`
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS contract_metadata_idx ON contract_metadata (network, contract)
+	`); err != nil {
+		return err
+	}
+	if _, err := db.DB().Exec(`
 		CREATE INDEX CONCURRENTLY IF NOT EXISTS contract_metadata_sort_idx ON contract_metadata (retry_count, updated_at)
+	`); err != nil {
+		return err
+	}
+	if _, err := db.DB().Exec(`
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS contract_metadata_update_id_idx ON contract_metadata (update_id)
 	`); err != nil {
 		return err
 	}
@@ -264,6 +274,16 @@ func (db *RelativeDatabase) CreateIndices() error {
 	}
 	if _, err := db.DB().Exec(`
 		CREATE INDEX CONCURRENTLY IF NOT EXISTS token_metadata_sort_idx ON token_metadata (retry_count, updated_at)
+	`); err != nil {
+		return err
+	}
+	if _, err := db.DB().Exec(`
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS token_metadata_idx ON token_metadata (network, contract, token_id)
+	`); err != nil {
+		return err
+	}
+	if _, err := db.DB().Exec(`
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS token_metadata_update_id_idx ON token_metadata (update_id)
 	`); err != nil {
 		return err
 	}
