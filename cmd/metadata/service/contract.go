@@ -101,6 +101,8 @@ func (s *ContractService) manager(ctx context.Context) {
 					continue
 				}
 
+				s.queue.Add(contracts[i].ID)
+
 				if ipfs.Is(contracts[i].Link) {
 					link, err := s.db.IPFSLinkByURL(contracts[i].Link)
 					if err == nil {
@@ -115,8 +117,6 @@ func (s *ContractService) manager(ctx context.Context) {
 						log.Err(err).Msg("contract IPFSLinkByURL")
 					}
 				}
-
-				s.queue.Add(contracts[i].ID)
 				s.tasks <- &contracts[i]
 			}
 		}

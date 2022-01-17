@@ -101,6 +101,8 @@ func (s *TokenService) manager(ctx context.Context) {
 					continue
 				}
 
+				s.queue.Add(tokens[i].ID)
+
 				if ipfs.Is(tokens[i].Link) {
 					link, err := s.repo.IPFSLinkByURL(tokens[i].Link)
 					if err == nil {
@@ -116,7 +118,6 @@ func (s *TokenService) manager(ctx context.Context) {
 					}
 				}
 
-				s.queue.Add(tokens[i].ID)
 				s.tasks <- &tokens[i]
 			}
 		}
