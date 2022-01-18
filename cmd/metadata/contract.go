@@ -16,7 +16,7 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 		return nil, nil
 	}
 	if update.Content.Hash != emptyHash {
-		return nil, indexer.ctx.Add(update, indexer.network)
+		return nil, indexer.tezosKeys.Add(update, indexer.network)
 	}
 
 	link, err := helpers.Decode(update.Content.Value)
