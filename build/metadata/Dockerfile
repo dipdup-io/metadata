@@ -34,5 +34,6 @@ COPY --from=builder /go/bin/dipdup-metadata /go/bin/dipdup-metadata
 COPY ./cmd/metadata/mappings ./mappings
 COPY ./cmd/metadata/graphql ./graphql
 COPY ./build/*.yml ./
+COPY ./cmd/metadata/views/*.sql ./views/
 
 ENTRYPOINT ["/go/bin/dipdup-metadata"]
