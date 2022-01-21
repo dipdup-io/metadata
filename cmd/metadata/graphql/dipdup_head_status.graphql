@@ -1,0 +1,5 @@
+query DipDupHeadStatus($name: String!) {
+  dipdup_head_status(where: {index_name: {_eq: $name}}) {
+      status
+  }
+}

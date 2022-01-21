@@ -289,3 +289,9 @@ func (db *RelativeDatabase) CreateIndices() error {
 	}
 	return nil
 }
+
+// Exec -
+func (db *RelativeDatabase) Exec(sql string) error {
+	_, err := db.DB().Exec(sql)
+	return err
+}

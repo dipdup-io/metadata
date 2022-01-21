@@ -241,11 +241,13 @@ func (indexer *Indexer) listen(ctx context.Context) {
 			} else {
 				indexer.log().Msg("New level")
 			}
-		case level := <-indexer.scanner.Blocks():
-			if level-indexer.state.Level > 1 {
-				indexer.state.Level = level - 1
+		case block := <-indexer.scanner.Blocks():
+			if block.Level-indexer.state.Level > 1 {
+				indexer.state.Level = block.Level
+				indexer.state.Hash = block.Hash
+				indexer.state.Timestamp = block.Timestamp.UTC()
 				if err := indexer.db.UpdateState(indexer.state); err != nil {
-					log.Err(err).Msg("")
+					log.Err(err).Msg("UpdateState")
 				} else {
 					indexer.log().Msg("New level")
 				}
@@ -288,9 +290,7 @@ func (indexer *Indexer) handlerUpdate(ctx context.Context, msg tzkt.Message) err
 	if err := indexer.db.SaveTokenMetadata(ctx, tokens); err != nil {
 		return err
 	}
-
-	indexer.state.Level = msg.Level
-	return indexer.db.UpdateState(indexer.state)
+	return nil
 }
 
 func (indexer *Indexer) incrementCounter(typ string, status models.Status) {

@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.42.20
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/dipdup-net/go-lib v0.1.51
+	github.com/dipdup-net/go-lib v0.1.55
 	github.com/disintegration/imaging v1.6.2
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20211123103400-5f8a17a2322f
 	github.com/go-pg/pg/v10 v10.10.6

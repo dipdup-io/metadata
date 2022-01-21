@@ -27,7 +27,7 @@ type Scanner struct {
 	contracts []string
 
 	diffs    chan Message
-	blocks   chan uint64
+	blocks   chan events.Block
 	wg       sync.WaitGroup
 	initOnce sync.Once
 }
@@ -40,7 +40,7 @@ func New(baseURL string, contracts ...string) *Scanner {
 		msg:       newMessage(),
 		contracts: contracts,
 		diffs:     make(chan Message, 1024),
-		blocks:    make(chan uint64, 10),
+		blocks:    make(chan events.Block, 10),
 	}
 }
 
@@ -125,7 +125,7 @@ func (scanner *Scanner) BigMaps() <-chan Message {
 }
 
 // Blocks -
-func (scanner *Scanner) Blocks() <-chan uint64 {
+func (scanner *Scanner) Blocks() <-chan events.Block {
 	return scanner.blocks
 }
 
@@ -237,6 +237,10 @@ func (scanner *Scanner) processSyncUpdates(ctx context.Context, updates []api.Bi
 			if scanner.msg.Level != 0 && scanner.msg.Level != updates[i].Level {
 				scanner.level = scanner.msg.Level
 				scanner.diffs <- scanner.msg.copy()
+				scanner.blocks <- events.Block{
+					Level:     scanner.msg.Level,
+					Timestamp: updates[i].Timestamp.UTC(),
+				}
 				scanner.msg.clear()
 			}
 
@@ -256,7 +260,7 @@ func (scanner *Scanner) handleBlocks(msg events.Message) error {
 		return errors.Errorf("Empty body: %v", body)
 	}
 
-	scanner.blocks <- body[0].Level
+	scanner.blocks <- body[0]
 	return nil
 }
 

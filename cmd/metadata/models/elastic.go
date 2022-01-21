@@ -619,3 +619,9 @@ func (e *Elastic) CreateIndices() error {
 	// TODO: implement
 	return nil
 }
+
+// Exec -
+func (e *Elastic) Exec(sql string) error {
+	// TODO: implement
+	return nil
+}

@@ -18,6 +18,7 @@ type Database interface {
 	io.Closer
 
 	CreateIndices() error
+	Exec(sql string) error
 }
 
 // NewDatabase -
@@ -28,11 +29,4 @@ func NewDatabase(ctx context.Context, cfg config.Database) (Database, error) {
 	default:
 		return NewRelativeDatabase(ctx, cfg)
 	}
-}
-
-// Transactable -
-type Transactable interface {
-	BeginTx()
-	RollbackTx() error
-	CommitTx() error
 }

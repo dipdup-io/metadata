@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -72,8 +75,14 @@ func main() {
 				indexers.Store(network, result.indexer)
 				indexerCancels.Store(network, result.cancel)
 				hasuraInit.Do(func() {
-					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
-						log.Err(err).Msg("")
+					views, err := createViews(ctx, cfg.Database)
+					if err != nil {
+						log.Err(err).Msg("createViews")
+						return
+					}
+
+					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
+						log.Err(err).Msg("hasura.Create")
 					}
 				})
 				return
@@ -94,8 +103,14 @@ func main() {
 						indexers.Store(network, result.indexer)
 						indexerCancels.Store(network, result.cancel)
 						hasuraInit.Do(func() {
-							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
-								log.Err(err).Msg("")
+							views, err := createViews(ctx, cfg.Database)
+							if err != nil {
+								log.Err(err).Msg("createViews")
+								return
+							}
+
+							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
+								log.Err(err).Msg("hasura.Create")
 							}
 						})
 						return
@@ -163,4 +178,37 @@ func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.I
 
 	result.cancel = cancel
 	return result, nil
+}
+
+func createViews(ctx context.Context, database golibConfig.Database) ([]string, error) {
+	files, err := ioutil.ReadDir("views")
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := models.NewDatabase(ctx, database)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	views := make([]string, 0)
+	for i := range files {
+		if files[i].IsDir() {
+			continue
+		}
+
+		path := fmt.Sprintf("views/%s", files[i].Name())
+		raw, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := db.Exec(string(raw)); err != nil {
+			return nil, err
+		}
+		views = append(views, strings.Split(files[i].Name(), ".")[0])
+	}
+
+	return views, nil
 }
