@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/dipdup-net/go-lib/tzkt/api"
-	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +45,6 @@ func TestIndexer_processTokenMetadata(t *testing.T) {
 				},
 			},
 			want: &models.TokenMetadata{
-				UpdateID: 1,
 				TokenID:  decimal.NewFromInt(0),
 				Contract: "KT1G1cCRNBgQ48mVDjopHjEmTN5Sbtar8nn9",
 				Metadata: models.JSONB(`{"decimals":"6","icon":"ipfs://QmXL3FZ5kcwXC8mdwkS1iCHS2qVoyg69ugBhU2ap8z1zcs","name":"Hedgehoge","symbol":"HEH","test_object":"{}"}`),
@@ -56,9 +54,7 @@ func TestIndexer_processTokenMetadata(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			indexer := &Indexer{
-				tokenActionsCounter: helpers.NewCounter(0),
-			}
+			indexer := &Indexer{}
 			got, err := indexer.processTokenMetadata(tt.update)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Indexer.processTokenMetadata() error = %v, wantErr %v", err, tt.wantErr)
