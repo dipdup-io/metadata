@@ -18,4 +18,4 @@ Supported features:
 Fully compatible with DipDup YAML configuration file format.
 Metadata indexer reuses `datasources`, `contracts`, `database`, `hasura` sections, and reads its own settings from `metadata` top-level section.
 
-Read more [in the docs](https://docs.dipdup.net/config-file-reference/plugins/metadata).
+Read more [in the docs](https://docs.dipdup.net/plugins/metadata).
