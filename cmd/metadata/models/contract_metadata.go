@@ -3,7 +3,12 @@ package models
 import (
 	"context"
 	"time"
+
+	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 )
+
+// ContractUpdateID - incremental counter
+var ContractUpdateID = helpers.NewCounter(0)
 
 // ContractMetadata -
 type ContractMetadata struct {
@@ -31,12 +36,14 @@ func (ContractMetadata) TableName() string {
 func (cm *ContractMetadata) BeforeInsert(ctx context.Context) (context.Context, error) {
 	cm.UpdatedAt = time.Now().Unix()
 	cm.CreatedAt = cm.UpdatedAt
+	cm.UpdateID = ContractUpdateID.Increment()
 	return ctx, nil
 }
 
 // BeforeUpdate -
 func (cm *ContractMetadata) BeforeUpdate(ctx context.Context) (context.Context, error) {
 	cm.UpdatedAt = time.Now().Unix()
+	cm.UpdateID = ContractUpdateID.Increment()
 	return ctx, nil
 }
 

@@ -29,7 +29,6 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 		Contract: update.Contract.Address,
 		Status:   models.StatusNew,
 		Link:     string(link),
-		UpdateID: indexer.contractActionsCounter.Increment(),
 	}, nil
 }
 
@@ -70,7 +69,6 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 			cm.Status = models.StatusFailed
 		}
 	}
-	cm.UpdateID = indexer.contractActionsCounter.Increment()
 
 	if resolved.By == resolver.ResolverTypeIPFS && cm.Status == models.StatusApplied {
 		if resolved.ResponseTime > 0 {

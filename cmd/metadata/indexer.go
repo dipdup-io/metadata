@@ -17,7 +17,6 @@ import (
 	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	internalContext "github.com/dipdup-net/metadata/cmd/metadata/context"
-	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
 	"github.com/dipdup-net/metadata/cmd/metadata/service"
@@ -43,9 +42,6 @@ type Indexer struct {
 	thumbnail *thumbnail.Service
 	settings  config.Settings
 
-	contractActionsCounter *helpers.Counter
-	tokenActionsCounter    *helpers.Counter
-
 	wg sync.WaitGroup
 }
 
@@ -63,16 +59,14 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 	}
 
 	indexer := &Indexer{
-		scanner:                tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
-		network:                network,
-		indexName:              models.IndexName(network),
-		resolver:               metadataResolver,
-		settings:               settings,
-		ctx:                    cont,
-		db:                     db,
-		prom:                   prom,
-		contractActionsCounter: helpers.NewCounter(0),
-		tokenActionsCounter:    helpers.NewCounter(0),
+		scanner:   tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
+		network:   network,
+		indexName: models.IndexName(network),
+		resolver:  metadataResolver,
+		settings:  settings,
+		ctx:       cont,
+		db:        db,
+		prom:      prom,
 	}
 
 	if aws := storage.NewAWS(settings.AWS); aws != nil {
@@ -213,13 +207,13 @@ func (indexer *Indexer) initCounters() error {
 	if err != nil {
 		return err
 	}
-	indexer.contractActionsCounter.Set(contractActionsCounter)
+	models.ContractUpdateID.Set(contractActionsCounter)
 
 	tokenActionsCounter, err := indexer.db.LastTokenUpdateID()
 	if err != nil {
 		return err
 	}
-	indexer.tokenActionsCounter.Set(tokenActionsCounter)
+	models.TokenUpdateID.Set(tokenActionsCounter)
 
 	return nil
 }

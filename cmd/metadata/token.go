@@ -97,8 +97,9 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.T
 		Contract: update.Contract.Address,
 		TokenID:  tokenInfo.TokenID,
 		Status:   models.StatusNew,
-		Metadata: helpers.Escape(metadata),
-		UpdateID: indexer.tokenActionsCounter.Increment(),
+	}
+	if len(metadata) > 2 {
+		token.Metadata = helpers.Escape(metadata)
 	}
 
 	if _, err := url.ParseRequestURI(tokenInfo.Link); err != nil {
@@ -154,8 +155,6 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 			tm.Status = models.StatusFailed
 		}
 	}
-
-	tm.UpdateID = indexer.tokenActionsCounter.Increment()
 
 	if resolved.By == resolver.ResolverTypeIPFS && tm.Status == models.StatusApplied {
 		link := models.IPFSLink{

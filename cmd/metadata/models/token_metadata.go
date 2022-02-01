@@ -4,8 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/shopspring/decimal"
 )
+
+// TokenUpdateID - incremental counter
+var TokenUpdateID = helpers.NewCounter(0)
 
 // TokenMetadata -
 type TokenMetadata struct {
@@ -35,12 +39,14 @@ func (TokenMetadata) TableName() string {
 func (tm *TokenMetadata) BeforeInsert(ctx context.Context) (context.Context, error) {
 	tm.UpdatedAt = time.Now().Unix()
 	tm.CreatedAt = tm.UpdatedAt
+	tm.UpdateID = TokenUpdateID.Increment()
 	return ctx, nil
 }
 
 // BeforeUpdate -
 func (tm *TokenMetadata) BeforeUpdate(ctx context.Context) (context.Context, error) {
 	tm.UpdatedAt = time.Now().Unix()
+	tm.UpdateID = TokenUpdateID.Increment()
 	return ctx, nil
 }
 
