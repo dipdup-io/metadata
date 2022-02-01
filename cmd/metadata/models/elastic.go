@@ -403,69 +403,6 @@ func (e *Elastic) GetUnprocessedImage(from uint64, limit int) ([]TokenMetadata, 
 	return tokens, nil
 }
 
-// CurrentContext -
-func (e *Elastic) CurrentContext() ([]ContextItem, error) {
-	hits, err := e.search(
-		`{"query":{"match_all":{}}}`,
-		e.Search.WithIndex(ContextItem{}.TableName()),
-		e.Search.WithSize(10000),
-	)
-	if err != nil {
-		return nil, err
-	}
-	updates := make([]ContextItem, len(hits.Hits.Hits))
-	for i, hit := range hits.Hits.Hits {
-		if err := json.Unmarshal(hit.Source, &updates[i]); err != nil {
-			return nil, err
-		}
-		updates[i].ID, err = strconv.ParseUint(hit.ID, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return updates, nil
-}
-
-// DumpContext -
-func (e *Elastic) DumpContext(action Action, item ContextItem) error {
-	switch action {
-	case ActionCreate, ActionUpdate:
-		data, err := json.Marshal(item)
-		if err != nil {
-			return err
-		}
-		resp, err := e.Create(
-			item.TableName(),
-			fmt.Sprintf("%d", time.Now().UnixNano()),
-			bytes.NewReader(data),
-			e.Create.WithRefresh("true"),
-		)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		if resp.IsError() {
-			return errors.New(resp.String())
-		}
-	case ActionDelete:
-		resp, err := e.Delete(
-			item.TableName(),
-			fmt.Sprintf("%d", time.Now().UnixNano()),
-			e.Delete.WithRefresh("true"),
-		)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-
-		if resp.IsError() {
-			return errors.New(resp.String())
-		}
-	}
-	return nil
-}
-
 // State -
 func (e *Elastic) State(indexName string) (s *database.State, err error) {
 	hits, err := e.search(
@@ -539,7 +476,7 @@ func (e *Elastic) createIndices() error {
 	if err := e.createIndex(TokenMetadata{}.TableName()); err != nil {
 		return err
 	}
-	if err := e.createIndex(ContextItem{}.TableName()); err != nil {
+	if err := e.createIndex(TezosKey{}.TableName()); err != nil {
 		return err
 	}
 	return nil
@@ -622,6 +559,24 @@ func (e *Elastic) CreateIndices() error {
 
 // Exec -
 func (e *Elastic) Exec(sql string) error {
+	// TODO: implement
+	return nil
+}
+
+// GetTezosKey -
+func (e *Elastic) GetTezosKey(network, address, key string) (tk TezosKey, err error) {
+	// TODO: implement
+	return
+}
+
+// SaveTezosKey -
+func (e *Elastic) SaveTezosKey(tk TezosKey) error {
+	// TODO: implement
+	return nil
+}
+
+// DeleteTezosKey -
+func (e *Elastic) DeleteTezosKey(tk TezosKey) error {
 	// TODO: implement
 	return nil
 }

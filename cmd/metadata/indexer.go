@@ -16,11 +16,11 @@ import (
 	"github.com/dipdup-net/go-lib/database"
 	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
-	internalContext "github.com/dipdup-net/metadata/cmd/metadata/context"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
 	"github.com/dipdup-net/metadata/cmd/metadata/service"
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
+	"github.com/dipdup-net/metadata/cmd/metadata/tezoskeys"
 	"github.com/dipdup-net/metadata/cmd/metadata/thumbnail"
 	"github.com/dipdup-net/metadata/cmd/metadata/tzkt"
 )
@@ -36,7 +36,7 @@ type Indexer struct {
 	db        models.Database
 	scanner   *tzkt.Scanner
 	prom      *prometheus.Service
-	ctx       *internalContext.Context
+	tezosKeys *tezoskeys.TezosKeys
 	contracts *service.ContractService
 	tokens    *service.TokenService
 	thumbnail *thumbnail.Service
@@ -51,9 +51,9 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 	if err != nil {
 		return nil, err
 	}
-	cont := internalContext.NewContext()
+	keys := tezoskeys.NewTezosKeys(db)
 
-	metadataResolver, err := resolver.New(settings, cont)
+	metadataResolver, err := resolver.New(settings, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		indexName: models.IndexName(network),
 		resolver:  metadataResolver,
 		settings:  settings,
-		ctx:       cont,
+		tezosKeys: keys,
 		db:        db,
 		prom:      prom,
 	}
@@ -103,10 +103,6 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 		}
 	})
 	if err := indexer.initState(); err != nil {
-		return err
-	}
-
-	if err := indexer.ctx.Load(indexer.db); err != nil {
 		return err
 	}
 
@@ -165,10 +161,6 @@ func (indexer *Indexer) Close() error {
 		if err := indexer.thumbnail.Close(); err != nil {
 			return err
 		}
-	}
-
-	if err := indexer.ctx.Dump(indexer.db); err != nil {
-		return err
 	}
 
 	if err := indexer.db.Close(); err != nil {

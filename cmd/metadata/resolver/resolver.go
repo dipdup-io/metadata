@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
-	internalContext "github.com/dipdup-net/metadata/cmd/metadata/context"
+	"github.com/dipdup-net/metadata/cmd/metadata/tezoskeys"
+	"github.com/dipdup-net/metadata/internal/tezos"
 	"github.com/pkg/errors"
 )
 
@@ -58,6 +59,7 @@ type Resolved struct {
 	Node         string
 	Data         []byte
 	ResponseTime int64
+	URI          tezos.URI
 }
 
 // Receiver -
@@ -69,7 +71,7 @@ type Receiver struct {
 }
 
 // New -
-func New(settings config.Settings, ctx *internalContext.Context) (Receiver, error) {
+func New(settings config.Settings, tezosKeys *tezoskeys.TezosKeys) (Receiver, error) {
 	ipfs, err := NewIPFS(settings.IPFS.Gateways,
 		WithTimeoutIpfs(settings.IPFS.Timeout),
 		WithPinningIpfs(settings.IPFS.Pinning),
@@ -79,7 +81,7 @@ func New(settings config.Settings, ctx *internalContext.Context) (Receiver, erro
 	}
 	return Receiver{
 		ipfs:  ipfs,
-		tezos: NewTezosStorage(ctx),
+		tezos: NewTezosStorage(tezosKeys),
 		http:  NewHttp(WithTimeoutHttp(settings.HTTPTimeout)),
 		sha:   NewSha256(WithTimeoutSha256(settings.HTTPTimeout)),
 	}, nil
@@ -104,7 +106,12 @@ func (r Receiver) Resolve(ctx context.Context, network, address, link string) (r
 
 	case r.tezos.Is(link):
 		resolved.By = ResolverTypeTezos
-		resolved.Data, err = r.tezos.Resolve(ctx, network, address, link)
+		data, err := r.tezos.Resolve(ctx, network, address, link)
+		if err != nil {
+			return resolved, err
+		}
+		resolved.Data = data.Data
+		resolved.URI = data.URI
 
 	case r.http.Is(link):
 		resolved.By = ResolverTypeHTTP

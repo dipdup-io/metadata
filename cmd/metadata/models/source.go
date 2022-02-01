@@ -12,7 +12,7 @@ import (
 type Database interface {
 	ContractRepository
 	TokenRepository
-	ContextRepository
+	TezosKeyRepository
 	IPFSLinkRepository
 	database.StateRepository
 	io.Closer

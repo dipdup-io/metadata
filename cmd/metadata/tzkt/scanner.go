@@ -208,7 +208,7 @@ func (scanner *Scanner) sync(ctx context.Context, headLevel uint64) error {
 
 func (scanner *Scanner) getSyncUpdates(ctx context.Context, headLevel uint64) ([]api.BigMapUpdate, error) {
 	filters := map[string]string{
-		"tags.any":  "token_metadata,metadata",
+		"path.as":   "*metadata",
 		"action.in": "add_key,update_key",
 		"limit":     fmt.Sprintf("%d", pageSize),
 		"level.le":  fmt.Sprintf("%d", headLevel),

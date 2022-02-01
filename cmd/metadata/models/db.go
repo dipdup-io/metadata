@@ -37,7 +37,7 @@ func NewRelativeDatabase(ctx context.Context, cfg config.Database) (*RelativeDat
 	database.Wait(ctx, db, 5*time.Second)
 
 	for _, data := range []interface{}{
-		&database.State{}, &ContractMetadata{}, &TokenMetadata{}, &ContextItem{}, &IPFSLink{},
+		&database.State{}, &ContractMetadata{}, &TokenMetadata{}, &TezosKey{}, &IPFSLink{},
 	} {
 		if err := db.DB().WithContext(ctx).Model(data).CreateTable(&orm.CreateTableOptions{
 			IfNotExists: true,
@@ -181,33 +181,52 @@ func (db *RelativeDatabase) CountTokensByStatus(network string, status Status) (
 	return db.DB().Model(&TokenMetadata{}).Where("status = ?", status).Where("network = ?", network).Count()
 }
 
-// CurrentContext -
-func (db *RelativeDatabase) CurrentContext() (updates []ContextItem, err error) {
-	err = db.DB().Model(&updates).Select()
+// GetTezosKey -
+func (db *RelativeDatabase) GetTezosKey(network, address, key string) (tk TezosKey, err error) {
+	query := db.DB().Model(&tk)
+
+	if network != "" {
+		query.Where("network = ?", network)
+	}
+	if address != "" {
+		query.Where("address = ?", address)
+	}
+	if key != "" {
+		query.Where("key = ?", key)
+	}
+
+	err = query.First()
 	return
+}
+
+// SaveTezosKey -
+func (db *RelativeDatabase) SaveTezosKey(tk TezosKey) error {
+	_, err := db.DB().Model(&tk).OnConflict("(network, address, key) DO UPDATE").Set("value = excluded.value").Insert()
+	return err
+}
+
+// DeleteTezosKey -
+func (db *RelativeDatabase) DeleteTezosKey(tk TezosKey) error {
+	query := db.DB().Model(&tk)
+
+	if tk.Network != "" {
+		query.Where("network = ?", tk.Network)
+	}
+	if tk.Address != "" {
+		query.Where("address = ?", tk.Address)
+	}
+	if tk.Key != "" {
+		query.Where("key = ?", tk.Key)
+	}
+
+	_, err := query.Delete()
+	return err
 }
 
 // LastTokenUpdateID -
 func (db *RelativeDatabase) LastTokenUpdateID() (updateID int64, err error) {
 	err = db.DB().Model(&TokenMetadata{}).ColumnExpr("max(update_id)").Select(&updateID)
 	return
-}
-
-// DumpContext -
-func (db *RelativeDatabase) DumpContext(action Action, item ContextItem) error {
-	switch action {
-	case ActionUpdate:
-		_, err := db.DB().Model(&item).WherePK().Update()
-		return err
-
-	case ActionCreate:
-		_, err := db.DB().Model(&item).Insert()
-		return err
-	case ActionDelete:
-		_, err := db.DB().Model(&item).Delete()
-		return err
-	}
-	return nil
 }
 
 // Close -
@@ -284,6 +303,11 @@ func (db *RelativeDatabase) CreateIndices() error {
 	}
 	if _, err := db.DB().Exec(`
 		CREATE INDEX CONCURRENTLY IF NOT EXISTS token_metadata_update_id_idx ON token_metadata (update_id)
+	`); err != nil {
+		return err
+	}
+	if _, err := db.DB().Exec(`
+		CREATE INDEX CONCURRENTLY IF NOT EXISTS tezos_key_idx ON tezos_keys (network, address, key)
 	`); err != nil {
 		return err
 	}
