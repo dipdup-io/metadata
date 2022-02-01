@@ -467,7 +467,7 @@ func (e *Elastic) DumpContext(action Action, item ContextItem) error {
 }
 
 // State -
-func (e *Elastic) State(indexName string) (s database.State, err error) {
+func (e *Elastic) State(indexName string) (s *database.State, err error) {
 	hits, err := e.search(
 		fmt.Sprintf(`{"query":{"term":{"index_name":"%s"}}}`, indexName),
 		e.Search.WithIndex(s.TableName()),
@@ -480,12 +480,12 @@ func (e *Elastic) State(indexName string) (s database.State, err error) {
 	if len(hits.Hits.Hits) != 1 {
 		return s, errors.Wrapf(pg.ErrNoRows, "%s %s", indexName, s.TableName())
 	}
-	err = json.Unmarshal(hits.Hits.Hits[0].Source, &s)
+	err = json.Unmarshal(hits.Hits.Hits[0].Source, s)
 	return
 }
 
 // UpdateState -
-func (e *Elastic) UpdateState(s database.State) error {
+func (e *Elastic) UpdateState(s *database.State) error {
 	data, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -513,13 +513,13 @@ func (e *Elastic) UpdateState(s database.State) error {
 }
 
 // CreateState -
-func (e *Elastic) CreateState(s database.State) error {
+func (e *Elastic) CreateState(s *database.State) error {
 	// TODO: implement
 	return nil
 }
 
 // DeleteState -
-func (e *Elastic) DeleteState(s database.State) error {
+func (e *Elastic) DeleteState(s *database.State) error {
 	// TODO: implement
 	return nil
 }

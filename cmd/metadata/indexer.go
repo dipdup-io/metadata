@@ -31,7 +31,7 @@ var createIndex sync.Once
 type Indexer struct {
 	network   string
 	indexName string
-	state     database.State
+	state     *database.State
 	resolver  resolver.Receiver
 	db        models.Database
 	scanner   *tzkt.Scanner
@@ -184,7 +184,7 @@ func (indexer *Indexer) initState() error {
 		if !errors.Is(err, pg.ErrNoRows) {
 			return err
 		}
-		indexer.state = database.State{
+		indexer.state = &database.State{
 			IndexType: models.IndexTypeMetadata,
 			IndexName: indexer.indexName,
 		}

@@ -4,6 +4,8 @@ SELECT
     CASE
         WHEN timestamp < NOW() - interval '3 minutes' THEN 'OUTDATED'
         ELSE 'OK'
-    END AS status
+    END AS status,
+    created_at,
+    updated_at
 FROM
     dipdup_state;
