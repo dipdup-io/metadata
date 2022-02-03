@@ -48,27 +48,30 @@ func NewRelativeDatabase(ctx context.Context, cfg config.Database) (*RelativeDat
 			return nil, err
 		}
 	}
-	db.DB().AddQueryHook(dbLogger{})
+	db.DB().AddQueryHook(&dbLogger{})
 
 	return &RelativeDatabase{db}, nil
 }
 
 type dbLogger struct{}
 
-func (d dbLogger) BeforeQuery(c context.Context, q *pg.QueryEvent) (context.Context, error) {
-	q.StartTime = time.Now()
-	return c, nil
+// BeforeQuery -
+func (d *dbLogger) BeforeQuery(ctx context.Context, event *pg.QueryEvent) (context.Context, error) {
+	event.StartTime = time.Now()
+	return ctx, nil
 }
 
-func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
-	duration := time.Since(q.StartTime).Milliseconds()
-	raw, err := q.FormattedQuery()
+func (d *dbLogger) AfterQuery(ctx context.Context, event *pg.QueryEvent) error {
+	query, err := event.FormattedQuery()
 	if err != nil {
 		return err
 	}
-	sql := string(raw)
-	log.Debug().Msgf("[%d ms] %+v", duration, sql)
 
+	if event.Err != nil {
+		log.Debug().Msgf("[%d ms] %s : %s", time.Since(event.StartTime).Milliseconds(), event.Err.Error(), string(query))
+	} else {
+		log.Debug().Msgf("[%d ms] %d rows | %s", time.Since(event.StartTime).Milliseconds(), event.Result.RowsReturned(), string(query))
+	}
 	return nil
 }
 
@@ -259,8 +262,8 @@ func (db *RelativeDatabase) UpdateIPFSLink(link IPFSLink) error {
 }
 
 // IPFSLinkByURL -
-func (db *RelativeDatabase) IPFSLinkByURL(url string) (link IPFSLink, err error) {
-	err = db.DB().Model(&link).Where("link = ?", url).First()
+func (db *RelativeDatabase) IPFSLinkByURLs(url ...string) (links []IPFSLink, err error) {
+	err = db.DB().Model(&links).WhereIn("link IN (?)", url).Select()
 	return
 }
 

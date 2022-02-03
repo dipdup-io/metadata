@@ -546,7 +546,7 @@ func (e *Elastic) UpdateIPFSLink(link IPFSLink) error {
 }
 
 // IPFSLinkByURL -
-func (e *Elastic) IPFSLinkByURL(url string) (link IPFSLink, err error) {
+func (e *Elastic) IPFSLinkByURLs(url ...string) (links []IPFSLink, err error) {
 	// TODO: implement
 	return
 }

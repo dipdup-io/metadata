@@ -19,7 +19,7 @@ func (IPFSLink) TableName() string {
 // IPFSLinkRepository -
 type IPFSLinkRepository interface {
 	IPFSLink(id int64) (IPFSLink, error)
-	IPFSLinkByURL(url string) (IPFSLink, error)
+	IPFSLinkByURLs(url ...string) ([]IPFSLink, error)
 	IPFSLinks(limit, offset int) ([]IPFSLink, error)
 	SaveIPFSLink(link IPFSLink) error
 	UpdateIPFSLink(link IPFSLink) error

@@ -96,6 +96,27 @@ func (s *ContractService) manager(ctx context.Context) {
 				log.Err(err).Msg("GetContractMetadata")
 				continue
 			}
+
+			links := make([]string, 0)
+			resolvedIPFS := make(map[string]models.IPFSLink)
+
+			for i := range contracts {
+				if s.queue.Contains(contracts[i].ID) || !ipfs.Is(contracts[i].Link) {
+					continue
+				}
+				links = append(links, contracts[i].Link)
+			}
+			if len(links) > 0 {
+				resolved, err := s.db.IPFSLinkByURLs(links...)
+				if err != nil && !errors.Is(err, pg.ErrNoRows) {
+					log.Err(err).Msg("contract IPFSLinkByURLs")
+					continue
+				}
+				for i := range resolved {
+					resolvedIPFS[resolved[i].Link] = resolved[i]
+				}
+			}
+
 			for i := range contracts {
 				if s.queue.Contains(contracts[i].ID) {
 					continue
@@ -103,21 +124,20 @@ func (s *ContractService) manager(ctx context.Context) {
 
 				s.queue.Add(contracts[i].ID)
 
-				if ipfs.Is(contracts[i].Link) {
-					link, err := s.db.IPFSLinkByURL(contracts[i].Link)
-					if err == nil {
+				if len(resolvedIPFS) > 0 && ipfs.Is(contracts[i].Link) {
+					data, ok := resolvedIPFS[contracts[i].Link]
+					if ok {
 						contracts[i].Status = models.StatusApplied
-						contracts[i].Metadata = link.Data
+						contracts[i].Metadata = data.Data
 						contracts[i].RetryCount += 1
 						s.result <- &contracts[i]
 						continue
 					}
-
-					if !errors.Is(err, pg.ErrNoRows) {
-						log.Err(err).Msg("contract IPFSLinkByURL")
-					}
 				}
 				s.tasks <- &contracts[i]
+			}
+			if len(contracts) == 0 {
+				time.Sleep(time.Second)
 			}
 		}
 	}

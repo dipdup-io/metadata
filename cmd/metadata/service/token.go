@@ -96,6 +96,27 @@ func (s *TokenService) manager(ctx context.Context) {
 				log.Err(err).Msg("GetTokenMetadata")
 				continue
 			}
+
+			links := make([]string, 0)
+			resolvedIPFS := make(map[string]models.IPFSLink)
+
+			for i := range tokens {
+				if s.queue.Contains(tokens[i].ID) || !ipfs.Is(tokens[i].Link) {
+					continue
+				}
+				links = append(links, tokens[i].Link)
+			}
+
+			if len(links) > 0 {
+				resolved, err := s.repo.IPFSLinkByURLs(links...)
+				if err != nil && !errors.Is(err, pg.ErrNoRows) {
+					log.Err(err).Msg("token IPFSLinkByURL")
+				}
+				for i := range resolved {
+					resolvedIPFS[resolved[i].Link] = resolved[i]
+				}
+			}
+
 			for i := range tokens {
 				if s.queue.Contains(tokens[i].ID) {
 					continue
@@ -103,22 +124,22 @@ func (s *TokenService) manager(ctx context.Context) {
 
 				s.queue.Add(tokens[i].ID)
 
-				if ipfs.Is(tokens[i].Link) {
-					link, err := s.repo.IPFSLinkByURL(tokens[i].Link)
-					if err == nil {
+				if len(resolvedIPFS) > 0 && ipfs.Is(tokens[i].Link) {
+					data, ok := resolvedIPFS[tokens[i].Link]
+					if ok {
 						tokens[i].Status = models.StatusApplied
-						tokens[i].Metadata = link.Data
+						tokens[i].Metadata = data.Data
 						tokens[i].RetryCount += 1
 						s.result <- &tokens[i]
 						continue
 					}
-
-					if !errors.Is(err, pg.ErrNoRows) {
-						log.Err(err).Msg("token IPFSLinkByURL")
-					}
 				}
 
 				s.tasks <- &tokens[i]
+			}
+
+			if len(tokens) == 0 {
+				time.Sleep(time.Second)
 			}
 		}
 	}
