@@ -67,7 +67,9 @@ type Indexer struct {
 
 // Filters -
 type Filters struct {
-	Accounts []string `yaml:"accounts" validate:"max=50"`
+	Accounts   []string `yaml:"accounts" validate:"max=50"`
+	FirstLevel uint64   `yaml:"first_level" validate:"min=0"`
+	LastLevel  uint64   `yaml:"last_level" validate:"min=0"`
 }
 
 // MetadataDataSource -

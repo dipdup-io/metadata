@@ -41,6 +41,7 @@ type Indexer struct {
 	tokens    *service.TokenService
 	thumbnail *thumbnail.Service
 	settings  config.Settings
+	filters   config.Filters
 
 	wg sync.WaitGroup
 }
@@ -67,6 +68,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		tezosKeys: keys,
 		db:        db,
 		prom:      prom,
+		filters:   filters,
 	}
 
 	if aws := storage.NewAWS(settings.AWS); aws != nil {
@@ -106,6 +108,11 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 		return err
 	}
 
+	if indexer.filters.LastLevel > 0 && indexer.state.Level > indexer.filters.LastLevel {
+		log.Warn().Msgf("You have arrived to a destination. Last level in config is %d. Current state level is %d.", indexer.filters.LastLevel, indexer.state.Level)
+		return nil
+	}
+
 	if indexer.thumbnail != nil {
 		indexer.thumbnail.Start(ctx)
 	}
@@ -136,7 +143,11 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 	indexer.wg.Add(1)
 	go indexer.listen(ctx)
 
-	indexer.scanner.Start(ctx, indexer.state.Level)
+	startLevel := indexer.state.Level
+	if indexer.filters.FirstLevel > 0 && startLevel < indexer.filters.FirstLevel {
+		startLevel = indexer.filters.FirstLevel
+	}
+	indexer.scanner.Start(ctx, startLevel, indexer.filters.LastLevel)
 
 	return nil
 }
@@ -237,6 +248,11 @@ func (indexer *Indexer) listen(ctx context.Context) {
 				} else {
 					indexer.log().Msg("New level")
 				}
+			}
+
+			if indexer.filters.LastLevel > 0 && block.Level > indexer.filters.LastLevel {
+				log.Warn().Msgf("You have arrived to a destination. Last level in config is %d.", indexer.filters.LastLevel)
+				return
 			}
 		}
 	}
