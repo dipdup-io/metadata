@@ -19,3 +19,14 @@ Fully compatible with DipDup YAML configuration file format.
 Metadata indexer reuses `datasources`, `contracts`, `database`, `hasura` sections, and reads its own settings from `metadata` top-level section.
 
 Read more [in the docs](https://docs.dipdup.net/plugins/metadata).
+
+## Maintenance
+
+### Refetch recent metadata
+
+This is not a permanent solution, rather an ad-hoc command to fix recent fetch errors. Adjust the data accordingly or remove time condition.
+```sql
+UPDATE token_metadata
+SET retry_count=0, status=1
+WHERE created_at > 1646082000 AND metadata ISNULL
+```
