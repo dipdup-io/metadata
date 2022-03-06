@@ -45,10 +45,14 @@ func New(baseURL string, contracts ...string) *Scanner {
 }
 
 // Start -
-func (scanner *Scanner) Start(ctx context.Context, level uint64) {
+func (scanner *Scanner) Start(ctx context.Context, startLevel, endLevel uint64) {
+	if endLevel > 0 && startLevel > 0 && startLevel > endLevel {
+		return
+	}
+
 	scanner.initOnce.Do(func() {
 		scanner.wg.Add(1)
-		go scanner.synchronization(ctx, level)
+		go scanner.synchronization(ctx, startLevel, endLevel)
 	})
 
 }
@@ -68,7 +72,7 @@ func (scanner *Scanner) start(ctx context.Context) {
 	go scanner.listen(ctx)
 }
 
-func (scanner *Scanner) synchronization(ctx context.Context, level uint64) {
+func (scanner *Scanner) synchronization(ctx context.Context, startLevel, endLevel uint64) {
 	defer scanner.wg.Done()
 
 	head, err := scanner.api.GetHead(ctx)
@@ -76,15 +80,19 @@ func (scanner *Scanner) synchronization(ctx context.Context, level uint64) {
 		log.Err(err).Msg("")
 		return
 	}
-	log.Info().Msgf("Current TzKT head is %d. Indexer state is %d.", head.Level, level)
+	log.Info().Msgf("Current TzKT head is %d. Indexer state is %d.", head.Level, startLevel)
 
-	scanner.level = level
+	scanner.level = startLevel
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
+			if endLevel > 0 && scanner.level > endLevel {
+				log.Warn().Msgf("synchronization was stopped due to last_level in config is equal to current level")
+				return
+			}
 			if head.Level <= scanner.level {
 				scanner.start(ctx)
 				return
