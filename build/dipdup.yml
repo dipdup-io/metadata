@@ -9,7 +9,7 @@ metadata:
         - https://dweb.link
         - https://ipfs.io
       timeout: 5
-      fallback: https://ipfs.baking-bad.org
+      fallback: ${IPFS_NODE_URI}
       pinning:
     http_timeout: 5
     max_retry_count_on_error: 10
@@ -29,6 +29,9 @@ metadata:
     hangzhounet:
       datasources:
         tzkt: https://api.hangzhou2net.tzkt.io
+    ithacanet:
+      datasources:
+        tzkt: https://api.ithacanet.tzkt.io
 
 database:
   kind: postgres
