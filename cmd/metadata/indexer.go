@@ -104,7 +104,7 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 			log.Err(err).Msg("create indices")
 		}
 	})
-	if err := indexer.initState(); err != nil {
+	if err := indexer.initState(ctx); err != nil {
 		return err
 	}
 
@@ -181,7 +181,7 @@ func (indexer *Indexer) Close() error {
 	return nil
 }
 
-func (indexer *Indexer) initState() error {
+func (indexer *Indexer) initState(ctx context.Context) error {
 	current, err := indexer.db.State(indexer.indexName)
 	if err != nil {
 		if !errors.Is(err, pg.ErrNoRows) {
@@ -202,7 +202,7 @@ func (indexer *Indexer) initState() error {
 			return err
 		}
 	}
-	return nil
+	return indexer.initialTokenMetadata(ctx)
 }
 
 func (indexer *Indexer) initCounters() error {
