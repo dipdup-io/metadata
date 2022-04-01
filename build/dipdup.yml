@@ -13,8 +13,8 @@ metadata:
       pinning:
     http_timeout: 5
     max_retry_count_on_error: 10
-    contract_service_workers: 15
-    token_service_workers: 25
+    contract_service_workers: 30
+    token_service_workers: 50
     max_cpu: 4
     aws:
     thumbnail:
