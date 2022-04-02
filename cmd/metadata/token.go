@@ -134,6 +134,10 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 		if e, ok := err.(resolver.ResolvingError); ok {
 			indexer.incrementErrorCounter(e)
 			err = e.Err
+
+			if e.Type == resolver.ErrorInvalidHTTPURI {
+				tm.RetryCount = int8(indexer.settings.MaxRetryCountOnError)
+			}
 		}
 
 		if tm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {

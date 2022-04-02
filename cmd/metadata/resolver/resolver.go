@@ -32,6 +32,7 @@ const (
 	ErrorTypeKeyTezosNotFond ErrorType = "tezos_key_not_found"
 	ErrorTypeTezosURIParsing ErrorType = "tezos_uri_parsing"
 	ErrorTypeInvalidJSON     ErrorType = "invalid_json"
+	ErrorInvalidHTTPURI      ErrorType = "invalid_http_uri"
 )
 
 // ResolvingError -
@@ -126,6 +127,9 @@ func (r Receiver) Resolve(ctx context.Context, network, address, link string) (r
 	}
 
 	if err != nil {
+		if errors.Is(err, ErrInvalidURI) {
+			return resolved, newResolvingError(0, ErrorInvalidHTTPURI, err)
+		}
 		return
 	}
 

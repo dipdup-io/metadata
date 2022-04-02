@@ -2,8 +2,10 @@ package resolver
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -61,8 +63,13 @@ func NewHttp(opts ...HttpOption) Http {
 
 // Resolve -
 func (s Http) Resolve(ctx context.Context, network, address, link string) ([]byte, error) {
-	if _, err := url.ParseRequestURI(link); err != nil {
+	parsed, err := url.ParseRequestURI(link)
+	if err != nil {
 		return nil, ErrInvalidURI
+	}
+
+	if err := s.ValidateURL(parsed); err != nil {
+		return nil, err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, link, nil)
@@ -91,4 +98,36 @@ func (s Http) Resolve(ctx context.Context, network, address, link string) ([]byt
 // Is -
 func (s Http) Is(link string) bool {
 	return strings.HasPrefix(link, prefixHttp) || strings.HasPrefix(link, prefixHttps)
+}
+
+// ValidateURL -
+func (s Http) ValidateURL(link *url.URL) error {
+	if link.Host == "localhost" {
+		return errors.Wrap(ErrInvalidURI, fmt.Sprintf("invalid host: %s", link.Host))
+	}
+
+	for _, mask := range []string{
+		"10.0.0.0/8",
+		"100.64.0.0/10",
+		"169.254.0.0/16",
+		"172.16.0.0/12",
+		"192.0.0.0/24",
+		"192.0.2.0/24",
+		"192.168.0.0/16",
+		"198.18.0.0/15",
+		"198.51.100.0/24",
+		"203.0.113.0/24",
+		"240.0.0.0/4",
+	} {
+		_, cidr, err := net.ParseCIDR(mask)
+		if err != nil {
+			return err
+		}
+
+		ip := net.ParseIP(link.Host)
+		if ip != nil && cidr.Contains(ip) {
+			return errors.Wrap(ErrInvalidURI, fmt.Sprintf("restricted subnet: %s", mask))
+		}
+	}
+	return nil
 }
