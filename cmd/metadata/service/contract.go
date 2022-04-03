@@ -186,7 +186,7 @@ func (s *ContractService) saver(ctx context.Context) {
 				}
 			}
 
-			if len(contracts) == 32 {
+			if len(contracts) == 10 {
 				if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 					log.Err(err).Msg("UpdateContractMetadata")
 					continue

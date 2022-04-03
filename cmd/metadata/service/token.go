@@ -175,7 +175,7 @@ func (s *TokenService) saver(ctx context.Context) {
 				}
 			}
 
-			if len(tokens) == 32 {
+			if len(tokens) == 10 {
 				if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
 					log.Err(err).Msg("UpdateTokenMetadata")
 					continue
