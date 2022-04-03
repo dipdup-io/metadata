@@ -191,9 +191,16 @@ func (s *TokenService) saver(ctx context.Context) {
 			if len(tokens) == 0 {
 				continue
 			}
-			if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
-				log.Err(err).Msg("UpdateTokenMetadata")
-				continue
+
+			for i := 0; i < len(tokens); i += 10 {
+				end := i + 10
+				if end > len(tokens) {
+					end = len(tokens)
+				}
+				if err := s.repo.UpdateTokenMetadata(ctx, tokens[i:end]); err != nil {
+					log.Err(err).Msg("UpdateTokenMetadata")
+					continue
+				}
 			}
 			for i := range tokens {
 				s.queue.Delete(tokens[i].ID)
