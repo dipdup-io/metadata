@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	stdJSON "encoding/json"
 	"errors"
-	"unicode/utf8"
 )
 
 // JSONB -
@@ -15,10 +14,7 @@ func (j JSONB) Value() (driver.Value, error) {
 	if j.IsNull() {
 		return nil, nil
 	}
-	if utf8.Valid(j) {
-		return string(j), nil
-	}
-	return nil, nil
+	return string(j), nil
 }
 
 // Scan -
