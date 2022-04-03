@@ -11,14 +11,14 @@ jobs:
         uses: golangci/golangci-lint-action@v2.3.0
         with:
           version: v1.45.2
-          args: --timeout=2m
+          args: --timeout=2m --go=1.18
   test:
     runs-on: ubuntu-latest
     steps:
       - name: install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.15.x
+          go-version: 1.18.x
       - name: checkout code
         uses: actions/checkout@v2
       - uses: actions/cache@v2
