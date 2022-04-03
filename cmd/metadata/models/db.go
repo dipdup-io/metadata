@@ -68,7 +68,7 @@ func (d *dbLogger) AfterQuery(ctx context.Context, event *pg.QueryEvent) error {
 	}
 
 	if event.Err != nil {
-		log.Debug().Msgf("[%d ms] %s : %s", time.Since(event.StartTime).Milliseconds(), event.Err.Error(), string(query))
+		log.Error().Msgf("[%d ms] %s : %s", time.Since(event.StartTime).Milliseconds(), event.Err.Error(), string(query))
 	} else {
 		log.Debug().Msgf("[%d ms] %d rows | %s", time.Since(event.StartTime).Milliseconds(), event.Result.RowsReturned(), string(query))
 	}
