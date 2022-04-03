@@ -102,8 +102,16 @@ func (s Http) Is(link string) bool {
 
 // ValidateURL -
 func (s Http) ValidateURL(link *url.URL) error {
-	if link.Host == "localhost" {
-		return errors.Wrap(ErrInvalidURI, fmt.Sprintf("invalid host: %s", link.Host))
+	host := link.Host
+	if strings.Contains(host, ":") {
+		newHost, _, err := net.SplitHostPort(link.Host)
+		if err != nil {
+			return err
+		}
+		host = newHost
+	}
+	if host == "localhost" || host == "127.0.0.1" {
+		return errors.Wrap(ErrInvalidURI, fmt.Sprintf("invalid host: %s", host))
 	}
 
 	for _, mask := range []string{
@@ -124,7 +132,7 @@ func (s Http) ValidateURL(link *url.URL) error {
 			return err
 		}
 
-		ip := net.ParseIP(link.Host)
+		ip := net.ParseIP(host)
 		if ip != nil && cidr.Contains(ip) {
 			return errors.Wrap(ErrInvalidURI, fmt.Sprintf("restricted subnet: %s", mask))
 		}
