@@ -135,7 +135,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 			indexer.incrementErrorCounter(e)
 			err = e.Err
 
-			if e.Type == resolver.ErrorInvalidHTTPURI {
+			if e.Type == resolver.ErrorInvalidHTTPURI || e.Type == resolver.ErrorTypeInvalidJSON {
 				tm.RetryCount = int8(indexer.settings.MaxRetryCountOnError)
 			}
 		}
