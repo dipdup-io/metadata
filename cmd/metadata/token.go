@@ -185,14 +185,13 @@ func mergeTokenMetadata(src, got []byte) ([]byte, error) {
 	}
 
 	srcMap := make(map[string]interface{})
-	if err := json.Unmarshal(src, &srcMap); err != nil {
+	if err := json.NewDecoder(bytes.NewBuffer(src)).Decode(&srcMap); err != nil {
 		return nil, err
 	}
 	gotMap := make(map[string]interface{})
-	if err := json.Unmarshal(got, &gotMap); err != nil {
+	if err := json.NewDecoder(bytes.NewBuffer(got)).Decode(&gotMap); err != nil {
 		return nil, err
 	}
-
 	for key, value := range gotMap {
 		if _, ok := srcMap[key]; !ok {
 			srcMap[key] = value

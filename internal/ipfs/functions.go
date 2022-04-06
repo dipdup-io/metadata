@@ -3,6 +3,7 @@ package ipfs
 import (
 	"fmt"
 	"math/rand"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -65,5 +66,10 @@ func ShuffleGateways(gateways []string) []string {
 
 // Is -
 func Is(link string) bool {
-	return ipfsURL.MatchString(link)
+	u, err := url.Parse(link)
+	if err != nil {
+		return false
+	}
+	_, err = cid.Decode(u.Host)
+	return err == nil
 }

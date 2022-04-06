@@ -263,7 +263,7 @@ func (db *RelativeDatabase) UpdateIPFSLink(link IPFSLink) error {
 
 // IPFSLinkByURL -
 func (db *RelativeDatabase) IPFSLinkByURLs(url ...string) (links []IPFSLink, err error) {
-	err = db.DB().Model(&links).WhereIn("link IN (?)", url).Select()
+	err = db.DB().Model(&links).Where("link IN (?)", pg.In(url)).Select(&links)
 	return
 }
 

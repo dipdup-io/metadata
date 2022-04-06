@@ -1,10 +1,10 @@
 package helpers
 
 import (
+	"bytes"
 	"encoding/hex"
-	"fmt"
-	"regexp"
 	"strings"
+	"unicode"
 )
 
 // Trim -
@@ -22,38 +22,16 @@ func Decode(data []byte) ([]byte, error) {
 	return hex.DecodeString(Trim(string(data)))
 }
 
-var regEscapedString = regexp.MustCompile(`\\u[0-9a-fA-F]{4}`)
-
 // Escape -
 func Escape(data []byte) []byte {
 	if len(data) == 0 {
 		return data
 	}
 
-	response := make([]byte, 0)
-	for {
-		loc := regEscapedString.FindIndex(data)
-		if loc == nil {
-			for i := 0; i < len(data); i++ {
-				if data[i] <= 2 {
-					response = append(response, []byte(fmt.Sprintf("0x%02x", data[i]))...)
-				} else {
-					response = append(response, data[i])
-				}
-			}
-			break
+	return bytes.Map(func(r rune) rune {
+		if unicode.IsPrint(r) || unicode.IsGraphic(r) {
+			return r
 		}
-		for i := 0; i < loc[0]; i++ {
-			if data[i] <= 2 {
-				response = append(response, []byte(fmt.Sprintf("0x%02x", data[i]))...)
-			} else {
-				response = append(response, data[i])
-			}
-		}
-		response = append(response, '0', 'x')
-		response = append(response, data[loc[0]+2:loc[1]]...)
-		data = data[loc[1]:]
-	}
-
-	return response
+		return -1
+	}, data)
 }

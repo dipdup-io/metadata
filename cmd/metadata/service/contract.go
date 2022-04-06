@@ -171,21 +171,6 @@ func (s *ContractService) saver(ctx context.Context) {
 		case contract := <-s.result:
 			contracts = append(contracts, contract)
 
-			if s.prom != nil {
-				switch contract.Status {
-				case models.StatusApplied, models.StatusFailed:
-					s.prom.DecGaugeValue("metadata_new", map[string]string{
-						"network": s.network,
-						"type":    "contract",
-					})
-					s.prom.IncrementCounter("metadata_counter", map[string]string{
-						"network": s.network,
-						"type":    "contract",
-						"status":  contract.Status.String(),
-					})
-				}
-			}
-
 			if len(contracts) == 10 {
 				if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 					log.Err(err).Msg("UpdateContractMetadata")
@@ -193,6 +178,21 @@ func (s *ContractService) saver(ctx context.Context) {
 				}
 				for i := range contracts {
 					s.queue.Delete(contracts[i].ID)
+
+					if s.prom != nil {
+						switch contracts[i].Status {
+						case models.StatusApplied, models.StatusFailed:
+							s.prom.DecGaugeValue("metadata_new", map[string]string{
+								"network": s.network,
+								"type":    "contract",
+							})
+							s.prom.IncrementCounter("metadata_counter", map[string]string{
+								"network": s.network,
+								"type":    "contract",
+								"status":  contracts[i].Status.String(),
+							})
+						}
+					}
 				}
 				contracts = nil
 				ticker.Reset(time.Second * 15)

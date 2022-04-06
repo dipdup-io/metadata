@@ -86,6 +86,7 @@ func (s *TokenService) manager(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+
 		case <-ticker.C:
 			if len(s.tasks) > s.workersCount {
 				continue
@@ -97,8 +98,13 @@ func (s *TokenService) manager(ctx context.Context) {
 				continue
 			}
 
+			if len(tokens) == 0 {
+				time.Sleep(time.Second)
+				continue
+			}
+
 			links := make([]string, 0)
-			resolvedIPFS := make(map[string]models.IPFSLink)
+			resolvedIPFS := make(map[string][]byte)
 
 			for i := range tokens {
 				if s.queue.Contains(tokens[i].ID) || !ipfs.Is(tokens[i].Link) {
@@ -113,7 +119,7 @@ func (s *TokenService) manager(ctx context.Context) {
 					log.Err(err).Msg("token IPFSLinkByURL")
 				}
 				for i := range resolved {
-					resolvedIPFS[resolved[i].Link] = resolved[i]
+					resolvedIPFS[resolved[i].Link] = resolved[i].Data
 				}
 			}
 
@@ -125,10 +131,9 @@ func (s *TokenService) manager(ctx context.Context) {
 				s.queue.Add(tokens[i].ID)
 
 				if len(resolvedIPFS) > 0 && ipfs.Is(tokens[i].Link) {
-					data, ok := resolvedIPFS[tokens[i].Link]
-					if ok {
+					if data, ok := resolvedIPFS[tokens[i].Link]; ok {
 						tokens[i].Status = models.StatusApplied
-						tokens[i].Metadata = data.Data
+						tokens[i].Metadata = data
 						tokens[i].RetryCount += 1
 						s.result <- &tokens[i]
 						continue
@@ -137,10 +142,6 @@ func (s *TokenService) manager(ctx context.Context) {
 
 				s.tasks <- &tokens[i]
 			}
-
-			if len(tokens) == 0 {
-				time.Sleep(time.Second)
-			}
 		}
 	}
 }
@@ -148,33 +149,43 @@ func (s *TokenService) manager(ctx context.Context) {
 func (s *TokenService) saver(ctx context.Context) {
 	defer s.wg.Done()
 
+	tokens := make([]*models.TokenMetadata, 0)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
 		case token := <-s.result:
-			if err := s.repo.UpdateTokenMetadata(ctx, []*models.TokenMetadata{token}); err != nil {
+			tokens = append(tokens, token)
+
+			if len(tokens) < 10 {
+				continue
+			}
+
+			if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
 				log.Err(err).Msg("UpdateTokenMetadata")
 				continue
 			}
 
-			s.queue.Delete(token.ID)
+			for i := range tokens {
+				s.queue.Delete(tokens[i].ID)
 
-			if s.prom != nil {
-				switch token.Status {
-				case models.StatusApplied, models.StatusFailed:
-					s.prom.DecGaugeValue("metadata_new", map[string]string{
-						"network": s.network,
-						"type":    "token",
-					})
-					s.prom.IncrementCounter("metadata_counter", map[string]string{
-						"network": s.network,
-						"type":    "token",
-						"status":  token.Status.String(),
-					})
+				if s.prom != nil {
+					switch tokens[i].Status {
+					case models.StatusApplied, models.StatusFailed:
+						s.prom.DecGaugeValue("metadata_new", map[string]string{
+							"network": s.network,
+							"type":    "token",
+						})
+						s.prom.IncrementCounter("metadata_counter", map[string]string{
+							"network": s.network,
+							"type":    "token",
+							"status":  tokens[i].Status.String(),
+						})
+					}
 				}
 			}
+			tokens = nil
 		}
 	}
 }
@@ -186,6 +197,7 @@ func (s *TokenService) worker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+
 		case unresolved := <-s.tasks:
 			resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
