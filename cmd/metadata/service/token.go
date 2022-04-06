@@ -154,6 +154,13 @@ func (s *TokenService) saver(ctx context.Context) {
 			return
 
 		case token := <-s.result:
+			if err := s.repo.UpdateTokenMetadata(ctx, []*models.TokenMetadata{token}); err != nil {
+				log.Err(err).Msg("UpdateTokenMetadata")
+				continue
+			}
+
+			s.queue.Delete(token.ID)
+
 			if s.prom != nil {
 				switch token.Status {
 				case models.StatusApplied, models.StatusFailed:
@@ -168,12 +175,6 @@ func (s *TokenService) saver(ctx context.Context) {
 					})
 				}
 			}
-
-			if err := s.repo.UpdateTokenMetadata(ctx, []*models.TokenMetadata{token}); err != nil {
-				log.Err(err).Msg("UpdateTokenMetadata")
-				continue
-			}
-			s.queue.Delete(token.ID)
 		}
 	}
 }
