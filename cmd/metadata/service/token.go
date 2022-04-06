@@ -148,18 +148,12 @@ func (s *TokenService) manager(ctx context.Context) {
 func (s *TokenService) saver(ctx context.Context) {
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	tokens := make([]*models.TokenMetadata, 0)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
 		case token := <-s.result:
-			tokens = append(tokens, token)
-
 			if s.prom != nil {
 				switch token.Status {
 				case models.StatusApplied, models.StatusFailed:
@@ -175,41 +169,13 @@ func (s *TokenService) saver(ctx context.Context) {
 				}
 			}
 
-			if len(tokens) == 10 {
-				if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
-					log.Err(err).Msg("UpdateTokenMetadata")
-					continue
-				}
-				for i := range tokens {
-					s.queue.Delete(tokens[i].ID)
-				}
-				tokens = nil
-				ticker.Reset(time.Second * 15)
-			}
-
-		case <-ticker.C:
-			if len(tokens) == 0 {
+			if err := s.repo.UpdateTokenMetadata(ctx, []*models.TokenMetadata{token}); err != nil {
+				log.Err(err).Msg("UpdateTokenMetadata")
 				continue
 			}
-
-			for i := 0; i < len(tokens); i += 10 {
-				end := i + 10
-				if end > len(tokens) {
-					end = len(tokens)
-				}
-				if err := s.repo.UpdateTokenMetadata(ctx, tokens[i:end]); err != nil {
-					log.Err(err).Msg("UpdateTokenMetadata")
-					continue
-				}
-			}
-			for i := range tokens {
-				s.queue.Delete(tokens[i].ID)
-			}
-			tokens = nil
-
+			s.queue.Delete(token.ID)
 		}
 	}
-
 }
 
 func (s *TokenService) worker(ctx context.Context) {
