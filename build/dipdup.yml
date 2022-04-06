@@ -8,11 +8,11 @@ metadata:
         - https://ipfs.infura.io
         - https://dweb.link
         - https://ipfs.io
-      timeout: 5
+      timeout: ${IPFS_TIMEOUT:-3}
       fallback: ${IPFS_NODE_URI}
       pinning:
     http_timeout: 5
-    max_retry_count_on_error: 10
+    max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
     contract_service_workers: 15
     token_service_workers: 25
     max_cpu: 4
