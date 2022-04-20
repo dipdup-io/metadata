@@ -1,0 +1,24 @@
+{
+	"type": "pg_create_remote_relationship",
+	"args": {
+		"name":   "item_metadata",
+		"source": "dipdup",
+		"table": {
+			"name":   "item_token",
+			"schema": "public"
+		},
+		"definition": {
+			"to_source": {
+				"relationship_type": "object",
+				"source":            "metadata",
+				"table": {
+					"name":   "item_token_metadata",
+					"schema": "public"
+				},
+				"field_mapping": {
+					"id": "token_id"
+				}
+			}
+		}
+	}
+}

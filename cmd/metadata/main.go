@@ -81,7 +81,13 @@ func main() {
 						return
 					}
 
-					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
+					custom_configs, err := readCustomHasuraConfigs(ctx, cfg.Database)
+					if err != nil {
+						log.Err(err).Msg("readCustomHasuraConfigs")
+						return
+					}
+
+					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, custom_configs, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
 						log.Err(err).Msg("hasura.Create")
 					}
 				})
@@ -109,7 +115,13 @@ func main() {
 								return
 							}
 
-							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
+							custom_configs, err := readCustomHasuraConfigs(ctx, cfg.Database)
+							if err != nil {
+								log.Err(err).Msg("readCustomHasuraConfigs")
+								return
+							}
+
+							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, custom_configs, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
 								log.Err(err).Msg("hasura.Create")
 							}
 						})
@@ -211,4 +223,34 @@ func createViews(ctx context.Context, database golibConfig.Database) ([]string, 
 	}
 
 	return views, nil
+}
+
+func readCustomHasuraConfigs(ctx context.Context, database golibConfig.Database) ([]interface{}, error) {
+	files, err := ioutil.ReadDir("custom_hasura_config")
+	if err != nil {
+		return nil, err
+	}
+
+	custom_configs := make([]interface{}, 0)
+	for i := range files {
+		if files[i].IsDir() {
+			continue
+		}
+
+		path := fmt.Sprintf("custom_hasura_config/%s", files[i].Name())
+		raw, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+
+		conf := make(map[string]interface{})
+
+		err = json.Unmarshal([]byte(raw), &conf)
+		if err != nil {
+			return nil, err
+		}
+		custom_configs = append(custom_configs, conf)
+	}
+
+	return custom_configs, nil
 }
