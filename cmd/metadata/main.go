@@ -225,13 +225,13 @@ func createViews(ctx context.Context, database golibConfig.Database) ([]string, 
 	return views, nil
 }
 
-func readCustomHasuraConfigs(ctx context.Context, database golibConfig.Database) ([]interface{}, error) {
+func readCustomHasuraConfigs(ctx context.Context, database golibConfig.Database) ([]hasura.Request, error) {
 	files, err := ioutil.ReadDir("custom_hasura_config")
 	if err != nil {
 		return nil, err
 	}
 
-	custom_configs := make([]interface{}, 0)
+	custom_configs := make([]hasura.Request, 0)
 	for i := range files {
 		if files[i].IsDir() {
 			continue
@@ -243,7 +243,7 @@ func readCustomHasuraConfigs(ctx context.Context, database golibConfig.Database)
 			return nil, err
 		}
 
-		conf := make(map[string]interface{})
+		conf := hasura.Request{}
 
 		err = json.Unmarshal([]byte(raw), &conf)
 		if err != nil {
