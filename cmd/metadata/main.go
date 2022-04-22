@@ -233,7 +233,7 @@ func readCustomHasuraConfigs(ctx context.Context, database golibConfig.Database)
 
 	custom_configs := make([]hasura.Request, 0)
 	for i := range files {
-		if files[i].IsDir() {
+		if files[i].IsDir() || strings.HasPrefix(files[i].Name(), ".") {
 			continue
 		}
 
