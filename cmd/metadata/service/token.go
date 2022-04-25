@@ -149,6 +149,9 @@ func (s *TokenService) manager(ctx context.Context) {
 func (s *TokenService) saver(ctx context.Context) {
 	defer s.wg.Done()
 
+	ticker := time.NewTicker(time.Second * 10)
+	defer ticker.Stop()
+
 	tokens := make([]*models.TokenMetadata, 0)
 	for {
 		select {
@@ -162,32 +165,51 @@ func (s *TokenService) saver(ctx context.Context) {
 				continue
 			}
 
-			if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
+			if err := s.bulkSaveTokens(ctx, tokens); err != nil {
 				log.Err(err).Msg("UpdateTokenMetadata")
 				continue
 			}
 
-			for i := range tokens {
-				s.queue.Delete(tokens[i].ID)
+			tokens = nil
 
-				if s.prom != nil {
-					switch tokens[i].Status {
-					case models.StatusApplied, models.StatusFailed:
-						s.prom.DecGaugeValue("metadata_new", map[string]string{
-							"network": s.network,
-							"type":    "token",
-						})
-						s.prom.IncrementCounter("metadata_counter", map[string]string{
-							"network": s.network,
-							"type":    "token",
-							"status":  tokens[i].Status.String(),
-						})
-					}
-				}
+		case <-ticker.C:
+			if len(tokens) == 0 {
+				continue
 			}
+			if err := s.bulkSaveTokens(ctx, tokens); err != nil {
+				log.Err(err).Msg("UpdateTokenMetadata")
+				continue
+			}
+
 			tokens = nil
 		}
 	}
+}
+
+func (s *TokenService) bulkSaveTokens(ctx context.Context, tokens []*models.TokenMetadata) error {
+	if err := s.repo.UpdateTokenMetadata(ctx, tokens); err != nil {
+		return err
+	}
+
+	for i := range tokens {
+		s.queue.Delete(tokens[i].ID)
+
+		if s.prom != nil {
+			switch tokens[i].Status {
+			case models.StatusApplied, models.StatusFailed:
+				s.prom.DecGaugeValue("metadata_new", map[string]string{
+					"network": s.network,
+					"type":    "token",
+				})
+				s.prom.IncrementCounter("metadata_counter", map[string]string{
+					"network": s.network,
+					"type":    "token",
+					"status":  tokens[i].Status.String(),
+				})
+			}
+		}
+	}
+	return nil
 }
 
 func (s *TokenService) worker(ctx context.Context) {
