@@ -23,7 +23,9 @@ func (c *Config) Substitute() error {
 			return err
 		}
 	}
-	c.Config.Hasura.SetSourceName()
+	if c.Config.Hasura != nil {
+		c.Config.Hasura.SetSourceName()
+	}
 	return nil
 }
 
