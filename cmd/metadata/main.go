@@ -81,7 +81,7 @@ func main() {
 						return
 					}
 
-					custom_configs, err := readCustomHasuraConfigs(ctx, cfg.Database)
+					custom_configs, err := hasura.ReadCustomConfigs(ctx, cfg.Database, "custom_hasura_config")
 					if err != nil {
 						log.Err(err).Msg("readCustomHasuraConfigs")
 						return
@@ -115,7 +115,7 @@ func main() {
 								return
 							}
 
-							custom_configs, err := readCustomHasuraConfigs(ctx, cfg.Database)
+							custom_configs, err := hasura.ReadCustomConfigs(ctx, cfg.Database, "custom_hasura_config")
 							if err != nil {
 								log.Err(err).Msg("readCustomHasuraConfigs")
 								return
@@ -223,34 +223,4 @@ func createViews(ctx context.Context, database golibConfig.Database) ([]string, 
 	}
 
 	return views, nil
-}
-
-func readCustomHasuraConfigs(ctx context.Context, database golibConfig.Database) ([]hasura.Request, error) {
-	files, err := ioutil.ReadDir("custom_hasura_config")
-	if err != nil {
-		return nil, err
-	}
-
-	custom_configs := make([]hasura.Request, 0)
-	for i := range files {
-		if files[i].IsDir() || strings.HasPrefix(files[i].Name(), ".") {
-			continue
-		}
-
-		path := fmt.Sprintf("custom_hasura_config/%s", files[i].Name())
-		raw, err := ioutil.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-
-		conf := hasura.Request{}
-
-		err = json.Unmarshal([]byte(raw), &conf)
-		if err != nil {
-			return nil, err
-		}
-		custom_configs = append(custom_configs, conf)
-	}
-
-	return custom_configs, nil
 }
