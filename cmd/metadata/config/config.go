@@ -15,6 +15,10 @@ type Config struct {
 
 // Substitute -
 func (c *Config) Substitute() error {
+	if err := c.Config.Substitute(); err != nil {
+		return err
+	}
+
 	for _, indexer := range c.Metadata.Indexers {
 		if err := substituteContracts(c, &indexer.Filters); err != nil {
 			return err

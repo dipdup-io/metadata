@@ -23,10 +23,5 @@ type Database interface {
 
 // NewDatabase -
 func NewDatabase(ctx context.Context, cfg config.Database) (Database, error) {
-	switch cfg.Kind {
-	case "elastic":
-		return NewElastic(cfg)
-	default:
-		return NewRelativeDatabase(ctx, cfg)
-	}
+	return NewRelativeDatabase(ctx, cfg)
 }

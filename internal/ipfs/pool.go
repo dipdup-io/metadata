@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 )
 
 // Pool -
@@ -17,6 +18,7 @@ type Pool struct {
 	gateways []string
 	limit    int64
 	client   *http.Client
+	limiter  *rate.Limiter
 }
 
 // NewPool -
@@ -38,6 +40,7 @@ func NewPool(gateways []string, limit int64) (*Pool, error) {
 				DisableKeepAlives: true,
 			},
 		},
+		limiter: rate.NewLimiter(rate.Limit(10), 1),
 	}, nil
 }
 
@@ -85,6 +88,9 @@ func (pool *Pool) GetFromNode(ctx context.Context, link, node string) (Data, err
 }
 
 func (pool *Pool) request(ctx context.Context, link, node string) ([]byte, error) {
+	if err := pool.limiter.Wait(ctx); err != nil {
+		return nil, err
+	}
 	path := Path(link)
 	gatewayURL := Link(node, path)
 

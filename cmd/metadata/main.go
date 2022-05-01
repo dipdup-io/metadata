@@ -81,7 +81,7 @@ func main() {
 						return
 					}
 
-					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
+					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
 						log.Err(err).Msg("hasura.Create")
 					}
 				})
@@ -109,7 +109,7 @@ func main() {
 								return
 							}
 
-							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
+							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
 								log.Err(err).Msg("hasura.Create")
 							}
 						})
