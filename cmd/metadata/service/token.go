@@ -161,12 +161,13 @@ func (s *TokenService) saver(ctx context.Context) {
 		case token := <-s.result:
 			tokens = append(tokens, token)
 
-			if len(tokens) < 2 {
+			if len(tokens) < 10 {
 				continue
 			}
 
 			if err := s.bulkSaveTokens(ctx, tokens); err != nil {
 				log.Err(err).Msg("UpdateTokenMetadata")
+				tokens = nil
 				continue
 			}
 

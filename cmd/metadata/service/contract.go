@@ -161,6 +161,7 @@ func (s *ContractService) saver(ctx context.Context) {
 			}
 			if err := s.db.UpdateContractMetadata(ctx, contracts); err != nil {
 				log.Err(err).Msg("UpdateContractMetadata")
+				contracts = nil
 				continue
 			}
 			for i := range contracts {
