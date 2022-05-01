@@ -161,7 +161,7 @@ func (s *TokenService) saver(ctx context.Context) {
 		case token := <-s.result:
 			tokens = append(tokens, token)
 
-			if len(tokens) < 10 {
+			if len(tokens) < 2 {
 				continue
 			}
 
