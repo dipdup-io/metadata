@@ -28,6 +28,8 @@ func Escape(data []byte) []byte {
 		return data
 	}
 
+	data = bytes.ReplaceAll(data, []byte(`\u0000`), nil)
+
 	return bytes.Map(func(r rune) rune {
 		if unicode.IsPrint(r) || unicode.IsGraphic(r) {
 			return r
