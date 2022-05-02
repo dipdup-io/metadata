@@ -131,6 +131,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 
 	resolved, err := indexer.resolver.Resolve(ctx, tm.Network, tm.Contract, tm.Link)
 	if err != nil {
+		tm.Error = err.Error()
 		if e, ok := err.(resolver.ResolvingError); ok {
 			indexer.incrementErrorCounter(e)
 			err = e.Err
@@ -158,6 +159,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 			tm.Metadata = metadata
 
 		} else {
+			tm.Error = "invalid json"
 			tm.Status = models.StatusFailed
 		}
 	}

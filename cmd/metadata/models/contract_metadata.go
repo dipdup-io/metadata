@@ -26,6 +26,7 @@ type ContractMetadata struct {
 	Status     Status `json:"status"`
 	RetryCount int8   `json:"retry_count" pg:",use_zero"`
 	Metadata   JSONB  `json:"metadata,omitempty" pg:",type:jsonb,use_zero"`
+	Error      string `json:"error,omitempty"`
 }
 
 // TableName -
@@ -115,7 +116,7 @@ func (contracts *Contracts) Update(metadata []*ContractMetadata) error {
 		return nil
 	}
 
-	_, err := contracts.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count").WherePK().Update()
+	_, err := contracts.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "error").WherePK().Update()
 	return err
 }
 
