@@ -22,13 +22,18 @@ func IndexName(network string) string {
 	return fmt.Sprintf("%s_%s", IndexTypeMetadata, network)
 }
 
-// RelativeDatabase -
-type RelativeDatabase struct {
+// Database -
+type Database struct {
 	*database.PgGo
+
+	Tokens    ModelRepository[*TokenMetadata]
+	Contracts ModelRepository[*ContractMetadata]
+	IPFS      *IPFS
+	TezosKeys *TezosKeys
 }
 
-// NewRelativeDatabase -
-func NewRelativeDatabase(ctx context.Context, cfg config.Database) (*RelativeDatabase, error) {
+// NewDatabase -
+func NewDatabase(ctx context.Context, cfg config.Database) (*Database, error) {
 	db := database.NewPgGo()
 	if err := db.Connect(ctx, cfg); err != nil {
 		return nil, err
@@ -50,7 +55,13 @@ func NewRelativeDatabase(ctx context.Context, cfg config.Database) (*RelativeDat
 	}
 	db.DB().AddQueryHook(&dbLogger{})
 
-	return &RelativeDatabase{db}, nil
+	return &Database{
+		PgGo:      db,
+		Tokens:    NewTokens(db),
+		Contracts: NewContracts(db),
+		IPFS:      NewIPFS(db),
+		TezosKeys: NewTezosKeys(db),
+	}, nil
 }
 
 type dbLogger struct{}
@@ -75,200 +86,13 @@ func (d *dbLogger) AfterQuery(ctx context.Context, event *pg.QueryEvent) error {
 	return nil
 }
 
-// GetContractMetadata -
-func (db *RelativeDatabase) GetContractMetadata(network string, status Status, limit, offset, retryCount int) (all []ContractMetadata, err error) {
-	query := db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("created_at < (extract(epoch from current_timestamp) - 10 * retry_count)")
-	if limit > 0 {
-		query.Limit(limit)
-	}
-	if offset > 0 {
-		query.Offset(offset)
-	}
-	if retryCount > 0 {
-		query.Where("retry_count < ?", retryCount)
-	}
-	err = query.OrderExpr("retry_count desc, updated_at desc").Select()
-	return
-}
-
-// UpdateContractMetadata -
-func (db *RelativeDatabase) UpdateContractMetadata(ctx context.Context, metadata []*ContractMetadata) error {
-	if len(metadata) == 0 {
-		return nil
-	}
-
-	_, err := db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count").WherePK().Update()
-	return err
-}
-
-// SaveContractMetadata -
-func (db *RelativeDatabase) SaveContractMetadata(ctx context.Context, metadata []*ContractMetadata) error {
-	if len(metadata) == 0 {
-		return nil
-	}
-	_, err := db.DB().Model(&metadata).
-		OnConflict("(network, contract) DO UPDATE").
-		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
-		Insert()
-	return err
-}
-
-// LastTokenUpdateID -
-func (db *RelativeDatabase) LastContractUpdateID() (updateID int64, err error) {
-	err = db.DB().Model(&ContractMetadata{}).ColumnExpr("max(update_id)").Select(&updateID)
-	return
-}
-
-// CountContractsByStatus -
-func (db *RelativeDatabase) CountContractsByStatus(network string, status Status) (int, error) {
-	return db.DB().Model(&ContractMetadata{}).Where("status = ?", status).Where("network = ?", network).Count()
-}
-
-// GetTokenMetadata -
-func (db *RelativeDatabase) GetTokenMetadata(network string, status Status, limit, offset, retryCount int) (all []TokenMetadata, err error) {
-	query := db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where(" created_at < (extract(epoch from current_timestamp) - 10 * retry_count)")
-	if limit > 0 {
-		query.Limit(limit)
-	}
-	if offset > 0 {
-		query.Offset(offset)
-	}
-	if retryCount > 0 {
-		query.Where("retry_count < ?", retryCount)
-	}
-	err = query.OrderExpr("retry_count desc, updated_at desc").Select()
-	return
-}
-
-// UpdateTokenMetadata -
-func (db *RelativeDatabase) UpdateTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error {
-	if len(metadata) == 0 {
-		return nil
-	}
-
-	_, err := db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "link").WherePK().Update()
-	return err
-}
-
-// SaveTokenMetadata -
-func (db *RelativeDatabase) SaveTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error {
-	if len(metadata) == 0 {
-		return nil
-	}
-
-	_, err := db.DB().Model(&metadata).
-		OnConflict("(network, contract, token_id) DO UPDATE").
-		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
-		Insert()
-	return err
-}
-
-// SetImageProcessed -
-func (db *RelativeDatabase) SetImageProcessed(token TokenMetadata) error {
-	_, err := db.DB().Model(&token).Set("image_processed = true").WherePK().Update()
-	return err
-}
-
-// GetUnprocessedImage -
-func (db *RelativeDatabase) GetUnprocessedImage(from uint64, limit int) (all []TokenMetadata, err error) {
-	query := db.DB().Model(&all).Where("status = 3 AND image_processed = false")
-	if from > 0 {
-		query.Where("id > ?", from)
-	}
-	err = query.Limit(limit).Order("id asc").Select()
-	return
-}
-
-// CountTokensByStatus -
-func (db *RelativeDatabase) CountTokensByStatus(network string, status Status) (int, error) {
-	return db.DB().Model(&TokenMetadata{}).Where("status = ?", status).Where("network = ?", network).Count()
-}
-
-// GetTezosKey -
-func (db *RelativeDatabase) GetTezosKey(network, address, key string) (tk TezosKey, err error) {
-	query := db.DB().Model(&tk)
-
-	if network != "" {
-		query.Where("network = ?", network)
-	}
-	if address != "" {
-		query.Where("address = ?", address)
-	}
-	if key != "" {
-		query.Where("key = ?", key)
-	}
-
-	err = query.First()
-	return
-}
-
-// SaveTezosKey -
-func (db *RelativeDatabase) SaveTezosKey(tk TezosKey) error {
-	_, err := db.DB().Model(&tk).OnConflict("(network, address, key) DO UPDATE").Set("value = excluded.value").Insert()
-	return err
-}
-
-// DeleteTezosKey -
-func (db *RelativeDatabase) DeleteTezosKey(tk TezosKey) error {
-	query := db.DB().Model(&tk)
-
-	if tk.Network != "" {
-		query.Where("network = ?", tk.Network)
-	}
-	if tk.Address != "" {
-		query.Where("address = ?", tk.Address)
-	}
-	if tk.Key != "" {
-		query.Where("key = ?", tk.Key)
-	}
-
-	_, err := query.Delete()
-	return err
-}
-
-// LastTokenUpdateID -
-func (db *RelativeDatabase) LastTokenUpdateID() (updateID int64, err error) {
-	err = db.DB().Model(&TokenMetadata{}).ColumnExpr("max(update_id)").Select(&updateID)
-	return
-}
-
 // Close -
-func (db *RelativeDatabase) Close() error {
+func (db *Database) Close() error {
 	return db.PgGo.Close()
 }
 
-// IPFSLink -
-func (db *RelativeDatabase) IPFSLink(id int64) (link IPFSLink, err error) {
-	err = db.DB().Model(&link).Where("id = ?", id).First()
-	return
-}
-
-// IPFSLinks -
-func (db *RelativeDatabase) IPFSLinks(limit, offset int) (links []IPFSLink, err error) {
-	err = db.DB().Model(&links).Limit(limit).Offset(offset).Order("id desc").Select(&links)
-	return
-}
-
-// SaveIPFSLink -
-func (db *RelativeDatabase) SaveIPFSLink(link IPFSLink) error {
-	_, err := db.DB().Model(&link).Where("link = ?link").SelectOrInsert(&link)
-	return err
-}
-
-// UpdateIPFSLink -
-func (db *RelativeDatabase) UpdateIPFSLink(link IPFSLink) error {
-	_, err := db.DB().Model(&link).WherePK().Column("data", "node").Update()
-	return err
-}
-
-// IPFSLinkByURL -
-func (db *RelativeDatabase) IPFSLinkByURLs(url ...string) (links []IPFSLink, err error) {
-	err = db.DB().Model(&links).Where("link IN (?)", pg.In(url)).Select(&links)
-	return
-}
-
 // CreateIndices -
-func (db *RelativeDatabase) CreateIndices() error {
+func (db *Database) CreateIndices() error {
 	if _, err := db.DB().Exec(`
 		CREATE INDEX CONCURRENTLY IF NOT EXISTS contract_metadata_network_status_idx ON contract_metadata (network, status)
 	`); err != nil {
@@ -318,7 +142,7 @@ func (db *RelativeDatabase) CreateIndices() error {
 }
 
 // Exec -
-func (db *RelativeDatabase) Exec(sql string) error {
+func (db *Database) Exec(sql string) error {
 	_, err := db.DB().Exec(sql)
 	return err
 }

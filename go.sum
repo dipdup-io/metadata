@@ -88,8 +88,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/decred/dcrd/lru v1.0.0/go.mod h1:mxKOwFd7lFjN2GZYsiz/ecgqR6kkYAl+0pz0tEMk218=
-github.com/dipdup-net/go-lib v0.2.9 h1:D3GuV+BrU4VhwFjblWDNUex2C/pBLcvv8utojjDKSv4=
-github.com/dipdup-net/go-lib v0.2.9/go.mod h1:RjVhNv63RE3pOAeHLwnspa2UjJi80k/Kelwv7aN1ETE=
+github.com/dipdup-net/go-lib v0.2.10 h1:MJPijh0I/xWB8dbQVb0+He0k7ODAOv9c6axT94wv/LE=
+github.com/dipdup-net/go-lib v0.2.10/go.mod h1:RjVhNv63RE3pOAeHLwnspa2UjJi80k/Kelwv7aN1ETE=
 github.com/disintegration/imaging v1.6.2 h1:w1LecBlG2Lnp8B3jk5zSuNqd7b4DXhcjwek1ei82L+c=
 github.com/disintegration/imaging v1.6.2/go.mod h1:44/5580QXChDfwIclfc/PCwrr44amcmDAg8hxG0Ewe4=
 github.com/ebellocchia/go-base58 v0.1.0 h1:0w/ODEfZnOPW5KW0QY/Xpb1fxba/BxQJMUa5iYzpljk=

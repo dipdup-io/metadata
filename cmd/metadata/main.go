@@ -62,29 +62,24 @@ func main() {
 
 	prometheusService := initPrometheus(cfg.Prometheus)
 
+	views, err := createViews(ctx, cfg.Database)
+	if err != nil {
+		log.Err(err).Msg("createViews")
+		return
+	}
+
 	var indexers sync.Map
 	var indexerCancels sync.Map
 
 	var hasuraInit sync.Once
 	for network, indexer := range cfg.Metadata.Indexers {
 		go func(network string, ind *config.Indexer) {
-			result, err := startIndexer(ctx, cfg, *ind, network, prometheusService)
+			result, err := startIndexer(ctx, cfg, *ind, network, prometheusService, views, &hasuraInit)
 			if err != nil {
 				log.Err(err).Msg("")
 			} else {
 				indexers.Store(network, result.indexer)
 				indexerCancels.Store(network, result.cancel)
-				hasuraInit.Do(func() {
-					views, err := createViews(ctx, cfg.Database)
-					if err != nil {
-						log.Err(err).Msg("createViews")
-						return
-					}
-
-					if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
-						log.Err(err).Msg("hasura.Create")
-					}
-				})
 				return
 			}
 
@@ -96,23 +91,12 @@ func main() {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					result, err := startIndexer(ctx, cfg, *ind, network, prometheusService)
+					result, err := startIndexer(ctx, cfg, *ind, network, prometheusService, views, &hasuraInit)
 					if err != nil {
 						log.Err(err).Msg("")
 					} else {
 						indexers.Store(network, result.indexer)
 						indexerCancels.Store(network, result.cancel)
-						hasuraInit.Do(func() {
-							views, err := createViews(ctx, cfg.Database)
-							if err != nil {
-								log.Err(err).Msg("createViews")
-								return
-							}
-
-							if err := hasura.Create(ctx, cfg.Hasura, cfg.Database, views, nil, new(models.TokenMetadata), new(models.ContractMetadata)); err != nil {
-								log.Err(err).Msg("hasura.Create")
-							}
-						})
 						return
 					}
 				}
@@ -160,7 +144,7 @@ func initPrometheus(cfg *golibConfig.Prometheus) *prometheus.Service {
 	return prometheusService
 }
 
-func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.Indexer, network string, prom *prometheus.Service) (startResult, error) {
+func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.Indexer, network string, prom *prometheus.Service, views []string, hasuraInit *sync.Once) (startResult, error) {
 	var result startResult
 	indexerCtx, cancel := context.WithCancel(ctx)
 
@@ -175,6 +159,18 @@ func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.I
 		cancel()
 		return result, err
 	}
+
+	hasuraInit.Do(func() {
+		if err := hasura.Create(ctx, hasura.GenerateArgs{
+			Config:               cfg.Hasura,
+			DatabaseConfig:       cfg.Database,
+			Views:                views,
+			CustomConfigurations: nil,
+			Models:               []any{new(models.TokenMetadata), new(models.ContractMetadata)},
+		}); err != nil {
+			log.Err(err).Msg("hasura.Create")
+		}
+	})
 
 	result.cancel = cancel
 	return result, nil

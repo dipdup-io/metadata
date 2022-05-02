@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/aws/aws-sdk-go v1.43.31
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/dipdup-net/go-lib v0.2.9
+	github.com/dipdup-net/go-lib v0.2.10
 	github.com/disintegration/imaging v1.6.2
 	github.com/elastic/go-elasticsearch/v8 v8.1.0
 	github.com/go-pg/pg/v10 v10.10.6
@@ -17,7 +17,6 @@ require (
 	github.com/rs/zerolog v1.26.1
 	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.7.1
-	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
 )
 
 require (
@@ -94,6 +93,7 @@ require (
 	golang.org/x/net v0.0.0-20220403103023-749bd193bc2b // indirect
 	golang.org/x/sys v0.0.0-20220403020550-483a9cbc67c0 // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect

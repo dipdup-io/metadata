@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/dipdup-net/go-lib/database"
 	"github.com/dipdup-net/go-lib/tzkt/api"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 )
@@ -32,13 +33,6 @@ func (TezosKey) TableName() string {
 	return "tezos_keys"
 }
 
-// TezosKeyRepository -
-type TezosKeyRepository interface {
-	GetTezosKey(network string, address string, key string) (TezosKey, error)
-	SaveTezosKey(key TezosKey) error
-	DeleteTezosKey(key TezosKey) error
-}
-
 // ContextFromUpdate -
 func ContextFromUpdate(update api.BigMapUpdate, network string) (TezosKey, error) {
 	var ctx TezosKey
@@ -52,4 +46,56 @@ func ContextFromUpdate(update api.BigMapUpdate, network string) (TezosKey, error
 	}
 	ctx.Value = data
 	return ctx, nil
+}
+
+// TezosKeys -
+type TezosKeys struct {
+	db *database.PgGo
+}
+
+// NewTezosKeys -
+func NewTezosKeys(db *database.PgGo) *TezosKeys {
+	return &TezosKeys{db}
+}
+
+// Get -
+func (keys *TezosKeys) Get(network, address, key string) (tk TezosKey, err error) {
+	query := keys.db.DB().Model(&tk)
+
+	if network != "" {
+		query.Where("network = ?", network)
+	}
+	if address != "" {
+		query.Where("address = ?", address)
+	}
+	if key != "" {
+		query.Where("key = ?", key)
+	}
+
+	err = query.First()
+	return
+}
+
+// Save -
+func (keys *TezosKeys) Save(tk TezosKey) error {
+	_, err := keys.db.DB().Model(&tk).OnConflict("(network, address, key) DO UPDATE").Set("value = excluded.value").Insert()
+	return err
+}
+
+// Delete -
+func (keys *TezosKeys) Delete(tk TezosKey) error {
+	query := keys.db.DB().Model(&tk)
+
+	if tk.Network != "" {
+		query.Where("network = ?", tk.Network)
+	}
+	if tk.Address != "" {
+		query.Where("address = ?", tk.Address)
+	}
+	if tk.Key != "" {
+		query.Where("key = ?", tk.Key)
+	}
+
+	_, err := query.Delete()
+	return err
 }

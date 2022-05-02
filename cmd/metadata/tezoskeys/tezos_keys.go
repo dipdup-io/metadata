@@ -14,11 +14,11 @@ type TezosKeysAction struct {
 
 // TezosKeys -
 type TezosKeys struct {
-	repo models.TezosKeyRepository
+	repo *models.TezosKeys
 }
 
 // NewTezosKeys -
-func NewTezosKeys(repo models.TezosKeyRepository) *TezosKeys {
+func NewTezosKeys(repo *models.TezosKeys) *TezosKeys {
 	return &TezosKeys{repo}
 }
 
@@ -35,14 +35,14 @@ func (tk *TezosKeys) Add(update api.BigMapUpdate, network string) error {
 
 	switch update.Action {
 	case "add_key", "update_key":
-		return tk.repo.SaveTezosKey(item)
+		return tk.repo.Save(item)
 	case "remove_key":
-		return tk.repo.DeleteTezosKey(item)
+		return tk.repo.Delete(item)
 	}
 	return nil
 }
 
 // Get -
 func (tk *TezosKeys) Get(network, address, key string) (models.TezosKey, error) {
-	return tk.repo.GetTezosKey(network, address, key)
+	return tk.repo.Get(network, address, key)
 }

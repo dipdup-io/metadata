@@ -1,8 +1,6 @@
 package config
 
 import (
-	"net/url"
-
 	"github.com/dipdup-net/go-lib/config"
 	"github.com/pkg/errors"
 )
@@ -79,14 +77,6 @@ type Filters struct {
 // MetadataDataSource -
 type MetadataDataSource struct {
 	Tzkt string `yaml:"tzkt" validate:"url"`
-}
-
-// Validate -
-func (cfg MetadataDataSource) Validate() error {
-	if _, err := url.ParseRequestURI(cfg.Tzkt); err != nil {
-		return errors.Wrapf(err, "Invalid TzKT url %s", cfg.Tzkt)
-	}
-	return nil
 }
 
 // Settings -
