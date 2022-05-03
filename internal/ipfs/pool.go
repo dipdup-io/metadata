@@ -10,10 +10,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 )
 
 // Pool -
 type Pool struct {
+	limiters map[string]*rate.Limiter
 	gateways []string
 	limit    int64
 	client   *http.Client
@@ -24,8 +26,14 @@ func NewPool(gateways []string, limit int64) (*Pool, error) {
 	if len(gateways) == 0 {
 		return nil, ErrEmptyIPFSGatewayList
 	}
+	pool := make(map[string]*rate.Limiter)
+	for i := range gateways {
+		pool[gateways[i]] = rate.NewLimiter(rate.Every(time.Second/10), 10)
+	}
+
 	return &Pool{
 		gateways: gateways,
+		limiters: pool,
 		limit:    limit,
 		client: &http.Client{
 			Transport: &http.Transport{
@@ -79,6 +87,12 @@ func (pool *Pool) GetFromNode(ctx context.Context, link, node string) (Data, err
 }
 
 func (pool *Pool) request(ctx context.Context, link, node string) ([]byte, error) {
+	if limiter, ok := pool.limiters[node]; ok {
+		if err := limiter.Wait(ctx); err != nil {
+			return nil, err
+		}
+	}
+
 	path := Path(link)
 	gatewayURL := Link(node, path)
 
