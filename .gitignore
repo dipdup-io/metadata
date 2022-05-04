@@ -20,3 +20,4 @@ vendor/
 dipdup.yml
 
 dist/
+node_modules/

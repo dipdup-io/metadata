@@ -1,0 +1,29 @@
+{
+    "name": "@dipdup/metadata",
+    "version": "0.1.0",
+    "description": "GQL client for Tezos contract & token metadata API",
+    "main": "dist/index.js",
+    "module": "dist/index.esm.js",
+    "types": "dist/index.d.ts",
+    "typings": "dist/index.d.ts",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/dipdup-net/metadata.git"
+    },
+    "author": "GenQL <genql.vercel.app>",
+    "license": "MIT",
+    "bugs": {
+      "url": "https://github.com/dipdup-net/metadata/issues"
+    },
+    "homepage": "https://dipdup.net/sandbox.html?service=metadata",
+    "devDependencies": {
+      "@genql/cli": "^2.6.0"
+    },
+    "dependencies": {
+      "@genql/runtime": "2.6.0",
+      "graphql": "^15.5.0"
+    },
+    "scripts": {
+      "build": "genql --esm-and-cjs --endpoint https://metadata.dipdup.net/v1/graphql --output ./dist"
+    }
+}
