@@ -33,12 +33,12 @@ type Indexer struct {
 	indexName string
 	state     *database.State
 	resolver  resolver.Receiver
-	db        models.Database
+	db        *models.Database
 	scanner   *tzkt.Scanner
 	prom      *prometheus.Service
 	tezosKeys *tezoskeys.TezosKeys
-	contracts *service.ContractService
-	tokens    *service.TokenService
+	contracts *service.Service[*models.ContractMetadata]
+	tokens    *service.Service[*models.TokenMetadata]
 	thumbnail *thumbnail.Service
 	settings  config.Settings
 	filters   config.Filters
@@ -52,7 +52,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 	if err != nil {
 		return nil, err
 	}
-	keys := tezoskeys.NewTezosKeys(db)
+	keys := tezoskeys.NewTezosKeys(db.TezosKeys)
 
 	metadataResolver, err := resolver.New(settings, keys)
 	if err != nil {
@@ -73,7 +73,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 
 	if aws := storage.NewAWS(settings.AWS); aws != nil {
 		indexer.thumbnail = thumbnail.New(
-			aws, db, network, settings.IPFS.Gateways,
+			aws, db.Tokens.(*models.Tokens), network, settings.IPFS.Gateways,
 			thumbnail.WithPrometheus(prom),
 			thumbnail.WithWorkers(settings.Thumbnail.Workers),
 			thumbnail.WithFileSizeLimit(settings.Thumbnail.MaxFileSize),
@@ -81,17 +81,19 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 			thumbnail.WithTimeout(settings.Thumbnail.Timeout),
 		)
 	}
-	indexer.contracts = service.NewContractService(
-		db, indexer.resolveContractMetadata, network,
-		service.WithMaxRetryCountContract(settings.MaxRetryCountOnError),
-		service.WithWorkersCountContract(settings.ContractServiceWorkers),
-		service.WithPrometheusContract(prom),
+	indexer.contracts = service.NewService(
+		db.Contracts, indexer.resolveContractMetadata, network,
+		service.WithMaxRetryCount[*models.ContractMetadata](settings.MaxRetryCountOnError),
+		service.WithWorkersCount[*models.ContractMetadata](settings.ContractServiceWorkers),
+		service.WithPrometheus[*models.ContractMetadata](prom, "contract"),
+		service.WithIPFSCache[*models.ContractMetadata](db.IPFS),
 	)
-	indexer.tokens = service.NewTokenService(
-		db, indexer.resolveTokenMetadata, network,
-		service.WithMaxRetryCountToken(settings.MaxRetryCountOnError),
-		service.WithWorkersCountToken(settings.TokenServiceWorkers),
-		service.WithPrometheusToken(prom),
+	indexer.tokens = service.NewService(
+		db.Tokens, indexer.resolveTokenMetadata, network,
+		service.WithMaxRetryCount[*models.TokenMetadata](settings.MaxRetryCountOnError),
+		service.WithWorkersCount[*models.TokenMetadata](settings.TokenServiceWorkers),
+		service.WithPrometheus[*models.TokenMetadata](prom, "token"),
+		service.WithIPFSCache[*models.TokenMetadata](db.IPFS),
 	)
 
 	return indexer, nil
@@ -118,7 +120,7 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 	}
 
 	if indexer.prom != nil {
-		newContractCount, err := indexer.db.CountContractsByStatus(indexer.network, models.StatusNew)
+		newContractCount, err := indexer.db.Contracts.CountByStatus(indexer.network, models.StatusNew)
 		if err != nil {
 			return err
 		}
@@ -127,7 +129,7 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 			"type":    "contract",
 		}, float64(newContractCount))
 
-		newTokenCount, err := indexer.db.CountTokensByStatus(indexer.network, models.StatusNew)
+		newTokenCount, err := indexer.db.Tokens.CountByStatus(indexer.network, models.StatusNew)
 		if err != nil {
 			return err
 		}
@@ -206,13 +208,13 @@ func (indexer *Indexer) initState(ctx context.Context) error {
 }
 
 func (indexer *Indexer) initCounters() error {
-	contractActionsCounter, err := indexer.db.LastContractUpdateID()
+	contractActionsCounter, err := indexer.db.Contracts.LastUpdateID()
 	if err != nil {
 		return err
 	}
 	models.ContractUpdateID.Set(contractActionsCounter)
 
-	tokenActionsCounter, err := indexer.db.LastTokenUpdateID()
+	tokenActionsCounter, err := indexer.db.Tokens.LastUpdateID()
 	if err != nil {
 		return err
 	}
@@ -285,11 +287,11 @@ func (indexer *Indexer) handlerUpdate(ctx context.Context, msg tzkt.Message) err
 		}
 	}
 
-	if err := indexer.db.SaveContractMetadata(ctx, contracts); err != nil {
+	if err := indexer.db.Contracts.Save(contracts); err != nil {
 		return err
 	}
 
-	if err := indexer.db.SaveTokenMetadata(ctx, tokens); err != nil {
+	if err := indexer.db.Tokens.Save(tokens); err != nil {
 		return err
 	}
 	return nil

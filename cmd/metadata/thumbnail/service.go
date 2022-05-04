@@ -29,7 +29,7 @@ type Service struct {
 	limit    int
 	gateways []string
 	storage  storage.Storage
-	db       models.Database
+	db       *models.Tokens
 	prom     *prometheus.Service
 
 	maxFileSizeMB int64
@@ -43,7 +43,7 @@ type Service struct {
 }
 
 // New -
-func New(storage storage.Storage, db models.Database, network string, gateways []string, opts ...ThumbnailOption) *Service {
+func New(storage storage.Storage, db *models.Tokens, network string, gateways []string, opts ...ThumbnailOption) *Service {
 	service := &Service{
 		cursor:        0,
 		limit:         50,

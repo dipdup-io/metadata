@@ -9,6 +9,7 @@ const (
 	StatusApplied
 )
 
+// String -
 func (s Status) String() string {
 	switch s {
 	case StatusApplied:

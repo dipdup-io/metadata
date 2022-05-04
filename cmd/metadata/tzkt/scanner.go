@@ -2,7 +2,6 @@ package tzkt
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -296,7 +295,7 @@ func (scanner *Scanner) handleBigMaps(msg events.Message) error {
 		if body[i].Content != nil {
 			diffs[i].Content = &api.BigMapUpdateContent{
 				Hash:  body[i].Content.Hash,
-				Key:   json.RawMessage(body[i].Content.Key),
+				Key:   body[i].Content.Key,
 				Value: body[i].Content.Value,
 			}
 		}

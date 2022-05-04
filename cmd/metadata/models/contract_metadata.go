@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/dipdup-net/go-lib/database"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 )
 
@@ -32,6 +33,41 @@ func (ContractMetadata) TableName() string {
 	return "contract_metadata"
 }
 
+// GetStatus -
+func (cm *ContractMetadata) GetStatus() Status {
+	return cm.Status
+}
+
+// GetRetryCount -
+func (cm *ContractMetadata) GetRetryCount() int8 {
+	return cm.RetryCount
+}
+
+// GetID -
+func (cm *ContractMetadata) GetID() uint64 {
+	return cm.ID
+}
+
+// GetLink -
+func (cm *ContractMetadata) GetLink() string {
+	return cm.Link
+}
+
+// IncrementRetryCount -
+func (cm *ContractMetadata) IncrementRetryCount() {
+	cm.RetryCount += 1
+}
+
+// SetMetadata -
+func (cm *ContractMetadata) SetMetadata(data JSONB) {
+	cm.Metadata = data
+}
+
+// SetStatus -
+func (cm *ContractMetadata) SetStatus(status Status) {
+	cm.Status = status
+}
+
 // BeforeInsert -
 func (cm *ContractMetadata) BeforeInsert(ctx context.Context) (context.Context, error) {
 	cm.UpdatedAt = time.Now().Unix()
@@ -47,11 +83,61 @@ func (cm *ContractMetadata) BeforeUpdate(ctx context.Context) (context.Context, 
 	return ctx, nil
 }
 
-// ContractRepository -
-type ContractRepository interface {
-	GetContractMetadata(network string, status Status, limit, offset, retryCount int) ([]ContractMetadata, error)
-	UpdateContractMetadata(ctx context.Context, metadata []*ContractMetadata) error
-	SaveContractMetadata(ctx context.Context, metadata []*ContractMetadata) error
-	LastContractUpdateID() (int64, error)
-	CountContractsByStatus(network string, status Status) (int, error)
+// Contracts -
+type Contracts struct {
+	db *database.PgGo
+}
+
+// NewContracts -
+func NewContracts(db *database.PgGo) *Contracts {
+	return &Contracts{db}
+}
+
+// Get -
+func (contracts *Contracts) Get(network string, status Status, limit, offset, retryCount int) (all []*ContractMetadata, err error) {
+	query := contracts.db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("created_at < (extract(epoch from current_timestamp) - 10 * retry_count)")
+	if limit > 0 {
+		query.Limit(limit)
+	}
+	if offset > 0 {
+		query.Offset(offset)
+	}
+	if retryCount > 0 {
+		query.Where("retry_count < ?", retryCount)
+	}
+	err = query.OrderExpr("retry_count desc, updated_at desc").Select()
+	return
+}
+
+// Update -
+func (contracts *Contracts) Update(metadata []*ContractMetadata) error {
+	if len(metadata) == 0 {
+		return nil
+	}
+
+	_, err := contracts.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count").WherePK().Update()
+	return err
+}
+
+// Save -
+func (contracts *Contracts) Save(metadata []*ContractMetadata) error {
+	if len(metadata) == 0 {
+		return nil
+	}
+	_, err := contracts.db.DB().Model(&metadata).
+		OnConflict("(network, contract) DO UPDATE").
+		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
+		Insert()
+	return err
+}
+
+// LastUpdateID -
+func (contracts *Contracts) LastUpdateID() (updateID int64, err error) {
+	err = contracts.db.DB().Model(&ContractMetadata{}).ColumnExpr("max(update_id)").Select(&updateID)
+	return
+}
+
+// CountByStatus -
+func (contracts *Contracts) CountByStatus(network string, status Status) (int, error) {
+	return contracts.db.DB().Model(&ContractMetadata{}).Where("status = ?", status).Where("network = ?", network).Count()
 }

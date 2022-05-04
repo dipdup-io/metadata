@@ -74,7 +74,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 		if resolved.ResponseTime > 0 {
 			indexer.addHistogramResponseTime(resolved)
 		}
-		return indexer.db.SaveIPFSLink(models.IPFSLink{
+		return indexer.db.IPFS.Save(models.IPFSLink{
 			Link: cm.Link,
 			Node: resolved.Node,
 			Data: resolved.Data,

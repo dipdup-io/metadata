@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/dipdup-net/go-lib/database"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/shopspring/decimal"
 )
@@ -35,6 +36,41 @@ func (TokenMetadata) TableName() string {
 	return "token_metadata"
 }
 
+// GetStatus -
+func (tm TokenMetadata) GetStatus() Status {
+	return tm.Status
+}
+
+// GetRetryCount -
+func (tm TokenMetadata) GetRetryCount() int8 {
+	return tm.RetryCount
+}
+
+// GetID -
+func (tm TokenMetadata) GetID() uint64 {
+	return tm.ID
+}
+
+// GetLink -
+func (tm TokenMetadata) GetLink() string {
+	return tm.Link
+}
+
+// IncrementRetryCount -
+func (tm *TokenMetadata) IncrementRetryCount() {
+	tm.RetryCount += 1
+}
+
+// SetMetadata -
+func (tm *TokenMetadata) SetMetadata(data JSONB) {
+	tm.Metadata = data
+}
+
+// SetStatus -
+func (tm *TokenMetadata) SetStatus(status Status) {
+	tm.Status = status
+}
+
 // BeforeInsert -
 func (tm *TokenMetadata) BeforeInsert(ctx context.Context) (context.Context, error) {
 	tm.UpdatedAt = time.Now().Unix()
@@ -52,11 +88,84 @@ func (tm *TokenMetadata) BeforeUpdate(ctx context.Context) (context.Context, err
 
 // TokenRepository -
 type TokenRepository interface {
-	GetTokenMetadata(network string, status Status, limit, offset, retryCount int) ([]TokenMetadata, error)
+	ModelRepository[*TokenMetadata]
+
 	SetImageProcessed(token TokenMetadata) error
 	GetUnprocessedImage(from uint64, limit int) ([]TokenMetadata, error)
-	UpdateTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error
-	SaveTokenMetadata(ctx context.Context, metadata []*TokenMetadata) error
-	LastTokenUpdateID() (int64, error)
-	CountTokensByStatus(network string, status Status) (int, error)
+}
+
+// Tokens -
+type Tokens struct {
+	db *database.PgGo
+}
+
+// NewTokens -
+func NewTokens(db *database.PgGo) *Tokens {
+	return &Tokens{db}
+}
+
+// Get -
+func (tokens *Tokens) Get(network string, status Status, limit, offset, retryCount int) (all []*TokenMetadata, err error) {
+	query := tokens.db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("created_at < (extract(epoch from current_timestamp) - 10 * retry_count)")
+	if limit > 0 {
+		query.Limit(limit)
+	}
+	if offset > 0 {
+		query.Offset(offset)
+	}
+	if retryCount > 0 {
+		query.Where("retry_count < ?", retryCount)
+	}
+	err = query.OrderExpr("retry_count desc, updated_at desc").Select()
+	return
+}
+
+// Update -
+func (tokens *Tokens) Update(metadata []*TokenMetadata) error {
+	if len(metadata) == 0 {
+		return nil
+	}
+
+	_, err := tokens.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count").WherePK().Update()
+	return err
+}
+
+// Save -
+func (tokens *Tokens) Save(metadata []*TokenMetadata) error {
+	if len(metadata) == 0 {
+		return nil
+	}
+
+	_, err := tokens.db.DB().Model(&metadata).
+		OnConflict("(network, contract, token_id) DO UPDATE").
+		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
+		Insert()
+	return err
+}
+
+// LastUpdateID -
+func (tokens *Tokens) LastUpdateID() (updateID int64, err error) {
+	err = tokens.db.DB().Model(&TokenMetadata{}).ColumnExpr("max(update_id)").Select(&updateID)
+	return
+}
+
+// CountByStatus -
+func (tokens *Tokens) CountByStatus(network string, status Status) (int, error) {
+	return tokens.db.DB().Model(&TokenMetadata{}).Where("status = ?", status).Where("network = ?", network).Count()
+}
+
+// SetImageProcessed -
+func (tokens *Tokens) SetImageProcessed(token TokenMetadata) error {
+	_, err := tokens.db.DB().Model(&token).Set("image_processed = true").WherePK().Update()
+	return err
+}
+
+// GetUnprocessedImage -
+func (tokens *Tokens) GetUnprocessedImage(from uint64, limit int) (all []TokenMetadata, err error) {
+	query := tokens.db.DB().Model(&all).Where("status = 3 AND image_processed = false")
+	if from > 0 {
+		query.Where("id > ?", from)
+	}
+	err = query.Limit(limit).Order("id asc").Select()
+	return
 }

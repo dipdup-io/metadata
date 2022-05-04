@@ -47,6 +47,7 @@ hasura:
   select_limit: 10000
   allow_aggregation: false
   rest: true
+  add_source: true
 
 prometheus:
   url: ${EXPORT_HOST:-0.0.0.0}:2112

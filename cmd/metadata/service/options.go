@@ -1,59 +1,42 @@
 package service
 
-import "github.com/dipdup-net/go-lib/prometheus"
+import (
+	"github.com/dipdup-net/go-lib/prometheus"
+	"github.com/dipdup-net/metadata/cmd/metadata/models"
+)
 
-// ContractServiceOption -
-type ContractServiceOption func(*ContractService)
+// ServiceOption -
+type ServiceOption[T models.Constraint] func(*Service[T])
 
-// WithMaxRetryCountContract -
-func WithMaxRetryCountContract(count int) ContractServiceOption {
-	return func(cs *ContractService) {
+// WithMaxRetryCount -
+func WithMaxRetryCount[T models.Constraint](count int) ServiceOption[T] {
+	return func(cs *Service[T]) {
 		if count > 0 {
 			cs.maxRetryCount = count
 		}
 	}
 }
 
-// WithWorkersCountContract -
-func WithWorkersCountContract(count int) ContractServiceOption {
-	return func(cs *ContractService) {
+// WithWorkersCount -
+func WithWorkersCount[T models.Constraint](count int) ServiceOption[T] {
+	return func(cs *Service[T]) {
 		if count > 0 {
 			cs.workersCount = count
 		}
 	}
 }
 
-// WithWorkersCountContract -
-func WithPrometheusContract(prom *prometheus.Service) ContractServiceOption {
-	return func(cs *ContractService) {
+// WithPrometheus -
+func WithPrometheus[T models.Constraint](prom *prometheus.Service, gaugeType string) ServiceOption[T] {
+	return func(cs *Service[T]) {
 		cs.prom = prom
+		cs.gaugeType = gaugeType
 	}
 }
 
-// TokenServiceOption -
-type TokenServiceOption func(*TokenService)
-
-// WithMaxRetryCountToken -
-func WithMaxRetryCountToken(count int) TokenServiceOption {
-	return func(ts *TokenService) {
-		if count > 0 {
-			ts.maxRetryCount = count
-		}
-	}
-}
-
-// WithWorkersCountToken -
-func WithWorkersCountToken(count int) TokenServiceOption {
-	return func(ts *TokenService) {
-		if count > 0 {
-			ts.workersCount = count
-		}
-	}
-}
-
-// WithPrometheusToken -
-func WithPrometheusToken(prom *prometheus.Service) TokenServiceOption {
-	return func(ts *TokenService) {
-		ts.prom = prom
+// WithIPFSCache -
+func WithIPFSCache[T models.Constraint](ipfsRepo *models.IPFS) ServiceOption[T] {
+	return func(cs *Service[T]) {
+		cs.ipfsRepo = ipfsRepo
 	}
 }

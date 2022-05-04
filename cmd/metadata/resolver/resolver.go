@@ -3,13 +3,16 @@ package resolver
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	stdJSON "encoding/json"
 
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/tezoskeys"
 	"github.com/dipdup-net/metadata/internal/tezos"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // ResolverType -
 type ResolverType int
@@ -133,12 +136,13 @@ func (r Receiver) Resolve(ctx context.Context, network, address, link string) (r
 		return
 	}
 
-	if !json.Valid(resolved.Data) {
+	resolved.Data = bytes.TrimLeft(resolved.Data, " ")
+	if len(resolved.Data) == 0 || resolved.Data[0] != '{' || !json.Valid(resolved.Data) {
 		return resolved, newResolvingError(0, ErrorTypeInvalidJSON, errors.New("invalid json"))
 	}
 
 	var buf bytes.Buffer
-	if err := json.Compact(&buf, resolved.Data); err != nil {
+	if err := stdJSON.Compact(&buf, resolved.Data); err != nil {
 		return resolved, err
 	}
 	resolved.Data = buf.Bytes()
