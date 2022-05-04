@@ -20,6 +20,60 @@ Metadata indexer reuses `datasources`, `contracts`, `database`, `hasura` section
 
 Read more [in the docs](https://docs.dipdup.net/plugins/metadata).
 
+## GQL client
+
+### Installation
+
+```
+npm i @dipdup/metadata
+```
+
+### Usage
+
+First of all you need to create an instance of metadata client:
+```js
+import { createClient } from '@dipdup/metadata'
+
+const client = createClient({
+    url: 'http://metadata.dipdup.net/v1/graphql',
+    subscription: {
+        url: "wss://metadata.dipdup.net/v1/graphql"
+    }
+});
+```
+
+#### Query
+
+```js
+import { everything } from '@dipdup/metadata'
+
+client.chain.query
+    .token_metadata({
+        where: { 
+            contract: { _eq: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton' },
+            token_id: { _eq: 100000 }
+        }
+    })
+    .get({ ...everything })
+    .then(res => console.log)
+```
+
+#### Subscription (live query)
+
+```js
+const { unsubscribe } = client.chain.subscription
+    .token_metadata({
+        where: { 
+            contract: { _eq: 'KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton' },
+            created_at: { _gt: '2021-07-06T00:00:00' }
+        }
+    })
+    .get({ ...everything })
+    .subscribe({
+        next: res => console.log
+    })
+```
+
 ## Maintenance
 
 ### Refetch recent metadata
