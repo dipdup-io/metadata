@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dipdup-net/go-lib/tzkt/api"
 	"github.com/dipdup-net/go-lib/tzkt/events"
@@ -201,7 +202,9 @@ func (scanner *Scanner) sync(ctx context.Context, headLevel uint64) error {
 
 			updates, err := scanner.getSyncUpdates(ctx, headLevel)
 			if err != nil {
-				return err
+				log.Err(err).Msg("getSyncUpdates")
+				time.Sleep(time.Second)
+				continue
 			}
 
 			if len(updates) > 0 {
