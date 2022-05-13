@@ -125,7 +125,20 @@ func (contracts *Contracts) Save(metadata []*ContractMetadata) error {
 	if len(metadata) == 0 {
 		return nil
 	}
-	_, err := contracts.db.DB().Model(&metadata).
+
+	savings := make([]*ContractMetadata, 0)
+	has := make(map[string]struct{})
+	for i := len(metadata) - 1; i >= 0; i-- {
+		if _, ok := has[metadata[i].Contract]; !ok {
+			has[metadata[i].Contract] = struct{}{}
+			savings = append(savings, metadata[i])
+		}
+	}
+	if len(savings) == 0 {
+		return nil
+	}
+
+	_, err := contracts.db.DB().Model(&savings).
 		OnConflict("(network, contract) DO UPDATE").
 		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
 		Insert()
