@@ -50,6 +50,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 
 	resolved, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link)
 	if err != nil {
+		cm.Error = err.Error()
 		if e, ok := err.(resolver.ResolvingError); ok {
 			indexer.incrementErrorCounter(e)
 			err = e.Err
@@ -66,6 +67,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 		if utf8.Valid(cm.Metadata) {
 			cm.Status = models.StatusApplied
 		} else {
+			cm.Error = "invalid json"
 			cm.Status = models.StatusFailed
 		}
 	}

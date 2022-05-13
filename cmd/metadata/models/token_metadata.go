@@ -29,6 +29,7 @@ type TokenMetadata struct {
 	RetryCount     int8            `json:"retry_count" pg:",use_zero"`
 	Status         Status          `json:"status"`
 	ImageProcessed bool            `json:"image_processed" pg:",use_zero,notnull"`
+	Error          string          `json:"error,omitempty"`
 }
 
 // Table -
@@ -126,7 +127,7 @@ func (tokens *Tokens) Update(metadata []*TokenMetadata) error {
 		return nil
 	}
 
-	_, err := tokens.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count").WherePK().Update()
+	_, err := tokens.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "error").WherePK().Update()
 	return err
 }
 
