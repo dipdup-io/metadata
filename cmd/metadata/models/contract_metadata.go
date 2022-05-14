@@ -26,6 +26,7 @@ type ContractMetadata struct {
 	Status     Status `json:"status"`
 	RetryCount int8   `json:"retry_count" pg:",use_zero"`
 	Metadata   JSONB  `json:"metadata,omitempty" pg:",type:jsonb,use_zero"`
+	Error      string `json:"error,omitempty"`
 }
 
 // TableName -
@@ -115,7 +116,7 @@ func (contracts *Contracts) Update(metadata []*ContractMetadata) error {
 		return nil
 	}
 
-	_, err := contracts.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count").WherePK().Update()
+	_, err := contracts.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "error").WherePK().Update()
 	return err
 }
 
@@ -124,7 +125,20 @@ func (contracts *Contracts) Save(metadata []*ContractMetadata) error {
 	if len(metadata) == 0 {
 		return nil
 	}
-	_, err := contracts.db.DB().Model(&metadata).
+
+	savings := make([]*ContractMetadata, 0)
+	has := make(map[string]struct{})
+	for i := len(metadata) - 1; i >= 0; i-- {
+		if _, ok := has[metadata[i].Contract]; !ok {
+			has[metadata[i].Contract] = struct{}{}
+			savings = append(savings, metadata[i])
+		}
+	}
+	if len(savings) == 0 {
+		return nil
+	}
+
+	_, err := contracts.db.DB().Model(&savings).
 		OnConflict("(network, contract) DO UPDATE").
 		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
 		Insert()

@@ -20,6 +20,14 @@ Metadata indexer reuses `datasources`, `contracts`, `database`, `hasura` section
 
 Read more [in the docs](https://docs.dipdup.net/plugins/metadata).
 
+## GQL client
+
+```
+npm i @dipdup/metadata
+```
+
+Read [how to use](./build/client/README.md) the GraphQL client for the Metadata service.
+
 ## Maintenance
 
 ### Refetch recent metadata

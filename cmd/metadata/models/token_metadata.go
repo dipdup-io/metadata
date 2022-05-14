@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/dipdup-net/go-lib/database"
@@ -29,6 +30,7 @@ type TokenMetadata struct {
 	RetryCount     int8            `json:"retry_count" pg:",use_zero"`
 	Status         Status          `json:"status"`
 	ImageProcessed bool            `json:"image_processed" pg:",use_zero,notnull"`
+	Error          string          `json:"error,omitempty"`
 }
 
 // Table -
@@ -126,7 +128,7 @@ func (tokens *Tokens) Update(metadata []*TokenMetadata) error {
 		return nil
 	}
 
-	_, err := tokens.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count").WherePK().Update()
+	_, err := tokens.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "error").WherePK().Update()
 	return err
 }
 
@@ -136,7 +138,21 @@ func (tokens *Tokens) Save(metadata []*TokenMetadata) error {
 		return nil
 	}
 
-	_, err := tokens.db.DB().Model(&metadata).
+	savings := make([]*TokenMetadata, 0)
+	has := make(map[string]struct{})
+	for i := len(metadata) - 1; i >= 0; i-- {
+		id := fmt.Sprintf("%s_%d", metadata[i].Contract, metadata[i].TokenID)
+		if _, ok := has[id]; !ok {
+			has[id] = struct{}{}
+			savings = append(savings, metadata[i])
+		}
+	}
+
+	if len(savings) == 0 {
+		return nil
+	}
+
+	_, err := tokens.db.DB().Model(&savings).
 		OnConflict("(network, contract, token_id) DO UPDATE").
 		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
 		Insert()
