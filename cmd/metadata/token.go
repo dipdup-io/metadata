@@ -151,6 +151,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 		resolved.Data = helpers.Escape(resolved.Data)
 		if utf8.Valid(resolved.Data) {
 			tm.Status = models.StatusApplied
+			tm.Error = ""
 
 			metadata, err := mergeTokenMetadata(tm.Metadata, resolved.Data)
 			if err != nil {

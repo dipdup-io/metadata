@@ -66,6 +66,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 		cm.Metadata = helpers.Escape(resolved.Data)
 		if utf8.Valid(cm.Metadata) {
 			cm.Status = models.StatusApplied
+			cm.Error = ""
 		} else {
 			cm.Error = "invalid json"
 			cm.Status = models.StatusFailed
