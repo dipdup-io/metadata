@@ -11,6 +11,7 @@ metadata:
       timeout: ${IPFS_TIMEOUT:-3}
       fallback: ${IPFS_NODE_URI}
       pinning:
+      delay: 10
     http_timeout: 5
     max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
     contract_service_workers: 15

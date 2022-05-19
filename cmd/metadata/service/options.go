@@ -40,3 +40,10 @@ func WithIPFSCache[T models.Constraint](ipfsRepo *models.IPFS) ServiceOption[T] 
 		cs.ipfsRepo = ipfsRepo
 	}
 }
+
+// WithDelay -
+func WithDelay[T models.Constraint](delay int) ServiceOption[T] {
+	return func(cs *Service[T]) {
+		cs.delay = delay
+	}
+}

@@ -114,4 +114,5 @@ type IPFS struct {
 	Pinning  []string `yaml:"pinning"`
 	Timeout  uint64   `yaml:"timeout" validate:"min=1"`
 	Fallback string   `yaml:"fallback" validate:"url"`
+	Delay    int      `yaml:"delay" validate:"min=1"`
 }
