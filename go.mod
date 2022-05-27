@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/aws/aws-sdk-go v1.43.31
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/dipdup-net/go-lib v0.2.10
+	github.com/dipdup-net/go-lib v0.2.13
 	github.com/disintegration/imaging v1.6.2
 	github.com/elastic/go-elasticsearch/v8 v8.1.0
 	github.com/go-pg/pg/v10 v10.10.6
@@ -96,7 +96,7 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.0 // indirect
 	gorm.io/driver/mysql v1.3.3 // indirect
 	gorm.io/driver/postgres v1.3.3 // indirect
 	gorm.io/driver/sqlite v1.3.1 // indirect
