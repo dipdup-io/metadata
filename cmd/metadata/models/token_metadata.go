@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/dipdup-net/go-lib/database"
@@ -99,11 +100,13 @@ type TokenRepository interface {
 // Tokens -
 type Tokens struct {
 	db *database.PgGo
+
+	mx sync.Mutex
 }
 
 // NewTokens -
 func NewTokens(db *database.PgGo) *Tokens {
-	return &Tokens{db}
+	return &Tokens{db: db}
 }
 
 // Get -
@@ -128,6 +131,9 @@ func (tokens *Tokens) Update(metadata []*TokenMetadata) error {
 		return nil
 	}
 
+	tokens.mx.Lock()
+	defer tokens.mx.Unlock()
+
 	_, err := tokens.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "error").WherePK().Update()
 	return err
 }
@@ -151,6 +157,9 @@ func (tokens *Tokens) Save(metadata []*TokenMetadata) error {
 	if len(savings) == 0 {
 		return nil
 	}
+
+	tokens.mx.Lock()
+	defer tokens.mx.Unlock()
 
 	_, err := tokens.db.DB().Model(&savings).
 		OnConflict("(network, contract, token_id) DO UPDATE").

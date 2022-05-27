@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/dipdup-net/go-lib/database"
@@ -87,11 +88,13 @@ func (cm *ContractMetadata) BeforeUpdate(ctx context.Context) (context.Context, 
 // Contracts -
 type Contracts struct {
 	db *database.PgGo
+
+	mx sync.Mutex
 }
 
 // NewContracts -
 func NewContracts(db *database.PgGo) *Contracts {
-	return &Contracts{db}
+	return &Contracts{db: db}
 }
 
 // Get -
@@ -116,6 +119,9 @@ func (contracts *Contracts) Update(metadata []*ContractMetadata) error {
 		return nil
 	}
 
+	contracts.mx.Lock()
+	defer contracts.mx.Unlock()
+
 	_, err := contracts.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "error").WherePK().Update()
 	return err
 }
@@ -137,6 +143,9 @@ func (contracts *Contracts) Save(metadata []*ContractMetadata) error {
 	if len(savings) == 0 {
 		return nil
 	}
+
+	contracts.mx.Lock()
+	defer contracts.mx.Unlock()
 
 	_, err := contracts.db.DB().Model(&savings).
 		OnConflict("(network, contract) DO UPDATE").
