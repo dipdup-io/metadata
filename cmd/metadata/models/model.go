@@ -9,7 +9,7 @@ type Constraint interface {
 
 // ModelRepository -
 type ModelRepository[T Constraint] interface {
-	Get(network string, status Status, limit, offset, retryCount int) ([]T, error)
+	Get(network string, status Status, limit, offset, retryCount, delay int) ([]T, error)
 	Update(metadata []T) error
 	Save(metadata []T) error
 	LastUpdateID() (int64, error)

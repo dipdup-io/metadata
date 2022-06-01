@@ -98,8 +98,8 @@ func NewContracts(db *database.PgGo) *Contracts {
 }
 
 // Get -
-func (contracts *Contracts) Get(network string, status Status, limit, offset, retryCount int) (all []*ContractMetadata, err error) {
-	query := contracts.db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("created_at < (extract(epoch from current_timestamp) - 10 * retry_count)")
+func (contracts *Contracts) Get(network string, status Status, limit, offset, retryCount, delay int) (all []*ContractMetadata, err error) {
+	query := contracts.db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("created_at < (extract(epoch from current_timestamp) - ? * retry_count)", delay)
 	if limit > 0 {
 		query.Limit(limit)
 	}

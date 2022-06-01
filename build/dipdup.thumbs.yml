@@ -9,6 +9,7 @@ metadata:
       fallback: https://ipfs.baking-bad.org
       pinning:
       timeout: 10
+      delay: 10
 
     http_timeout: 10
     max_retry_count_on_error: 3

@@ -87,6 +87,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		service.WithWorkersCount[*models.ContractMetadata](settings.ContractServiceWorkers),
 		service.WithPrometheus[*models.ContractMetadata](prom, "contract"),
 		service.WithIPFSCache[*models.ContractMetadata](db.IPFS),
+		service.WithDelay[*models.ContractMetadata](settings.IPFS.Delay),
 	)
 	indexer.tokens = service.NewService(
 		db.Tokens, indexer.resolveTokenMetadata, network,
@@ -94,6 +95,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		service.WithWorkersCount[*models.TokenMetadata](settings.TokenServiceWorkers),
 		service.WithPrometheus[*models.TokenMetadata](prom, "token"),
 		service.WithIPFSCache[*models.TokenMetadata](db.IPFS),
+		service.WithDelay[*models.TokenMetadata](settings.IPFS.Delay),
 	)
 
 	return indexer, nil

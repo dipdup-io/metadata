@@ -21,6 +21,7 @@ type Service[T models.Constraint] struct {
 	network       string
 	maxRetryCount int
 	workersCount  int
+	delay         int
 	handler       func(ctx context.Context, t T) error
 	prom          *prometheus.Service
 	gaugeType     string
@@ -41,6 +42,7 @@ func NewService[T models.Constraint](repo models.ModelRepository[T], handler fun
 		result:        make(chan T, 16),
 		network:       network,
 		queue:         NewQueue(),
+		delay:         10,
 	}
 
 	for i := range opts {
@@ -94,7 +96,7 @@ func (s *Service[T]) manager(ctx context.Context) {
 			if len(s.tasks) > s.workersCount {
 				continue
 			}
-			data, err := s.repo.Get(s.network, models.StatusNew, 200, 0, s.maxRetryCount)
+			data, err := s.repo.Get(s.network, models.StatusNew, 200, 0, s.maxRetryCount, s.delay)
 			if err != nil {
 				log.Err(err).Msg("GetContractMetadata")
 				continue
