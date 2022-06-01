@@ -67,12 +67,12 @@ func main() {
 		log.Err(err).Msg("createViews")
 		return
 	}
-  
-  custom_configs, err := hasura.ReadCustomConfigs(ctx, cfg.Database, "custom_hasura_config")
+
+	custom_configs, err := hasura.ReadCustomConfigs(ctx, cfg.Database, "custom_hasura_config")
 	if err != nil {
 		log.Err(err).Msg("readCustomHasuraConfigs")
 		return
-  }
+	}
 
 	var indexers sync.Map
 	var indexerCancels sync.Map
