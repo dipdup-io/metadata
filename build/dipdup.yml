@@ -27,9 +27,9 @@ metadata:
     mainnet:
       datasources:
         tzkt: https://api.tzkt.io
-    hangzhounet:
+    jakartanet:
       datasources:
-        tzkt: https://api.hangzhou2net.tzkt.io
+        tzkt: https://api.jakartanet.tzkt.io
     ithacanet:
       datasources:
         tzkt: https://api.ithacanet.tzkt.io
