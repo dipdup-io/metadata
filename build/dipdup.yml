@@ -30,9 +30,9 @@ metadata:
     jakartanet:
       datasources:
         tzkt: https://api.jakartanet.tzkt.io
-    ithacanet:
+    ghostnet:
       datasources:
-        tzkt: https://api.ithacanet.tzkt.io
+        tzkt: https://api.ghostnet.tzkt.io
 
 database:
   kind: postgres
