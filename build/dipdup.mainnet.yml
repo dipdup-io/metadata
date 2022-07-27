@@ -1,0 +1,48 @@
+version: 0.0.1
+
+metadata:
+  settings:
+    ipfs:
+      gateways:
+        - https://gateway.pinata.cloud
+        - https://ipfs.infura.io
+        - https://dweb.link
+        - https://ipfs.io
+      timeout: ${IPFS_TIMEOUT:-3}
+      fallback: ${IPFS_NODE_URI}
+      pinning:
+      delay: 10
+    http_timeout: 5
+    max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
+    contract_service_workers: ${TOKEN_SERVICE_WORKERS:-15}
+    token_service_workers: ${TOKEN_SERVICE_WORKERS:-25}
+    max_cpu: ${MAX_CPU:-4}
+    aws:
+    thumbnail:
+      max_file_size_mb: 100
+      workers: 20
+      size: 100
+      timeout: 20
+  indexers:
+    mainnet:
+      datasources:
+        tzkt: https://api.tzkt.io
+
+database:
+  kind: postgres
+  host: ${POSTGRES_HOST:-db}
+  port: 5432
+  user: ${POSTGRES_USER:-dipdup}
+  password: ${POSTGRES_PASSWORD:-changeme}
+  database: ${POSTGRES_DB:-dipdup}
+
+hasura:
+  url: http://${HASURA_HOST:-hasura}:8080
+  admin_secret: ${ADMIN_SECRET:-changeme}
+  select_limit: 10000
+  allow_aggregation: false
+  rest: true
+  add_source: true
+
+prometheus:
+  url: ${EXPORT_HOST:-0.0.0.0}:2112
