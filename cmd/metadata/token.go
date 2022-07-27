@@ -263,7 +263,7 @@ var legacyTokens = []*models.TokenMetadata{
 		Network:        "mainnet",
 		Contract:       "KT1AafHA1C1vk959wvHWBispY9Y2f3fxBUUo",
 		TokenID:        decimal.NewFromInt(0),
-		Metadata:       models.JSONB(`{"name":"LB Token","symbol":"LBT","decimals":"0"}`),
+		Metadata:       models.JSONB(`{"name":"Sirius","symbol":"SIRS","decimals":"0"}`),
 		Status:         models.StatusApplied,
 		RetryCount:     1,
 		ImageProcessed: true,
