@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dipdup-net/go-lib/prometheus"
+	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/internal/ipfs"
 	"github.com/go-pg/pg/v10"
@@ -138,7 +139,7 @@ func (s *Service[T]) manager(ctx context.Context) {
 				if s.ipfsRepo != nil {
 					if ipfsData, ok := resolvedIPFS[data[i].GetLink()]; ok {
 						data[i].SetStatus(models.StatusApplied)
-						data[i].SetMetadata(ipfsData.Data)
+						data[i].SetMetadata(helpers.Escape(ipfsData.Data))
 						data[i].IncrementRetryCount()
 						s.result <- data[i]
 						continue
