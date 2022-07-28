@@ -111,17 +111,24 @@ func NewTokens(db *database.PgGo) *Tokens {
 
 // Get -
 func (tokens *Tokens) Get(network string, status Status, limit, offset, retryCount, delay int) (all []*TokenMetadata, err error) {
-	query := tokens.db.DB().Model(&all).Where("status = ?", status).Where("network = ?", network).Where("created_at < (extract(epoch from current_timestamp) - ? * retry_count)", delay)
+	subQuery := tokens.db.DB().Model((*TokenMetadata)(nil)).Column("id").
+		Where("status = ?", status).
+		Where("network = ?", network).
+		Where("created_at < (extract(epoch from current_timestamp) - ? * retry_count)", delay).
+		OrderExpr("retry_count desc, updated_at desc")
+
+	if retryCount > 0 {
+		subQuery.Where("retry_count < ?", retryCount)
+	}
+
+	query := tokens.db.DB().Model(&all).Where("id IN (?)", subQuery)
 	if limit > 0 {
 		query.Limit(limit)
 	}
 	if offset > 0 {
 		query.Offset(offset)
 	}
-	if retryCount > 0 {
-		query.Where("retry_count < ?", retryCount)
-	}
-	err = query.OrderExpr("retry_count desc, updated_at desc").Select()
+	err = query.Select()
 	return
 }
 
