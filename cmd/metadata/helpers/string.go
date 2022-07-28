@@ -31,7 +31,7 @@ func Escape(data []byte) []byte {
 		return data
 	}
 
-	data = escape.ReplaceAll(data, []byte("\\$1"))
+	data = escape.ReplaceAll(data, nil)
 	return bytes.Map(func(r rune) rune {
 		if unicode.IsPrint(r) || unicode.IsGraphic(r) {
 			return r
