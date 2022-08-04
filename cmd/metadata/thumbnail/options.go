@@ -3,14 +3,14 @@ package thumbnail
 import (
 	"time"
 
-	"github.com/dipdup-net/go-lib/prometheus"
+	"github.com/dipdup-net/metadata/cmd/metadata/prometheus"
 )
 
 // ThumbnailOption -
 type ThumbnailOption func(*Service)
 
 // WithPrometheus -
-func WithPrometheus(prom *prometheus.Service) ThumbnailOption {
+func WithPrometheus(prom *prometheus.Prometheus) ThumbnailOption {
 	return func(m *Service) {
 		m.prom = prom
 	}

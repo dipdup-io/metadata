@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
+	"github.com/dipdup-net/metadata/cmd/metadata/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
 	"github.com/dipdup-net/metadata/internal/ipfs"
 	"github.com/disintegration/imaging"
@@ -30,7 +30,7 @@ type Service struct {
 	gateways []string
 	storage  storage.Storage
 	db       *models.Tokens
-	prom     *prometheus.Service
+	prom     *prometheus.Prometheus
 
 	maxFileSizeMB int64
 	size          int
@@ -138,7 +138,7 @@ func (s *Service) work(ctx context.Context, one models.TokenMetadata) error {
 
 	var found bool
 	for _, format := range raw.Formats {
-		s.incrementMimeCounter(format.MimeType)
+		s.prom.IncrementMimeCounter(s.network, format.MimeType)
 
 		if _, ok := validMimes[format.MimeType]; !ok {
 			continue
@@ -260,14 +260,4 @@ func (s *Service) resolve(ctx context.Context, link, mime, filename string) erro
 	default:
 		return errors.Wrapf(ErrInvalidThumbnailLink, "link=%s", link)
 	}
-}
-
-func (service *Service) incrementMimeCounter(mime string) {
-	if service.prom == nil {
-		return
-	}
-	service.prom.IncrementCounter("metadata_mime_type", map[string]string{
-		"network": service.network,
-		"mime":    mime,
-	})
 }

@@ -6,16 +6,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
+	"github.com/dipdup-net/metadata/cmd/metadata/prometheus"
 	"github.com/dipdup-net/metadata/internal/ipfs"
 	"github.com/go-pg/pg/v10"
 	"github.com/rs/zerolog/log"
 )
 
 // Service -
-type Service[T models.Constraint] struct {
+type Service[T models.Model] struct {
 	repo     models.ModelRepository[T]
 	ipfsRepo *models.IPFS
 
@@ -24,7 +24,7 @@ type Service[T models.Constraint] struct {
 	workersCount  int
 	delay         int
 	handler       func(ctx context.Context, t T) error
-	prom          *prometheus.Service
+	prom          *prometheus.Prometheus
 	gaugeType     string
 	tasks         chan T
 	result        chan T
@@ -33,7 +33,7 @@ type Service[T models.Constraint] struct {
 }
 
 // NewService -
-func NewService[T models.Constraint](repo models.ModelRepository[T], handler func(context.Context, T) error, network string, opts ...ServiceOption[T]) *Service[T] {
+func NewService[T models.Model](repo models.ModelRepository[T], handler func(context.Context, T) error, network string, opts ...ServiceOption[T]) *Service[T] {
 	cs := &Service[T]{
 		maxRetryCount: 3,
 		workersCount:  5,
@@ -170,7 +170,7 @@ func (s *Service[T]) saver(ctx context.Context) {
 				continue
 			}
 
-			if err := s.bulkSave(ctx, data); err != nil {
+			if err := s.bulkSave(data); err != nil {
 				log.Err(err).Msg("bulkSave")
 				data = nil
 				continue
@@ -182,7 +182,7 @@ func (s *Service[T]) saver(ctx context.Context) {
 			if len(data) == 0 {
 				continue
 			}
-			if err := s.bulkSave(ctx, data); err != nil {
+			if err := s.bulkSave(data); err != nil {
 				log.Err(err).Msg("bulkSave")
 				data = nil
 				continue
@@ -193,7 +193,7 @@ func (s *Service[T]) saver(ctx context.Context) {
 	}
 }
 
-func (s *Service[T]) bulkSave(ctx context.Context, data []T) error {
+func (s *Service[T]) bulkSave(data []T) error {
 	if err := s.repo.Update(data); err != nil {
 		return err
 	}
@@ -202,17 +202,11 @@ func (s *Service[T]) bulkSave(ctx context.Context, data []T) error {
 		s.queue.Delete(data[i].GetID())
 
 		if s.prom != nil {
-			switch data[i].GetStatus() {
+			status := data[i].GetStatus()
+			switch status {
 			case models.StatusApplied, models.StatusFailed:
-				s.prom.DecGaugeValue("metadata_new", map[string]string{
-					"network": s.network,
-					"type":    s.gaugeType,
-				})
-				s.prom.IncrementCounter("metadata_counter", map[string]string{
-					"network": s.network,
-					"type":    s.gaugeType,
-					"status":  data[i].GetStatus().String(),
-				})
+				s.prom.DecrementMetadataNew(s.network, s.gaugeType)
+				s.prom.IncrementMetadataCounter(s.network, s.gaugeType, status.String())
 			}
 		}
 	}

@@ -1,14 +1,7 @@
 package models
 
-// Constraint -
-type Constraint interface {
-	*TokenMetadata | *ContractMetadata
-
-	Model
-}
-
 // ModelRepository -
-type ModelRepository[T Constraint] interface {
+type ModelRepository[T Model] interface {
 	Get(network string, status Status, limit, offset, retryCount, delay int) ([]T, error)
 	Update(metadata []T) error
 	Save(metadata []T) error

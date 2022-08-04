@@ -1,15 +1,15 @@
 package service
 
 import (
-	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
+	"github.com/dipdup-net/metadata/cmd/metadata/prometheus"
 )
 
 // ServiceOption -
-type ServiceOption[T models.Constraint] func(*Service[T])
+type ServiceOption[T models.Model] func(*Service[T])
 
 // WithMaxRetryCount -
-func WithMaxRetryCount[T models.Constraint](count int) ServiceOption[T] {
+func WithMaxRetryCount[T models.Model](count int) ServiceOption[T] {
 	return func(cs *Service[T]) {
 		if count > 0 {
 			cs.maxRetryCount = count
@@ -18,7 +18,7 @@ func WithMaxRetryCount[T models.Constraint](count int) ServiceOption[T] {
 }
 
 // WithWorkersCount -
-func WithWorkersCount[T models.Constraint](count int) ServiceOption[T] {
+func WithWorkersCount[T models.Model](count int) ServiceOption[T] {
 	return func(cs *Service[T]) {
 		if count > 0 {
 			cs.workersCount = count
@@ -27,7 +27,7 @@ func WithWorkersCount[T models.Constraint](count int) ServiceOption[T] {
 }
 
 // WithPrometheus -
-func WithPrometheus[T models.Constraint](prom *prometheus.Service, gaugeType string) ServiceOption[T] {
+func WithPrometheus[T models.Model](prom *prometheus.Prometheus, gaugeType string) ServiceOption[T] {
 	return func(cs *Service[T]) {
 		cs.prom = prom
 		cs.gaugeType = gaugeType
@@ -35,14 +35,14 @@ func WithPrometheus[T models.Constraint](prom *prometheus.Service, gaugeType str
 }
 
 // WithIPFSCache -
-func WithIPFSCache[T models.Constraint](ipfsRepo *models.IPFS) ServiceOption[T] {
+func WithIPFSCache[T models.Model](ipfsRepo *models.IPFS) ServiceOption[T] {
 	return func(cs *Service[T]) {
 		cs.ipfsRepo = ipfsRepo
 	}
 }
 
 // WithDelay -
-func WithDelay[T models.Constraint](delay int) ServiceOption[T] {
+func WithDelay[T models.Model](delay int) ServiceOption[T] {
 	return func(cs *Service[T]) {
 		cs.delay = delay
 	}

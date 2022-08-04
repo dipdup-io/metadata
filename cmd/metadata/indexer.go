@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -14,9 +13,9 @@ import (
 
 	generalConfig "github.com/dipdup-net/go-lib/config"
 	"github.com/dipdup-net/go-lib/database"
-	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
+	"github.com/dipdup-net/metadata/cmd/metadata/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
 	"github.com/dipdup-net/metadata/cmd/metadata/service"
 	"github.com/dipdup-net/metadata/cmd/metadata/storage"
@@ -35,7 +34,7 @@ type Indexer struct {
 	resolver  resolver.Receiver
 	db        *models.Database
 	scanner   *tzkt.Scanner
-	prom      *prometheus.Service
+	prom      *prometheus.Prometheus
 	tezosKeys *tezoskeys.TezosKeys
 	contracts *service.Service[*models.ContractMetadata]
 	tokens    *service.Service[*models.TokenMetadata]
@@ -47,7 +46,7 @@ type Indexer struct {
 }
 
 // NewIndexer -
-func NewIndexer(ctx context.Context, network string, indexerConfig *config.Indexer, database generalConfig.Database, filters config.Filters, settings config.Settings, prom *prometheus.Service) (*Indexer, error) {
+func NewIndexer(ctx context.Context, network string, indexerConfig *config.Indexer, database generalConfig.Database, filters config.Filters, settings config.Settings, prom *prometheus.Prometheus) (*Indexer, error) {
 	db, err := models.NewDatabase(ctx, database)
 	if err != nil {
 		return nil, err
@@ -85,7 +84,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		db.Contracts, indexer.resolveContractMetadata, network,
 		service.WithMaxRetryCount[*models.ContractMetadata](settings.MaxRetryCountOnError),
 		service.WithWorkersCount[*models.ContractMetadata](settings.ContractServiceWorkers),
-		service.WithPrometheus[*models.ContractMetadata](prom, "contract"),
+		service.WithPrometheus[*models.ContractMetadata](prom, prometheus.MetadataTypeContract),
 		service.WithIPFSCache[*models.ContractMetadata](db.IPFS),
 		service.WithDelay[*models.ContractMetadata](settings.IPFS.Delay),
 	)
@@ -93,7 +92,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		db.Tokens, indexer.resolveTokenMetadata, network,
 		service.WithMaxRetryCount[*models.TokenMetadata](settings.MaxRetryCountOnError),
 		service.WithWorkersCount[*models.TokenMetadata](settings.TokenServiceWorkers),
-		service.WithPrometheus[*models.TokenMetadata](prom, "token"),
+		service.WithPrometheus[*models.TokenMetadata](prom, prometheus.MetadataTypeToken),
 		service.WithIPFSCache[*models.TokenMetadata](db.IPFS),
 		service.WithDelay[*models.TokenMetadata](settings.IPFS.Delay),
 	)
@@ -126,19 +125,13 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		indexer.prom.SetGaugeValue(metricMetadataNew, map[string]string{
-			"network": indexer.network,
-			"type":    "contract",
-		}, float64(newContractCount))
+		indexer.prom.SetMetadataNew(indexer.network, prometheus.MetadataTypeContract, float64(newContractCount))
 
 		newTokenCount, err := indexer.db.Tokens.CountByStatus(indexer.network, models.StatusNew)
 		if err != nil {
 			return err
 		}
-		indexer.prom.SetGaugeValue(metricMetadataNew, map[string]string{
-			"network": indexer.network,
-			"type":    "token",
-		}, float64(newTokenCount))
+		indexer.prom.SetMetadataNew(indexer.network, prometheus.MetadataTypeToken, float64(newTokenCount))
 	}
 
 	indexer.contracts.Start(ctx)
@@ -283,7 +276,7 @@ func (indexer *Indexer) handlerUpdate(ctx context.Context, msg tzkt.Message) err
 				return errors.Wrap(err, "contract_metadata")
 			}
 			if contract != nil {
-				indexer.incrementNewMetadataGauge("contract")
+				indexer.prom.IncrementMetadataNew(indexer.network, prometheus.MetadataTypeContract)
 				contracts = append(contracts, contract)
 			}
 		}
@@ -297,46 +290,4 @@ func (indexer *Indexer) handlerUpdate(ctx context.Context, msg tzkt.Message) err
 		return err
 	}
 	return nil
-}
-
-func (indexer *Indexer) incrementCounter(typ string, status models.Status) {
-	if indexer.prom == nil {
-		return
-	}
-	indexer.prom.IncrementCounter(metricMetadataCounter, map[string]string{
-		"network": indexer.network,
-		"type":    typ,
-		"status":  status.String(),
-	})
-}
-
-func (indexer *Indexer) incrementErrorCounter(err resolver.ResolvingError) {
-	if indexer.prom == nil {
-		return
-	}
-	indexer.prom.IncrementCounter(metricsMetadataHttpErrors, map[string]string{
-		"network": indexer.network,
-		"type":    string(err.Type),
-		"code":    strconv.FormatInt(int64(err.Code), 10),
-	})
-}
-
-func (indexer *Indexer) addHistogramResponseTime(data resolver.Resolved) {
-	if indexer.prom == nil {
-		return
-	}
-	indexer.prom.AddHistogramValue(metricsMetadataIPFSResponseTime, map[string]string{
-		"network": indexer.network,
-		"node":    data.Node,
-	}, float64(len(data.Data))/float64(data.ResponseTime))
-}
-
-func (indexer *Indexer) incrementNewMetadataGauge(typ string) {
-	if indexer.prom == nil {
-		return
-	}
-	indexer.prom.IncGaugeValue(metricMetadataNew, map[string]string{
-		"network": indexer.network,
-		"type":    typ,
-	})
 }

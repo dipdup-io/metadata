@@ -52,7 +52,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 	if err != nil {
 		cm.Error = err.Error()
 		if e, ok := err.(resolver.ResolvingError); ok {
-			indexer.incrementErrorCounter(e)
+			indexer.prom.IncrementErrorCounter(indexer.network, e)
 			err = e.Err
 		}
 
@@ -75,7 +75,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 
 	if resolved.By == resolver.ResolverTypeIPFS && cm.Status == models.StatusApplied {
 		if resolved.ResponseTime > 0 {
-			indexer.addHistogramResponseTime(resolved)
+			indexer.prom.AddHistogramResponseTime(indexer.network, resolved)
 		}
 		return indexer.db.IPFS.Save(models.IPFSLink{
 			Link: cm.Link,

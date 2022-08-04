@@ -18,17 +18,9 @@ import (
 	"github.com/dipdup-net/go-lib/cmdline"
 	golibConfig "github.com/dipdup-net/go-lib/config"
 	"github.com/dipdup-net/go-lib/hasura"
-	"github.com/dipdup-net/go-lib/prometheus"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
-)
-
-const (
-	metricMetadataCounter           = "metadata_counter"
-	metricMetadataNew               = "metadata_new"
-	metricsMetadataHttpErrors       = "metadata_http_errors"
-	metricsMetadataMimeType         = "metadata_mime_type"
-	metricsMetadataIPFSResponseTime = "metadata_ipfs_response_time"
+	"github.com/dipdup-net/metadata/cmd/metadata/prometheus"
 )
 
 type startResult struct {
@@ -60,7 +52,10 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
-	prometheusService := initPrometheus(cfg.Prometheus)
+	prometheusService := prometheus.NewPrometheus(cfg.Prometheus)
+	if prometheusService != nil {
+		prometheusService.Start()
+	}
 
 	views, err := createViews(ctx, cfg.Database)
 	if err != nil {
@@ -122,35 +117,21 @@ func main() {
 	log.Warn().Msgf("Trying carefully stopping....")
 	indexers.Range(func(key, value interface{}) bool {
 		if err := value.(*Indexer).Close(); err != nil {
-			log.Err(err).Msg("")
+			log.Err(err).Msgf("%T.Close()", value)
 		}
 		return err == nil
 	})
 
 	if prometheusService != nil {
 		if err := prometheusService.Close(); err != nil {
-			log.Err(err).Msg("")
+			log.Err(err).Msg("prometheusService.Close()")
 		}
 	}
 
 	close(signals)
 }
 
-func initPrometheus(cfg *golibConfig.Prometheus) *prometheus.Service {
-	prometheusService := prometheus.NewService(cfg)
-
-	prometheusService.RegisterGoBuildMetrics()
-	prometheusService.RegisterGauge(metricMetadataNew, "Count of new metadata", "type", "network")
-	prometheusService.RegisterCounter(metricMetadataCounter, "Count of metadata", "type", "status", "network")
-	prometheusService.RegisterCounter(metricsMetadataHttpErrors, "Count of HTTP errors in metadata", "network", "code", "type")
-	prometheusService.RegisterCounter(metricsMetadataMimeType, "Count of metadata mime types", "network", "mime")
-	prometheusService.RegisterHistogram(metricsMetadataIPFSResponseTime, "Histogram showing received bytes from IPFS per millisecons", "network", "node")
-
-	prometheusService.Start()
-	return prometheusService
-}
-
-func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.Indexer, network string, prom *prometheus.Service, views []string, customConfigs []hasura.Request, hasuraInit *sync.Once) (startResult, error) {
+func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.Indexer, network string, prom *prometheus.Prometheus, views []string, customConfigs []hasura.Request, hasuraInit *sync.Once) (startResult, error) {
 	var result startResult
 	indexerCtx, cancel := context.WithCancel(ctx)
 
