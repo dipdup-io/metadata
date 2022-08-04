@@ -89,7 +89,7 @@ func (p *Prometheus) IncrementMetadataCounter(network, typ, status string) {
 	if p == nil || p.service == nil {
 		return
 	}
-	p.service.IncGaugeValue(MetricMetadataCounter, map[string]string{
+	p.service.IncrementCounter(MetricMetadataCounter, map[string]string{
 		"network": network,
 		"type":    typ,
 		"status":  status,
