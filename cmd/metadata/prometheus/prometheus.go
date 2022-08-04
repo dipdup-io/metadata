@@ -48,17 +48,23 @@ func NewPrometheus(cfg *golibConfig.Prometheus) *Prometheus {
 
 // Start -
 func (p *Prometheus) Start() {
+	if p == nil || p.service == nil {
+		return
+	}
 	p.service.Start()
 }
 
 // Close -
 func (p *Prometheus) Close() error {
+	if p == nil || p.service == nil {
+		return nil
+	}
 	return p.service.Close()
 }
 
 // IncrementMetadataNew -
 func (p *Prometheus) IncrementMetadataNew(network, typ string) {
-	if p.service == nil {
+	if p == nil || p.service == nil {
 		return
 	}
 	p.service.IncGaugeValue(MetricMetadataNew, map[string]string{
@@ -69,7 +75,7 @@ func (p *Prometheus) IncrementMetadataNew(network, typ string) {
 
 // DecrementMetadataNew -
 func (p *Prometheus) DecrementMetadataNew(network, typ string) {
-	if p.service == nil {
+	if p == nil || p.service == nil {
 		return
 	}
 	p.service.DecGaugeValue(MetricMetadataNew, map[string]string{
@@ -80,7 +86,7 @@ func (p *Prometheus) DecrementMetadataNew(network, typ string) {
 
 // IncrementMetadataCounter -
 func (p *Prometheus) IncrementMetadataCounter(network, typ, status string) {
-	if p.service == nil {
+	if p == nil || p.service == nil {
 		return
 	}
 	p.service.IncGaugeValue(MetricMetadataCounter, map[string]string{
@@ -92,7 +98,7 @@ func (p *Prometheus) IncrementMetadataCounter(network, typ, status string) {
 
 // IncrementErrorCounter -
 func (p *Prometheus) IncrementErrorCounter(network string, err resolver.ResolvingError) {
-	if p.service == nil {
+	if p == nil || p.service == nil {
 		return
 	}
 	p.service.IncrementCounter(MetricsMetadataHttpErrors, map[string]string{
@@ -104,7 +110,7 @@ func (p *Prometheus) IncrementErrorCounter(network string, err resolver.Resolvin
 
 // AddHistogramResponseTime -
 func (p *Prometheus) AddHistogramResponseTime(network string, data resolver.Resolved) {
-	if p.service == nil {
+	if p == nil || p.service == nil {
 		return
 	}
 	p.service.AddHistogramValue(MetricsMetadataIPFSResponseTime, map[string]string{
@@ -115,7 +121,7 @@ func (p *Prometheus) AddHistogramResponseTime(network string, data resolver.Reso
 
 // IncrementMimeCounter -
 func (p *Prometheus) IncrementMimeCounter(network, mime string) {
-	if p.service == nil {
+	if p == nil || p.service == nil {
 		return
 	}
 	p.service.IncrementCounter("metadata_mime_type", map[string]string{
@@ -126,7 +132,7 @@ func (p *Prometheus) IncrementMimeCounter(network, mime string) {
 
 // SetMetadataNew -
 func (p *Prometheus) SetMetadataNew(network, typ string, value float64) {
-	if p.service == nil {
+	if p == nil || p.service == nil {
 		return
 	}
 	p.service.SetGaugeValue(MetricMetadataNew, map[string]string{
