@@ -132,6 +132,27 @@ func (tokens *Tokens) Get(network string, status Status, limit, offset, retryCou
 	return
 }
 
+// FailedByTimeout -
+func (tokens *Tokens) FailedByTimeout(network string, limit, offset, retryCount, delay int) (all []*TokenMetadata, err error) {
+	subQuery := tokens.db.DB().Model((*TokenMetadata)(nil)).Column("id").
+		Where("status = ?", StatusFailed).
+		Where("network = ?", network).
+		Where("retry_count = ?", retryCount).
+		Where("error LIKE '%%deadline%%'").
+		Where("created_at < (extract(epoch from current_timestamp) - ?)", delay).
+		OrderExpr("updated_at desc")
+
+	query := tokens.db.DB().Model(&all).Where("id IN (?)", subQuery)
+	if limit > 0 {
+		query.Limit(limit)
+	}
+	if offset > 0 {
+		query.Offset(offset)
+	}
+	err = query.Select()
+	return
+}
+
 // Update -
 func (tokens *Tokens) Update(metadata []*TokenMetadata) error {
 	if len(metadata) == 0 {

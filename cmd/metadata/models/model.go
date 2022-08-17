@@ -7,6 +7,7 @@ type ModelRepository[T Model] interface {
 	Save(metadata []T) error
 	LastUpdateID() (int64, error)
 	CountByStatus(network string, status Status) (int, error)
+	FailedByTimeout(network string, limit, offset, retryCount, delay int) (all []T, err error)
 }
 
 // Model -

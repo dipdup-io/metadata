@@ -32,7 +32,7 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out:        os.Stderr,
 		TimeFormat: "2006-01-02 15:04:05",
-	}).Level(zerolog.InfoLevel)
+	}).Level(zerolog.DebugLevel)
 
 	args := cmdline.Parse()
 	if args.Help {

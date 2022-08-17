@@ -65,6 +65,9 @@ func (s *Service[T]) Start(ctx context.Context) {
 
 	s.wg.Add(1)
 	go s.saver(ctx)
+
+	s.wg.Add(1)
+	go s.lastHope(ctx)
 }
 
 // Close -
@@ -99,7 +102,7 @@ func (s *Service[T]) manager(ctx context.Context) {
 			}
 			data, err := s.repo.Get(s.network, models.StatusNew, 200, 0, s.maxRetryCount, s.delay)
 			if err != nil {
-				log.Err(err).Msg("GetContractMetadata")
+				log.Err(err).Msg("repo.Get")
 				continue
 			}
 
@@ -225,10 +228,45 @@ func (s *Service[T]) worker(ctx context.Context) {
 			defer cancel()
 
 			if err := s.handler(resolveCtx, unresolved); err != nil {
-				log.Err(err).Msg("resolve contract")
+				log.Err(err).Msg("resolve")
 			}
 
 			s.result <- unresolved
+		}
+	}
+
+}
+
+func (s *Service[T]) lastHope(ctx context.Context) {
+	defer s.wg.Done()
+
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+
+	limit := 100
+	offset := 0
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+
+			var end bool
+			for !end {
+				data, err := s.repo.FailedByTimeout(s.network, limit, offset, s.maxRetryCount, 3600)
+				if err != nil {
+					log.Err(err).Msg("repo.Get")
+					continue
+				}
+
+				end = len(data) < limit
+				offset += len(data)
+
+				for i := range data {
+					s.tasks <- data[i]
+				}
+			}
 		}
 	}
 

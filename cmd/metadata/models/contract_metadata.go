@@ -113,6 +113,27 @@ func (contracts *Contracts) Get(network string, status Status, limit, offset, re
 	return
 }
 
+// FailedByTimeout -
+func (contracts *Contracts) FailedByTimeout(network string, limit, offset, retryCount, delay int) (all []*ContractMetadata, err error) {
+	subQuery := contracts.db.DB().Model((*ContractMetadata)(nil)).Column("id").
+		Where("status = ?", StatusFailed).
+		Where("network = ?", network).
+		Where("retry_count = ?", retryCount).
+		Where("error LIKE '%%deadline%%'").
+		Where("created_at < (extract(epoch from current_timestamp) - ?)", delay).
+		OrderExpr("updated_at desc")
+
+	query := contracts.db.DB().Model(&all).Where("id IN (?)", subQuery)
+	if limit > 0 {
+		query.Limit(limit)
+	}
+	if offset > 0 {
+		query.Offset(offset)
+	}
+	err = query.Select()
+	return
+}
+
 // Update -
 func (contracts *Contracts) Update(metadata []*ContractMetadata) error {
 	if len(metadata) == 0 {
