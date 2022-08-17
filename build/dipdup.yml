@@ -7,6 +7,8 @@ metadata:
         - https://ipfs.infura.io
         - https://dweb.link
         - https://ipfs.io
+        - https://ipfs.teia.rocks
+        - https://cf-ipfs.com
       timeout: ${IPFS_TIMEOUT:-3}
       fallback: ${IPFS_NODE_URI}
       pinning:
