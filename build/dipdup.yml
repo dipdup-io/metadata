@@ -4,7 +4,6 @@ metadata:
   settings:
     ipfs:
       gateways:
-        - https://gateway.pinata.cloud
         - https://ipfs.infura.io
         - https://dweb.link
         - https://ipfs.io
