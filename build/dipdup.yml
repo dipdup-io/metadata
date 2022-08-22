@@ -31,6 +31,9 @@ metadata:
     jakartanet:
       datasources:
         tzkt: https://api.jakartanet.tzkt.io
+    kathmandunet:
+      datasources:
+        tzkt: https://api.kathmandunet.tzkt.io
     ghostnet:
       datasources:
         tzkt: https://api.ghostnet.tzkt.io
