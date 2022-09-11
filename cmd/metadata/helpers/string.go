@@ -23,7 +23,7 @@ func Decode(data []byte) ([]byte, error) {
 	return hex.DecodeString(Trim(string(data)))
 }
 
-var escape = regexp.MustCompile("(\\\\u((d8|D8)[0-9a-fA-F]{2}|0000))")
+var escape = regexp.MustCompile(`(\\u((d8|D8)[0-9a-fA-F]{2}|0000))`)
 
 // Escape -
 func Escape(data []byte) []byte {

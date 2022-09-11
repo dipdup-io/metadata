@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
@@ -164,7 +163,7 @@ func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.I
 }
 
 func createViews(ctx context.Context, database golibConfig.Database) ([]string, error) {
-	files, err := ioutil.ReadDir("views")
+	files, err := os.ReadDir("views")
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +181,7 @@ func createViews(ctx context.Context, database golibConfig.Database) ([]string, 
 		}
 
 		path := fmt.Sprintf("views/%s", files[i].Name())
-		raw, err := ioutil.ReadFile(path)
+		raw, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}

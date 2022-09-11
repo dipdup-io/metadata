@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -87,7 +86,7 @@ func (s Http) Resolve(ctx context.Context, network, address, link string) ([]byt
 		return nil, newResolvingError(resp.StatusCode, ErrorTypeHttpRequest, errors.Errorf("invalid status: %s", resp.Status))
 	}
 
-	data, err := ioutil.ReadAll(io.LimitReader(resp.Body, 20971520)) // 20 MB limit for metadata
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 20971520)) // 20 MB limit for metadata
 	if err != nil {
 		return nil, newResolvingError(0, ErrorTypeTooBig, err)
 	}

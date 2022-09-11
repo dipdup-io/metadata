@@ -3,7 +3,6 @@ package ipfs
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -112,7 +111,7 @@ func (pool *Pool) request(ctx context.Context, link, node string) ([]byte, error
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return ioutil.ReadAll(io.LimitReader(resp.Body, pool.limit))
+		return io.ReadAll(io.LimitReader(resp.Body, pool.limit))
 	default:
 		return nil, errors.Errorf("invalid status: %s", resp.Status)
 	}
