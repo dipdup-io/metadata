@@ -13,7 +13,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
       - ADMIN_SECRET=${ADMIN_SECRET:-changeme}
     volumes:
-      - db:/etc/metadata/ipfs
+      - ipfs:/etc/metadata/ipfs
 
   db:
     image: postgres:13
