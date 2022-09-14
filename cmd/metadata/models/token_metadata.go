@@ -27,7 +27,7 @@ type TokenMetadata struct {
 	Network        string          `json:"network" pg:",unique:token"`
 	Contract       string          `json:"contract" pg:",unique:token"`
 	Link           string          `json:"link"`
-	Metadata       JSONB           `json:"metadata,omitempty" pg:",type:jsonb,use_zero"`
+	Metadata       JSONB           `json:"metadata,omitempty" pg:",type:json,use_zero"`
 	RetryCount     int8            `json:"retry_count" pg:",use_zero"`
 	Status         Status          `json:"status"`
 	ImageProcessed bool            `json:"image_processed" pg:",use_zero,notnull"`
@@ -175,7 +175,7 @@ func (tokens *Tokens) Save(metadata []*TokenMetadata) error {
 	savings := make([]*TokenMetadata, 0)
 	has := make(map[string]struct{})
 	for i := len(metadata) - 1; i >= 0; i-- {
-		id := fmt.Sprintf("%s_%d", metadata[i].Contract, metadata[i].TokenID)
+		id := fmt.Sprintf("%s_%s", metadata[i].Contract, metadata[i].TokenID.String())
 		if _, ok := has[id]; !ok {
 			has[id] = struct{}{}
 			savings = append(savings, metadata[i])

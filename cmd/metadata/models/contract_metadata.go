@@ -26,7 +26,7 @@ type ContractMetadata struct {
 	Link       string `json:"link"`
 	Status     Status `json:"status"`
 	RetryCount int8   `json:"retry_count" pg:",use_zero"`
-	Metadata   JSONB  `json:"metadata,omitempty" pg:",type:jsonb,use_zero"`
+	Metadata   JSONB  `json:"metadata,omitempty" pg:",type:json,use_zero"`
 	Error      string `json:"error,omitempty"`
 }
 

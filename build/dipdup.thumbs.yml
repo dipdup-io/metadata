@@ -11,6 +11,7 @@ metadata:
         - https://ipfs.io
       fallback: ${IPFS_NODE_URI}
       bootstrap:
+        - /dnsaddr/ipfs.infura.io/tcp/5001/https
       timeout: 10
       delay: 10
 

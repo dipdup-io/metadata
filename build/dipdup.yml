@@ -5,6 +5,7 @@ metadata:
     ipfs:
       dir: /etc/metadata/ipfs
       bootstrap:
+        - /dnsaddr/ipfs.infura.io/tcp/5001/https
       gateways:
         - https://ipfs.infura.io
         - https://dweb.link

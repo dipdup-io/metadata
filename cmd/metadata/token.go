@@ -149,7 +149,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 			indexer.logTokenMetadata(*tm, "failed", "warn")
 		}
 	} else {
-		resolved.Data = helpers.Escape(resolved.Data)
+		// resolved.Data = helpers.Escape(resolved.Data)
 		if utf8.Valid(resolved.Data) {
 			tm.Status = models.StatusApplied
 			tm.Error = ""
