@@ -3,15 +3,16 @@ version: 0.0.1
 metadata:
   settings:
     ipfs:
+      dir: /etc/metadata/ipfs
+      bootstrap:
       gateways:
         - https://ipfs.infura.io
         - https://dweb.link
         - https://ipfs.io
         - https://ipfs.teia.rocks
         - https://cf-ipfs.com
-      timeout: ${IPFS_TIMEOUT:-3}
+      timeout: ${IPFS_TIMEOUT:-10}
       fallback: ${IPFS_NODE_URI}
-      pinning:
       delay: 10
     http_timeout: 5
     max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}

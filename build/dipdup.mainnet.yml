@@ -3,14 +3,15 @@ version: 0.0.1
 metadata:
   settings:
     ipfs:
+      dir: /etc/metadata/ipfs
       gateways:
         - https://gateway.pinata.cloud
         - https://ipfs.infura.io
         - https://dweb.link
         - https://ipfs.io
-      timeout: ${IPFS_TIMEOUT:-3}
       fallback: ${IPFS_NODE_URI}
-      pinning:
+      bootstrap:
+      timeout: ${IPFS_TIMEOUT:-10}
       delay: 10
     http_timeout: 5
     max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}

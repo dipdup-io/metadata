@@ -7,6 +7,7 @@ import (
 
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/tezoskeys"
+	"github.com/dipdup-net/metadata/internal/ipfs"
 	"github.com/dipdup-net/metadata/internal/tezos"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
@@ -69,20 +70,20 @@ type Resolved struct {
 // Receiver -
 type Receiver struct {
 	http  Http
-	ipfs  Ipfs
+	ipfs  IpfsNode
 	sha   Sha256
 	tezos TezosStorage
 }
 
 // New -
-func New(settings config.Settings, tezosKeys *tezoskeys.TezosKeys) (Receiver, error) {
-	ipfs, err := NewIPFS(settings.IPFS.Gateways,
-		WithTimeoutIpfs(settings.IPFS.Timeout),
-		WithPinningIpfs(settings.IPFS.Pinning),
-		WithFallbackIpfs(settings.IPFS.Fallback))
+func New(ctx context.Context, settings config.Settings, tezosKeys *tezoskeys.TezosKeys, node *ipfs.Node) (Receiver, error) {
+	ipfs, err := NewIPFSNode(node,
+		WithTimeoutIpfsNode(settings.IPFS.Timeout),
+	)
 	if err != nil {
 		return Receiver{}, err
 	}
+
 	return Receiver{
 		ipfs:  ipfs,
 		tezos: NewTezosStorage(tezosKeys),

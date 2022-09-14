@@ -3,11 +3,14 @@ version: 0.0.1
 metadata:
   settings:
     ipfs:
+      dir: /etc/metadata/ipfs
       gateways:
+        - https://gateway.pinata.cloud
+        - https://ipfs.infura.io
         - https://dweb.link
         - https://ipfs.io
-      fallback: https://ipfs.baking-bad.org
-      pinning:
+      fallback: ${IPFS_NODE_URI}
+      bootstrap:
       timeout: 10
       delay: 10
 

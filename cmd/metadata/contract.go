@@ -67,6 +67,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 		if utf8.Valid(cm.Metadata) {
 			cm.Status = models.StatusApplied
 			cm.Error = ""
+			indexer.log().Int64("response_time", resolved.ResponseTime).Str("contract", cm.Contract).Msg("resolved contract metadata")
 		} else {
 			cm.Error = "invalid json"
 			cm.Status = models.StatusFailed
@@ -77,11 +78,6 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 		if resolved.ResponseTime > 0 {
 			indexer.prom.AddHistogramResponseTime(indexer.network, resolved)
 		}
-		return indexer.db.IPFS.Save(models.IPFSLink{
-			Link: cm.Link,
-			Node: resolved.Node,
-			Data: resolved.Data,
-		})
 	}
 	return nil
 }
