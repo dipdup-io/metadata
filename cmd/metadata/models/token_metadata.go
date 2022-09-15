@@ -138,7 +138,7 @@ func (tokens *Tokens) FailedByTimeout(network string, limit, offset, retryCount,
 		Where("status = ?", StatusFailed).
 		Where("network = ?", network).
 		Where("retry_count = ?", retryCount).
-		Where("error LIKE '%%deadline%%'").
+		Where("error LIKE '%%Client.Timeout%%'").
 		Where("created_at < (extract(epoch from current_timestamp) - ?)", delay).
 		OrderExpr("updated_at desc")
 
