@@ -32,8 +32,8 @@ type Node struct {
 }
 
 // NewNode -
-func NewNode(ctx context.Context, dir string, limit int64) (*Node, error) {
-	api, node, err := spawn(ctx, dir)
+func NewNode(ctx context.Context, dir string, limit int64, blacklist []string) (*Node, error) {
+	api, node, err := spawn(ctx, dir, blacklist)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to spawn node")
 	}
@@ -103,7 +103,7 @@ func (n *Node) Get(ctx context.Context, cid string) (Data, error) {
 
 var loadPluginsOnce sync.Once
 
-func spawn(ctx context.Context, dir string) (icore.CoreAPI, *core.IpfsNode, error) {
+func spawn(ctx context.Context, dir string, blacklist []string) (icore.CoreAPI, *core.IpfsNode, error) {
 	var onceErr error
 	loadPluginsOnce.Do(func() {
 		onceErr = setupPlugins("")
@@ -112,7 +112,7 @@ func spawn(ctx context.Context, dir string) (icore.CoreAPI, *core.IpfsNode, erro
 		return nil, nil, onceErr
 	}
 
-	repoPath, err := createRepository(dir)
+	repoPath, err := createRepository(dir, blacklist)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -169,7 +169,7 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 	return nil
 }
 
-func createRepository(dir string) (string, error) {
+func createRepository(dir string, blacklist []string) (string, error) {
 	if _, err := os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
 			if err := os.MkdirAll(dir, os.ModePerm); err != nil {
@@ -191,24 +191,7 @@ func createRepository(dir string) (string, error) {
 	cfg.Swarm.ConnMgr.LowWater = 1
 	cfg.Swarm.Transports.Network.Relay = config.False
 	cfg.Swarm.Transports.Network.QUIC = config.False
-	cfg.Swarm.AddrFilters = []string{
-		"/ip4/10.0.0.0/ipcidr/8",
-		"/ip4/100.64.0.0/ipcidr/10",
-		"/ip4/169.254.0.0/ipcidr/16",
-		"/ip4/172.16.0.0/ipcidr/12",
-		"/ip4/192.0.0.0/ipcidr/24",
-		"/ip4/192.0.2.0/ipcidr/24",
-		"/ip4/192.168.0.0/ipcidr/16",
-		"/ip4/198.18.0.0/ipcidr/15",
-		"/ip4/198.51.100.0/ipcidr/24",
-		"/ip4/203.0.113.0/ipcidr/24",
-		"/ip4/240.0.0.0/ipcidr/4",
-		"/ip6/100::/ipcidr/64",
-		"/ip6/2001:2::/ipcidr/48",
-		"/ip6/2001:db8::/ipcidr/32",
-		"/ip6/fc00::/ipcidr/7",
-		"/ip6/fe80::/ipcidr/10",
-	}
+	cfg.Swarm.AddrFilters = blacklist
 
 	// Create the repo with the config
 	if err = fsrepo.Init(dir, cfg); err != nil {

@@ -116,6 +116,7 @@ type IPFS struct {
 	Dir       string   `yaml:"dir"`
 	Bootstrap []string `yaml:"bootstrap"`
 	Gateways  []string `yaml:"gateways" validate:"min=1,dive,url"`
+	Blacklist []string `yaml:"blacklist"`
 	Timeout   uint64   `yaml:"timeout" validate:"min=1"`
 	Fallback  string   `yaml:"fallback" validate:"url"`
 	Delay     int      `yaml:"delay" validate:"min=1"`
