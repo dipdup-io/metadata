@@ -122,7 +122,7 @@ func spawn(ctx context.Context, dir string) (icore.CoreAPI, *core.IpfsNode, erro
 		return nil, nil, err
 	}
 
-	node, err := core.NewNode(context.Background(), &core.BuildCfg{
+	node, err := core.NewNode(ctx, &core.BuildCfg{
 		Online: true,
 		// Routing: libp2p.DHTOption,
 		Repo: r,
