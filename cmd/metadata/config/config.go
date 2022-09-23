@@ -113,9 +113,11 @@ type Thumbnail struct {
 
 // IPFS -
 type IPFS struct {
-	Gateways []string `yaml:"gateways" validate:"min=1,dive,url"`
-	Pinning  []string `yaml:"pinning"`
-	Timeout  uint64   `yaml:"timeout" validate:"min=1"`
-	Fallback string   `yaml:"fallback" validate:"url"`
-	Delay    int      `yaml:"delay" validate:"min=1"`
+	Dir       string   `yaml:"dir"`
+	Bootstrap []string `yaml:"bootstrap"`
+	Gateways  []string `yaml:"gateways" validate:"min=1,dive,url"`
+	Blacklist []string `yaml:"blacklist"`
+	Timeout   uint64   `yaml:"timeout" validate:"min=1"`
+	Fallback  string   `yaml:"fallback" validate:"url"`
+	Delay     int      `yaml:"delay" validate:"min=1"`
 }

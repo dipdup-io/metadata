@@ -28,7 +28,6 @@ type Database struct {
 
 	Tokens    ModelRepository[*TokenMetadata]
 	Contracts ModelRepository[*ContractMetadata]
-	IPFS      *IPFS
 	TezosKeys *TezosKeys
 }
 
@@ -42,7 +41,7 @@ func NewDatabase(ctx context.Context, cfg config.Database) (*Database, error) {
 	database.Wait(ctx, db, 5*time.Second)
 
 	for _, data := range []interface{}{
-		&database.State{}, &ContractMetadata{}, &TokenMetadata{}, &TezosKey{}, &IPFSLink{},
+		&database.State{}, &ContractMetadata{}, &TokenMetadata{}, &TezosKey{},
 	} {
 		if err := db.DB().WithContext(ctx).Model(data).CreateTable(&orm.CreateTableOptions{
 			IfNotExists: true,
@@ -59,7 +58,6 @@ func NewDatabase(ctx context.Context, cfg config.Database) (*Database, error) {
 		PgGo:      db,
 		Tokens:    NewTokens(db),
 		Contracts: NewContracts(db),
-		IPFS:      NewIPFS(db),
 		TezosKeys: NewTezosKeys(db),
 	}, nil
 }

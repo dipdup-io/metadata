@@ -20,6 +20,7 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/prometheus"
+	"github.com/dipdup-net/metadata/internal/ipfs"
 )
 
 type startResult struct {
@@ -68,13 +69,24 @@ func main() {
 		return
 	}
 
+	ipfsNode, err := ipfs.NewNode(ctx, cfg.Metadata.Settings.IPFS.Dir, 1024*1024, cfg.Metadata.Settings.IPFS.Blacklist)
+	if err != nil {
+		log.Err(err).Msg("ipfs.NewNode")
+		return
+	}
+
+	if err := ipfsNode.Start(ctx); err != nil {
+		log.Err(err).Msg("ipfs.Start")
+		return
+	}
+
 	var indexers sync.Map
 	var indexerCancels sync.Map
 
 	var hasuraInit sync.Once
 	for network, indexer := range cfg.Metadata.Indexers {
 		go func(network string, ind *config.Indexer) {
-			result, err := startIndexer(ctx, cfg, *ind, network, prometheusService, views, custom_configs, &hasuraInit)
+			result, err := startIndexer(ctx, cfg, *ind, network, prometheusService, ipfsNode, views, custom_configs, &hasuraInit)
 			if err != nil {
 				log.Err(err).Msg("")
 			} else {
@@ -91,7 +103,7 @@ func main() {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					result, err := startIndexer(ctx, cfg, *ind, network, prometheusService, views, custom_configs, &hasuraInit)
+					result, err := startIndexer(ctx, cfg, *ind, network, prometheusService, ipfsNode, views, custom_configs, &hasuraInit)
 					if err != nil {
 						log.Err(err).Msg("")
 					} else {
@@ -121,6 +133,10 @@ func main() {
 		return err == nil
 	})
 
+	if err := ipfsNode.Close(); err != nil {
+		log.Err(err).Msgf("ipfsNode.Close()")
+	}
+
 	if prometheusService != nil {
 		if err := prometheusService.Close(); err != nil {
 			log.Err(err).Msg("prometheusService.Close()")
@@ -130,11 +146,11 @@ func main() {
 	close(signals)
 }
 
-func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.Indexer, network string, prom *prometheus.Prometheus, views []string, customConfigs []hasura.Request, hasuraInit *sync.Once) (startResult, error) {
+func startIndexer(ctx context.Context, cfg config.Config, indexerConfig config.Indexer, network string, prom *prometheus.Prometheus, ipfsNode *ipfs.Node, views []string, customConfigs []hasura.Request, hasuraInit *sync.Once) (startResult, error) {
 	var result startResult
 	indexerCtx, cancel := context.WithCancel(ctx)
 
-	indexer, err := NewIndexer(indexerCtx, network, &indexerConfig, cfg.Database, indexerConfig.Filters, cfg.Metadata.Settings, prom)
+	indexer, err := NewIndexer(indexerCtx, network, &indexerConfig, cfg.Database, indexerConfig.Filters, cfg.Metadata.Settings, prom, ipfsNode)
 	if err != nil {
 		cancel()
 		return result, err

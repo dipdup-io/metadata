@@ -12,6 +12,8 @@ services:
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
       - ADMIN_SECRET=${ADMIN_SECRET:-changeme}
+    volumes:
+      - ipfs:/etc/metadata/ipfs
 
   db:
     image: postgres:13
@@ -45,3 +47,4 @@ services:
 
 volumes:
   db:
+  ipfs:

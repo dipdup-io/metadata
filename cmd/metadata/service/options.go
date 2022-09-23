@@ -34,13 +34,6 @@ func WithPrometheus[T models.Model](prom *prometheus.Prometheus, gaugeType strin
 	}
 }
 
-// WithIPFSCache -
-func WithIPFSCache[T models.Model](ipfsRepo *models.IPFS) ServiceOption[T] {
-	return func(cs *Service[T]) {
-		cs.ipfsRepo = ipfsRepo
-	}
-}
-
 // WithDelay -
 func WithDelay[T models.Model](delay int) ServiceOption[T] {
 	return func(cs *Service[T]) {

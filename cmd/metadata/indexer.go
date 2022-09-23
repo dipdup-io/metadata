@@ -22,6 +22,7 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/tezoskeys"
 	"github.com/dipdup-net/metadata/cmd/metadata/thumbnail"
 	"github.com/dipdup-net/metadata/cmd/metadata/tzkt"
+	"github.com/dipdup-net/metadata/internal/ipfs"
 )
 
 var createIndex sync.Once
@@ -46,14 +47,14 @@ type Indexer struct {
 }
 
 // NewIndexer -
-func NewIndexer(ctx context.Context, network string, indexerConfig *config.Indexer, database generalConfig.Database, filters config.Filters, settings config.Settings, prom *prometheus.Prometheus) (*Indexer, error) {
+func NewIndexer(ctx context.Context, network string, indexerConfig *config.Indexer, database generalConfig.Database, filters config.Filters, settings config.Settings, prom *prometheus.Prometheus, node *ipfs.Node) (*Indexer, error) {
 	db, err := models.NewDatabase(ctx, database)
 	if err != nil {
 		return nil, err
 	}
 	keys := tezoskeys.NewTezosKeys(db.TezosKeys)
 
-	metadataResolver, err := resolver.New(settings, keys)
+	metadataResolver, err := resolver.New(ctx, settings, keys, node)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +86,6 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		service.WithMaxRetryCount[*models.ContractMetadata](settings.MaxRetryCountOnError),
 		service.WithWorkersCount[*models.ContractMetadata](settings.ContractServiceWorkers),
 		service.WithPrometheus[*models.ContractMetadata](prom, prometheus.MetadataTypeContract),
-		service.WithIPFSCache[*models.ContractMetadata](db.IPFS),
 		service.WithDelay[*models.ContractMetadata](settings.IPFS.Delay),
 	)
 	indexer.tokens = service.NewService(
@@ -93,7 +93,6 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		service.WithMaxRetryCount[*models.TokenMetadata](settings.MaxRetryCountOnError),
 		service.WithWorkersCount[*models.TokenMetadata](settings.TokenServiceWorkers),
 		service.WithPrometheus[*models.TokenMetadata](prom, prometheus.MetadataTypeToken),
-		service.WithIPFSCache[*models.TokenMetadata](db.IPFS),
 		service.WithDelay[*models.TokenMetadata](settings.IPFS.Delay),
 	)
 

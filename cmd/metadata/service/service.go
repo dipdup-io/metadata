@@ -2,22 +2,17 @@ package service
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
-	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/prometheus"
-	"github.com/dipdup-net/metadata/internal/ipfs"
-	"github.com/go-pg/pg/v10"
 	"github.com/rs/zerolog/log"
 )
 
 // Service -
 type Service[T models.Model] struct {
-	repo     models.ModelRepository[T]
-	ipfsRepo *models.IPFS
+	repo models.ModelRepository[T]
 
 	network       string
 	maxRetryCount int
@@ -111,43 +106,12 @@ func (s *Service[T]) manager(ctx context.Context) {
 				continue
 			}
 
-			resolvedIPFS := make(map[string]models.IPFSLink)
-
-			if s.ipfsRepo != nil {
-				links := make([]string, 0)
-
-				for i := range data {
-					if s.queue.Contains(data[i].GetID()) || !ipfs.Is(data[i].GetLink()) {
-						continue
-					}
-					links = append(links, data[i].GetLink())
-				}
-				if len(links) > 0 {
-					resolved, err := s.ipfsRepo.GetByURLs(links...)
-					if err != nil && !errors.Is(err, pg.ErrNoRows) {
-						log.Err(err).Msg("contract IPFSLinkByURLs")
-					}
-					for i := range resolved {
-						resolvedIPFS[resolved[i].Link] = resolved[i]
-					}
-				}
-			}
-
 			for i := range data {
 				if s.queue.Contains(data[i].GetID()) {
 					continue
 				}
 				s.queue.Add(data[i].GetID())
 
-				if s.ipfsRepo != nil {
-					if ipfsData, ok := resolvedIPFS[data[i].GetLink()]; ok {
-						data[i].SetStatus(models.StatusApplied)
-						data[i].SetMetadata(helpers.Escape(ipfsData.Data))
-						data[i].IncrementRetryCount()
-						s.result <- data[i]
-						continue
-					}
-				}
 				s.tasks <- data[i]
 			}
 		}

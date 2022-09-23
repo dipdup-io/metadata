@@ -166,6 +166,15 @@ func (scanner *Scanner) listen(ctx context.Context) {
 			return
 		case msg := <-scanner.client.Listen():
 			switch msg.Type {
+			case events.MessageTypeState:
+				if scanner.level < msg.State {
+					if err := scanner.client.Close(); err != nil {
+						log.Err(err).Msg("scanner.client.Close")
+					}
+					scanner.synchronization(ctx, scanner.level, 0)
+					return
+				}
+
 			case events.MessageTypeData:
 				switch msg.Channel {
 				case events.ChannelBlocks:
@@ -179,7 +188,7 @@ func (scanner *Scanner) listen(ctx context.Context) {
 				default:
 					log.Error().Msgf("Unknown channel %s", msg.Channel)
 				}
-			case events.MessageTypeState, events.MessageTypeReorg, events.MessageTypeSubscribed:
+			case events.MessageTypeReorg, events.MessageTypeSubscribed:
 			}
 		}
 	}

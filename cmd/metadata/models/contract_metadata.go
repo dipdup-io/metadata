@@ -26,7 +26,7 @@ type ContractMetadata struct {
 	Link       string `json:"link"`
 	Status     Status `json:"status"`
 	RetryCount int8   `json:"retry_count" pg:",use_zero"`
-	Metadata   JSONB  `json:"metadata,omitempty" pg:",type:jsonb,use_zero"`
+	Metadata   JSONB  `json:"metadata,omitempty" pg:",type:json,use_zero"`
 	Error      string `json:"error,omitempty"`
 }
 
@@ -119,7 +119,8 @@ func (contracts *Contracts) FailedByTimeout(network string, limit, offset, retry
 		Where("status = ?", StatusFailed).
 		Where("network = ?", network).
 		Where("retry_count = ?", retryCount).
-		Where("error LIKE '%%deadline%%'").
+		Where("error LIKE '%%context deadline exceeded%%'").
+		Where("link LIKE 'ipfs://%%'").
 		Where("created_at < (extract(epoch from current_timestamp) - ?)", delay).
 		OrderExpr("updated_at desc")
 

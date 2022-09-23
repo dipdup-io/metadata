@@ -127,7 +127,7 @@ func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str, level str
 }
 
 func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.TokenMetadata) error {
-	indexer.logTokenMetadata(*tm, "Trying to resolve", "info")
+	indexer.logTokenMetadata(*tm, "trying to resolve", "info")
 	tm.RetryCount += 1
 
 	resolved, err := indexer.resolver.Resolve(ctx, tm.Network, tm.Contract, tm.Link)
@@ -143,13 +143,13 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 		}
 
 		if tm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {
-			indexer.logTokenMetadata(*tm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
+			indexer.logTokenMetadata(*tm, fmt.Sprintf("retry: %s", err.Error()), "warn")
 		} else {
 			tm.Status = models.StatusFailed
-			indexer.logTokenMetadata(*tm, "Failed", "warn")
+			indexer.logTokenMetadata(*tm, "failed", "warn")
 		}
 	} else {
-		resolved.Data = helpers.Escape(resolved.Data)
+		// resolved.Data = helpers.Escape(resolved.Data)
 		if utf8.Valid(resolved.Data) {
 			tm.Status = models.StatusApplied
 			tm.Error = ""
@@ -159,7 +159,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 				return err
 			}
 			tm.Metadata = metadata
-
+			indexer.log().Int64("response_time", resolved.ResponseTime).Str("contract", tm.Contract).Str("token_id", tm.TokenID.String()).Msg("resolved token metadata")
 		} else {
 			tm.Error = "invalid json"
 			tm.Status = models.StatusFailed
@@ -167,15 +167,9 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 	}
 
 	if resolved.By == resolver.ResolverTypeIPFS && tm.Status == models.StatusApplied {
-		link := models.IPFSLink{
-			Link: tm.Link,
-			Node: resolved.Node,
-			Data: resolved.Data,
-		}
 		if resolved.ResponseTime > 0 {
 			indexer.prom.AddHistogramResponseTime(indexer.network, resolved)
 		}
-		return indexer.db.IPFS.Save(link)
 	}
 	return nil
 }
