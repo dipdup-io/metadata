@@ -204,10 +204,10 @@ func (s *Service[T]) worker(ctx context.Context) {
 func (s *Service[T]) lastHope(ctx context.Context) {
 	defer s.wg.Done()
 
-	ticker := time.NewTicker(time.Hour)
+	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 
-	limit := 100
+	limit := 10
 	offset := 0
 
 	for {

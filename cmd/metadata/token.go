@@ -105,6 +105,7 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.T
 
 	if _, err := url.ParseRequestURI(tokenInfo.Link); err != nil {
 		token.Status = models.StatusApplied
+		token.RetryCount = 1
 		indexer.prom.IncrementMetadataCounter(indexer.network, prometheus.MetadataTypeToken, token.Status.String())
 	} else {
 		token.Link = tokenInfo.Link
