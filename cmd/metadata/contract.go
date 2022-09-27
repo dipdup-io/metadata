@@ -63,7 +63,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 			indexer.logContractMetadata(*cm, "Failed", "warn")
 		}
 	} else {
-		// cm.Metadata = helpers.Escape(resolved.Data)
+		cm.Metadata = resolved.Data
 		if utf8.Valid(resolved.Data) {
 			cm.Status = models.StatusApplied
 			cm.Error = ""
