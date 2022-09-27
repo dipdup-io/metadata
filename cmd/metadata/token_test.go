@@ -45,10 +45,11 @@ func TestIndexer_processTokenMetadata(t *testing.T) {
 				},
 			},
 			want: &models.TokenMetadata{
-				TokenID:  decimal.NewFromInt(0),
-				Contract: "KT1G1cCRNBgQ48mVDjopHjEmTN5Sbtar8nn9",
-				Metadata: models.JSONB(`{"decimals":"6","icon":"ipfs://QmXL3FZ5kcwXC8mdwkS1iCHS2qVoyg69ugBhU2ap8z1zcs","name":"Hedgehoge","symbol":"HEH","test_object":"{}"}`),
-				Status:   models.StatusApplied,
+				TokenID:    decimal.NewFromInt(0),
+				Contract:   "KT1G1cCRNBgQ48mVDjopHjEmTN5Sbtar8nn9",
+				Metadata:   models.JSONB(`{"decimals":"6","icon":"ipfs://QmXL3FZ5kcwXC8mdwkS1iCHS2qVoyg69ugBhU2ap8z1zcs","name":"Hedgehoge","symbol":"HEH","test_object":"{}"}`),
+				Status:     models.StatusApplied,
+				RetryCount: 1,
 			},
 		},
 	}
