@@ -207,29 +207,14 @@ func (s *Service[T]) lastHope(ctx context.Context) {
 	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 
-	limit := 10
-	offset := 0
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-
-			var end bool
-			for !end {
-				data, err := s.repo.FailedByTimeout(s.network, limit, offset, s.maxRetryCount, 3600)
-				if err != nil {
-					log.Err(err).Msg("repo.Get")
-					continue
-				}
-
-				end = len(data) < limit
-				offset += len(data)
-
-				for i := range data {
-					s.tasks <- data[i]
-				}
+			if err := s.repo.Retry(s.network, s.maxRetryCount, time.Hour); err != nil {
+				log.Err(err).Msg("repo.Retry")
+				continue
 			}
 		}
 	}

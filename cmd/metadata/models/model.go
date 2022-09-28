@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // ModelRepository -
 type ModelRepository[T Model] interface {
 	Get(network string, status Status, limit, offset, retryCount, delay int) ([]T, error)
@@ -7,7 +9,7 @@ type ModelRepository[T Model] interface {
 	Save(metadata []T) error
 	LastUpdateID() (int64, error)
 	CountByStatus(network string, status Status) (int, error)
-	FailedByTimeout(network string, limit, offset, retryCount, delay int) (all []T, err error)
+	Retry(network string, retryCount int, window time.Duration) error
 }
 
 // Model -
