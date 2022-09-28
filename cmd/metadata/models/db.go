@@ -40,7 +40,7 @@ func NewDatabase(ctx context.Context, cfg config.Database) (*Database, error) {
 
 	database.Wait(ctx, db, 5*time.Second)
 
-	for _, data := range []interface{}{
+	for _, data := range []any{
 		&database.State{}, &ContractMetadata{}, &TokenMetadata{}, &TezosKey{},
 	} {
 		if err := db.DB().WithContext(ctx).Model(data).CreateTable(&orm.CreateTableOptions{

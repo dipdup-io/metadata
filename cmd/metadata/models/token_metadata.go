@@ -135,6 +135,8 @@ func (tokens *Tokens) Get(network string, status Status, limit, offset, retryCou
 // Retry -
 func (tokens *Tokens) Retry(network string, retryCount int, window time.Duration) error {
 	_, err := tokens.db.DB().Model((*TokenMetadata)(nil)).
+		Set("retry_count = 0").
+		Set("status = ?", StatusNew).
 		Where("status = ?", StatusFailed).
 		Where("network = ?", network).
 		Where("retry_count >= ?", retryCount).

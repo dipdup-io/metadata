@@ -115,7 +115,9 @@ func (contracts *Contracts) Get(network string, status Status, limit, offset, re
 
 // Retry -
 func (contracts *Contracts) Retry(network string, retryCount int, window time.Duration) error {
-	_, err := contracts.db.DB().Model((*TokenMetadata)(nil)).
+	_, err := contracts.db.DB().Model((*ContractMetadata)(nil)).
+		Set("retry_count = 0").
+		Set("status = ?", StatusNew).
 		Where("status = ?", StatusFailed).
 		Where("network = ?", network).
 		Where("retry_count >= ?", retryCount).
