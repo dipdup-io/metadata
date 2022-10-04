@@ -15,7 +15,7 @@ require (
 	github.com/ipfs/interface-go-ipfs-core v0.7.0
 	github.com/ipfs/kubo v0.15.1-0.20220912134046-007295d34d4a
 	github.com/json-iterator/go v1.1.12
-	github.com/labstack/echo/v4 v4.7.2
+	github.com/labstack/echo/v4 v4.9.0
 	github.com/libp2p/go-libp2p v0.22.1-0.20220909022011-aa6d051e651f
 	github.com/multiformats/go-multiaddr v0.7.0
 	github.com/pkg/errors v0.9.1
