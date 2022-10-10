@@ -47,9 +47,6 @@ metadata:
     mainnet:
       datasources:
         tzkt: https://api.tzkt.io
-    jakartanet:
-      datasources:
-        tzkt: https://api.jakartanet.tzkt.io
     kathmandunet:
       datasources:
         tzkt: https://api.kathmandunet.tzkt.io
