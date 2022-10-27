@@ -150,16 +150,18 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 			indexer.logTokenMetadata(*tm, "failed", "warn")
 		}
 	} else {
-		// resolved.Data = helpers.Escape(resolved.Data)
 		if utf8.Valid(resolved.Data) {
 			tm.Status = models.StatusApplied
 			tm.Error = ""
 
-			metadata, err := mergeTokenMetadata(tm.Metadata, resolved.Data)
-			if err != nil {
-				return err
+			if resolved.By != resolver.ResolverTypeIPFS {
+				tm.Metadata, err = mergeTokenMetadata(tm.Metadata, resolved.Data)
+				if err != nil {
+					return err
+				}
+			} else {
+				tm.Metadata = resolved.Data
 			}
-			tm.Metadata = metadata
 			indexer.log().Int64("response_time", resolved.ResponseTime).Str("contract", tm.Contract).Str("token_id", tm.TokenID.String()).Msg("resolved token metadata")
 		} else {
 			tm.Error = "invalid json"
