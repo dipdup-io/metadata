@@ -3,6 +3,7 @@ package helpers
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"regexp"
 	"strings"
 	"unicode"
@@ -15,7 +16,14 @@ func Trim(val string) string {
 
 // IsJSON -
 func IsJSON(val string) bool {
-	return strings.HasPrefix(val, `"7b`) && strings.HasSuffix(val, `7d"`)
+	if len(val) < 2 {
+		return false
+	}
+	data, err := hex.DecodeString(val[1 : len(val)-1])
+	if err != nil {
+		return false
+	}
+	return json.Valid(data)
 }
 
 // Decode
