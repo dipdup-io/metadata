@@ -137,7 +137,7 @@ func (contracts *Contracts) Update(metadata []*ContractMetadata) error {
 	contracts.mx.Lock()
 	defer contracts.mx.Unlock()
 
-	_, err := contracts.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "error").WherePK().Update()
+	_, err := contracts.db.DB().Model(&metadata).Column("metadata", "update_id", "updated_at", "status", "retry_count", "error").WherePK().Update()
 	return err
 }
 
@@ -164,7 +164,7 @@ func (contracts *Contracts) Save(metadata []*ContractMetadata) error {
 
 	_, err := contracts.db.DB().Model(&savings).
 		OnConflict("(network, contract) DO UPDATE").
-		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
+		Set("metadata = excluded.metadata, link = excluded.link, updated_at = excluded.updated_at, update_id = excluded.update_id, status = excluded.status").
 		Insert()
 	return err
 }

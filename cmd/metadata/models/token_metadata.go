@@ -156,7 +156,7 @@ func (tokens *Tokens) Update(metadata []*TokenMetadata) error {
 	tokens.mx.Lock()
 	defer tokens.mx.Unlock()
 
-	_, err := tokens.db.DB().Model(&metadata).Column("metadata", "update_id", "status", "retry_count", "error").WherePK().Update()
+	_, err := tokens.db.DB().Model(&metadata).Column("metadata", "update_id", "updated_at", "status", "retry_count", "error").WherePK().Update()
 	return err
 }
 
@@ -185,7 +185,7 @@ func (tokens *Tokens) Save(metadata []*TokenMetadata) error {
 
 	_, err := tokens.db.DB().Model(&savings).
 		OnConflict("(network, contract, token_id) DO UPDATE").
-		Set("metadata = excluded.metadata, link = excluded.link, update_id = excluded.update_id, status = excluded.status").
+		Set("metadata = excluded.metadata, link = excluded.link, updated_at = excluded.updated_at, update_id = excluded.update_id, status = excluded.status").
 		Insert()
 	return err
 }
