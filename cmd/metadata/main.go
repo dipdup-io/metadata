@@ -57,8 +57,7 @@ func main() {
 		prometheusService.Start()
 	}
 
-	err = execScripts(ctx, cfg.Database)
-	if err != nil {
+	if err := execScripts(ctx, cfg.Database); err != nil {
 		log.Err(err).Msg("execScripts")
 		return
 	}
