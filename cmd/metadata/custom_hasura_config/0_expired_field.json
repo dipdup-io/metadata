@@ -1,0 +1,21 @@
+{
+  "type": "bulk",
+  "source": "default",
+  "resource_version": 195,
+  "args": [
+    {
+      "type": "pg_add_computed_field",
+      "args": {
+        "table": { "schema": "public", "name": "token_metadata" },
+        "name": "expired",
+        "definition": {
+          "function": { "name": "token_metadata_expired", "schema": "public" },
+          "table_argument": null,
+          "session_argument": null
+        },
+        "comment": null,
+        "source": "default"
+      }
+    }
+  ]
+}
