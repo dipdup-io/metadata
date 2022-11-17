@@ -1,0 +1,30 @@
+{
+    "type": "bulk",
+    "source": "default",
+    "resource_version": 195,
+    "args": [
+      {
+        "type": "add_query_to_collection",
+        "args": {
+          "collection_name": "allowed-queries",
+          "query_name": "Invalidate token metadata",
+          "query": "mutation Invalidate($contract: String) {\n  update_token_metadata(\n    where: {\n      contract: {_eq: $contract}, \n      status: {_neq: \"1\"}, \n      expired: {_eq: true}\n    }, \n    _set: {\n      status: \"1\", \n      retry_count: \"0\"\n    }) {\n    \taffected_rows\n  }\n}"
+        }
+      },
+      {
+        "type": "create_rest_endpoint",
+        "args": {
+          "name": "Invalidate token metadata",
+          "url": "invalidate_token_metadata",
+          "definition": {
+            "query": {
+              "query_name": "Invalidate token metadata",
+              "collection_name": "allowed-queries"
+            }
+          },
+          "methods": ["PUT", "PATCH"]
+        }
+      }
+    ]
+  }
+  

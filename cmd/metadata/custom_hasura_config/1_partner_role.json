@@ -1,0 +1,58 @@
+{
+    "type": "bulk",
+    "source": "default",
+    "resource_version": 195,
+    "args": [
+      {
+        "type": "pg_create_select_permission",
+        "args": {
+          "table": { "name": "token_metadata", "schema": "public" },
+          "role": "partner",
+          "permission": {
+            "columns": [
+              "id",
+              "created_at",
+              "updated_at",
+              "update_id",
+              "token_id",
+              "network",
+              "contract",
+              "link",
+              "metadata",
+              "retry_count",
+              "status",
+              "image_processed",
+              "error"
+            ],
+            "computed_fields": ["expired"],
+            "backend_only": false,
+            "filter": {},
+            "limit": 100,
+            "allow_aggregations": false
+          },
+          "source": "default"
+        }
+      },
+      {
+        "type": "pg_create_update_permission",
+        "args": {
+          "table": { "name": "token_metadata", "schema": "public" },
+          "role": "partner",
+          "permission": {
+            "columns": ["retry_count", "status"],
+            "filter": {
+              "_and": [
+                { "contract": { "_eq": "X-Hasura-User-Id" } },
+                { "status": { "_neq": 1 } },
+                { "expired": { "_eq": "true" } }
+              ]
+            },
+            "backend_only": false,
+            "set": {}
+          },
+          "source": "default"
+        }
+      }
+    ]
+  }
+  

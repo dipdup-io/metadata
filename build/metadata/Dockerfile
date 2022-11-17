@@ -35,6 +35,7 @@ COPY ./cmd/metadata/mappings ./mappings
 COPY ./cmd/metadata/graphql ./graphql
 COPY ./build/*.yml ./
 COPY ./cmd/metadata/views/*.sql ./views/
+COPY ./cmd/metadata/sql/*.sql ./sql/
 COPY ./cmd/metadata/custom_hasura_config ./custom_hasura_config
 
 ENTRYPOINT ["/go/bin/dipdup-metadata"]

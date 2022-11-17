@@ -57,6 +57,11 @@ func main() {
 		prometheusService.Start()
 	}
 
+	if err := execScripts(ctx, cfg.Database); err != nil {
+		log.Err(err).Msg("execScripts")
+		return
+	}
+
 	views, err := createViews(ctx, cfg.Database)
 	if err != nil {
 		log.Err(err).Msg("createViews")
@@ -209,4 +214,35 @@ func createViews(ctx context.Context, database golibConfig.Database) ([]string, 
 	}
 
 	return views, nil
+}
+
+func execScripts(ctx context.Context, database golibConfig.Database) error {
+	files, err := os.ReadDir("sql")
+	if err != nil {
+		return err
+	}
+
+	db, err := models.NewDatabase(ctx, database)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	for i := range files {
+		if files[i].IsDir() {
+			continue
+		}
+
+		path := fmt.Sprintf("sql/%s", files[i].Name())
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		if err := db.Exec(string(raw)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
