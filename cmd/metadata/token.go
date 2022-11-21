@@ -289,9 +289,9 @@ var legacyTokens = []*models.TokenMetadata{
 }
 
 var legacyContracts = map[string]struct{}{
-	"KT1K9gCRgaLRFKTErYt1wVxA3Frb9FjasjTV": struct{}{},
-	"KT1AxaBxkFLCUi3f8rdDAAxBKHfzY8LfKDRA": struct{}{},
-	"KT1AFA2mwNUMNd4SsujE1YYp29vd8BZejyKW": struct{}{},
+	"KT1K9gCRgaLRFKTErYt1wVxA3Frb9FjasjTV": {},
+	"KT1AxaBxkFLCUi3f8rdDAAxBKHfzY8LfKDRA": {},
+	"KT1AFA2mwNUMNd4SsujE1YYp29vd8BZejyKW": {},
 }
 
 func (indexer *Indexer) initialTokenMetadata(ctx context.Context) error {
