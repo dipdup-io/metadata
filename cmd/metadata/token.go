@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
-	stdJSON "encoding/json"
 	"fmt"
 	"net/url"
 	"unicode/utf8"
@@ -128,6 +126,11 @@ func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str, level str
 }
 
 func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.TokenMetadata) error {
+	if _, ok := legacyContracts[tm.Contract]; ok {
+		indexer.logTokenMetadata(*tm, "readonly legacy metadata", "info")
+		return nil
+	}
+
 	indexer.logTokenMetadata(*tm, "trying to resolve", "info")
 	tm.RetryCount += 1
 
@@ -153,15 +156,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 		if utf8.Valid(resolved.Data) {
 			tm.Status = models.StatusApplied
 			tm.Error = ""
-
-			if resolved.By != resolver.ResolverTypeIPFS {
-				tm.Metadata, err = mergeTokenMetadata(tm.Metadata, resolved.Data)
-				if err != nil {
-					return err
-				}
-			} else {
-				tm.Metadata = resolved.Data
-			}
+			tm.Metadata = resolved.Data
 			indexer.log().Int64("response_time", resolved.ResponseTime).Str("contract", tm.Contract).Str("token_id", tm.TokenID.String()).Msg("resolved token metadata")
 		} else {
 			tm.Error = "invalid json"
@@ -175,37 +170,6 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 		}
 	}
 	return nil
-}
-
-func mergeTokenMetadata(src, got []byte) ([]byte, error) {
-	if len(src) == 0 {
-		return got, nil
-	}
-
-	if len(got) == 0 {
-		return src, nil
-	}
-
-	srcMap := make(map[string]interface{})
-	if err := json.NewDecoder(bytes.NewBuffer(src)).Decode(&srcMap); err != nil {
-		return nil, err
-	}
-	gotMap := make(map[string]interface{})
-	if err := json.NewDecoder(bytes.NewBuffer(got)).Decode(&gotMap); err != nil {
-		return nil, err
-	}
-	for key, value := range gotMap {
-		if _, ok := srcMap[key]; !ok {
-			srcMap[key] = value
-		}
-	}
-	data, err := json.Marshal(srcMap)
-	if err != nil {
-		return nil, err
-	}
-	var dst bytes.Buffer
-	err = stdJSON.Compact(&dst, data)
-	return dst.Bytes(), err
 }
 
 var legacyTokens = []*models.TokenMetadata{
@@ -322,6 +286,12 @@ var legacyTokens = []*models.TokenMetadata{
 		RetryCount:     1,
 		ImageProcessed: true,
 	},
+}
+
+var legacyContracts = map[string]struct{}{
+	"KT1K9gCRgaLRFKTErYt1wVxA3Frb9FjasjTV": struct{}{},
+	"KT1AxaBxkFLCUi3f8rdDAAxBKHfzY8LfKDRA": struct{}{},
+	"KT1AFA2mwNUMNd4SsujE1YYp29vd8BZejyKW": struct{}{},
 }
 
 func (indexer *Indexer) initialTokenMetadata(ctx context.Context) error {
