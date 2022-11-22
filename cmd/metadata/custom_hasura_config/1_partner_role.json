@@ -43,9 +43,9 @@
             "filter": {
               "_and": [
                 { "contract": { "_eq": "X-Hasura-User-Id" } },
-                { "token_id": { "_is_null": "false"} },
+                { "token_id": { "_is_null": false} },
                 { "status": { "_neq": 1 } },
-                { "expired": { "_eq": "true" } }
+                { "expired": { "_eq": true } }
               ]
             },
             "backend_only": false,
