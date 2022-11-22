@@ -8,7 +8,7 @@
         "args": {
           "collection_name": "allowed-queries",
           "query_name": "Invalidate token metadata",
-          "query": "mutation Invalidate($contract: String) {\n  update_token_metadata(\n    where: {\n      contract: {_eq: $contract}, \n      status: {_neq: \"1\"}, \n      expired: {_eq: true}\n    }, \n    _set: {\n      status: \"1\", \n      retry_count: \"0\"\n    }) {\n    \taffected_rows\n  }\n}"
+          "query": "mutation Invalidate($contract: String, $token_id: numeric = 0) {\n  update_token_metadata(\n    where: {\n      contract: {_eq: $contract}, \n      token_id: {_eq: $token_id}, \n      status: {_neq: \"1\"}, \n      expired: {_eq: true}\n    }, \n    _set: {\n      status: \"1\", \n      retry_count: \"0\"\n    }) {\n    \taffected_rows\n  }\n}"
         }
       },
       {
