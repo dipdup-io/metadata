@@ -53,6 +53,10 @@ metadata:
     ghostnet:
       datasources:
         tzkt: https://api.ghostnet.tzkt.io
+    limanet:
+      datasources:
+        tzkt: https://api.limanet.tzkt.io
+
 
 database:
   kind: postgres
