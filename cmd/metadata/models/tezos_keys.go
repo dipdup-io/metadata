@@ -2,7 +2,7 @@ package models
 
 import (
 	"github.com/dipdup-net/go-lib/database"
-	"github.com/dipdup-net/go-lib/tzkt/api"
+	"github.com/dipdup-net/go-lib/tzkt/data"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 )
 
@@ -34,7 +34,7 @@ func (TezosKey) TableName() string {
 }
 
 // ContextFromUpdate -
-func ContextFromUpdate(update api.BigMapUpdate, network string) (TezosKey, error) {
+func ContextFromUpdate(update data.BigMapUpdate, network string) (TezosKey, error) {
 	var ctx TezosKey
 	ctx.Address = update.Contract.Address
 	ctx.Network = network

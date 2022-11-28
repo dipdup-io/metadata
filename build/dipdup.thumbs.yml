@@ -48,7 +48,7 @@ metadata:
   indexers:
     mainnet:
       datasources:
-          tzkt: https://api.tzkt.io
+          tzkt: tzkt_mainnet
 
 database:
   kind: postgres
@@ -67,3 +67,9 @@ hasura:
 
 prometheus:
   url: ${EXPORT_HOST:-0.0.0.0}:2112
+
+datasources:
+  tzkt_mainnet:
+    url: https://api.tzkt.io
+    kind: tzkt
+    timeout: 10  

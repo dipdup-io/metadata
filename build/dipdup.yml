@@ -46,16 +46,16 @@ metadata:
   indexers:
     mainnet:
       datasources:
-        tzkt: https://api.tzkt.io
+        tzkt: tzkt_mainnet
     kathmandunet:
       datasources:
-        tzkt: https://api.kathmandunet.tzkt.io
+        tzkt: tzkt_kathmandunet
     ghostnet:
       datasources:
-        tzkt: https://api.ghostnet.tzkt.io
+        tzkt: tzkt_ghostnet
     limanet:
       datasources:
-        tzkt: https://api.limanet.tzkt.io
+        tzkt: tzkt_limanet
 
 
 database:
@@ -76,3 +76,21 @@ hasura:
 
 prometheus:
   url: ${EXPORT_HOST:-0.0.0.0}:2112
+
+datasources:
+  tzkt_mainnet:
+    url: https://api.tzkt.io
+    kind: tzkt
+    timeout: 10  
+  tzkt_kathmandunet:
+    url: https://api.kathmandunet.tzkt.io
+    kind: tzkt
+    timeout: 10
+  tzkt_ghostnet:
+    url: https://api.ghostnet.tzkt.io
+    kind: tzkt
+    timeout: 10
+  tzkt_limanet:
+    url: https://api.limanet.tzkt.io
+    kind: tzkt
+    timeout: 10

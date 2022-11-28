@@ -1,7 +1,7 @@
 package tzkt
 
 import (
-	"github.com/dipdup-net/go-lib/tzkt/api"
+	api "github.com/dipdup-net/go-lib/tzkt/data"
 	"github.com/dipdup-net/go-lib/tzkt/events"
 )
 

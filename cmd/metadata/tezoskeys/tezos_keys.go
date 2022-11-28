@@ -1,7 +1,7 @@
 package tezoskeys
 
 import (
-	"github.com/dipdup-net/go-lib/tzkt/api"
+	"github.com/dipdup-net/go-lib/tzkt/data"
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 )
@@ -23,7 +23,7 @@ func NewTezosKeys(repo *models.TezosKeys) *TezosKeys {
 }
 
 // Add -
-func (tk *TezosKeys) Add(update api.BigMapUpdate, network string) error {
+func (tk *TezosKeys) Add(update data.BigMapUpdate, network string) error {
 	val := string(update.Content.Value)
 	if !helpers.IsJSON(val) { // wait only JSON
 		return nil

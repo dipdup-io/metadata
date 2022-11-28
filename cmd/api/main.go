@@ -5,26 +5,38 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/dipdup-net/go-lib/cmdline"
 	"github.com/dipdup-net/go-lib/config"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
 )
 
 var es *elasticsearch.Client
 
+var (
+	rootCmd = &cobra.Command{
+		Use:   "api",
+		Short: "DipDup metadata API",
+	}
+)
+
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	args := cmdline.Parse()
-	if args.Help {
+	configPath := rootCmd.PersistentFlags().StringP("config", "c", "dipdup.yml", "path to YAML config file")
+	if err := rootCmd.Execute(); err != nil {
+		log.Panic().Err(err).Msg("command line execute")
+		return
+	}
+	if err := rootCmd.MarkFlagRequired("config"); err != nil {
+		log.Panic().Err(err).Msg("config command line arg is required")
 		return
 	}
 
-	cfg, err := config.Load(args.Config)
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Err(err).Msg("")
 		return

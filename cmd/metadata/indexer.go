@@ -58,9 +58,13 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 	if err != nil {
 		return nil, err
 	}
+	scanner, err := tzkt.New(indexerConfig.DataSource.Tzkt.Struct(), filters.Addresses()...)
+	if err != nil {
+		return nil, err
+	}
 
 	indexer := &Indexer{
-		scanner:   tzkt.New(indexerConfig.DataSource.Tzkt, filters.Accounts...),
+		scanner:   scanner,
 		network:   network,
 		indexName: models.IndexName(network),
 		resolver:  metadataResolver,

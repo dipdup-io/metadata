@@ -25,29 +25,26 @@ func (c *Config) Substitute() error {
 			return err
 		}
 	}
-	if c.Config.Hasura != nil {
-		c.Config.Hasura.SetSourceName()
-	}
 	return nil
 }
 
 func substituteContracts(c *Config, filters *Filters) error {
 	for i, address := range filters.Accounts {
-		contract, ok := c.Contracts[address]
+		contract, ok := c.Contracts[address.Name()]
 		if !ok {
 			continue
 		}
-		filters.Accounts[i] = contract.Address
+		filters.Accounts[i].SetStruct(contract)
 	}
 	return nil
 }
 
 func substituteDataSources(c *Config, dataSource *MetadataDataSource) error {
-	if source, ok := c.DataSources[dataSource.Tzkt]; ok {
+	if source, ok := c.DataSources[dataSource.Tzkt.Name()]; ok {
 		if source.Kind != "tzkt" {
 			return errors.Errorf("Invalid tzkt data source kind. Expected `tzkt`, got `%s`", source.Kind)
 		}
-		dataSource.Tzkt = source.URL
+		dataSource.Tzkt.SetStruct(source)
 	}
 	return nil
 }
@@ -72,14 +69,23 @@ type Indexer struct {
 
 // Filters -
 type Filters struct {
-	Accounts   []string `yaml:"accounts" validate:"max=50"`
-	FirstLevel uint64   `yaml:"first_level" validate:"min=0"`
-	LastLevel  uint64   `yaml:"last_level" validate:"min=0"`
+	Accounts   []config.Alias[config.Contract] `yaml:"accounts" validate:"max=50"`
+	FirstLevel uint64                          `yaml:"first_level" validate:"min=0"`
+	LastLevel  uint64                          `yaml:"last_level" validate:"min=0"`
+}
+
+// Addresses -
+func (f Filters) Addresses() []string {
+	addresses := make([]string, 0)
+	for i := range f.Accounts {
+		addresses = append(addresses, f.Accounts[i].Struct().Address)
+	}
+	return addresses
 }
 
 // MetadataDataSource -
 type MetadataDataSource struct {
-	Tzkt string `yaml:"tzkt" validate:"url"`
+	Tzkt config.Alias[config.DataSource] `yaml:"tzkt" validate:"url"`
 }
 
 // Settings -

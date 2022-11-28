@@ -3,11 +3,14 @@ package tzkt
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/dipdup-net/go-lib/config"
 	"github.com/dipdup-net/go-lib/tzkt/api"
+	"github.com/dipdup-net/go-lib/tzkt/data"
 	"github.com/dipdup-net/go-lib/tzkt/events"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -27,21 +30,27 @@ type Scanner struct {
 	contracts []string
 
 	diffs    chan Message
-	blocks   chan events.Block
+	blocks   chan data.Block
 	wg       sync.WaitGroup
 	initOnce sync.Once
 }
 
 // New -
-func New(baseURL string, contracts ...string) *Scanner {
+func New(cfg config.DataSource, contracts ...string) (*Scanner, error) {
+	baseURL, err := url.Parse(cfg.URL)
+	if err != nil {
+		return nil, err
+	}
+	eventsURL := baseURL.JoinPath("v1/events")
+
 	return &Scanner{
-		client:    events.NewTzKT(fmt.Sprintf("%s/%s", strings.TrimSuffix(baseURL, "/"), "v1/events")),
-		api:       api.New(baseURL),
+		client:    events.NewTzKT(eventsURL.String()),
+		api:       api.New(baseURL.String()),
 		msg:       newMessage(),
 		contracts: contracts,
 		diffs:     make(chan Message, 1024),
-		blocks:    make(chan events.Block, 10),
-	}
+		blocks:    make(chan data.Block, 10),
+	}, nil
 }
 
 // Start -
@@ -58,7 +67,7 @@ func (scanner *Scanner) Start(ctx context.Context, startLevel, endLevel uint64) 
 }
 
 func (scanner *Scanner) start(ctx context.Context) {
-	if err := scanner.client.Connect(); err != nil {
+	if err := scanner.client.Connect(ctx); err != nil {
 		log.Err(err).Msg("")
 		return
 	}
@@ -133,7 +142,7 @@ func (scanner *Scanner) BigMaps() <-chan Message {
 }
 
 // Blocks -
-func (scanner *Scanner) Blocks() <-chan events.Block {
+func (scanner *Scanner) Blocks() <-chan data.Block {
 	return scanner.blocks
 }
 
@@ -225,7 +234,7 @@ func (scanner *Scanner) sync(ctx context.Context, headLevel uint64) error {
 	}
 }
 
-func (scanner *Scanner) getSyncUpdates(ctx context.Context, headLevel uint64) ([]api.BigMapUpdate, error) {
+func (scanner *Scanner) getSyncUpdates(ctx context.Context, headLevel uint64) ([]data.BigMapUpdate, error) {
 	filters := map[string]string{
 		"path.as":   "*metadata",
 		"action.in": "add_key,update_key",
@@ -247,7 +256,7 @@ func (scanner *Scanner) getSyncUpdates(ctx context.Context, headLevel uint64) ([
 	return scanner.api.GetBigmapUpdates(ctx, filters)
 }
 
-func (scanner *Scanner) processSyncUpdates(ctx context.Context, updates []api.BigMapUpdate) {
+func (scanner *Scanner) processSyncUpdates(ctx context.Context, updates []data.BigMapUpdate) {
 	for i := range updates {
 		select {
 		case <-ctx.Done():
@@ -256,7 +265,7 @@ func (scanner *Scanner) processSyncUpdates(ctx context.Context, updates []api.Bi
 			if scanner.msg.Level != 0 && scanner.msg.Level != updates[i].Level {
 				scanner.level = scanner.msg.Level
 				scanner.diffs <- scanner.msg.copy()
-				scanner.blocks <- events.Block{
+				scanner.blocks <- data.Block{
 					Level:     scanner.msg.Level,
 					Timestamp: updates[i].Timestamp.UTC(),
 				}
@@ -271,7 +280,7 @@ func (scanner *Scanner) processSyncUpdates(ctx context.Context, updates []api.Bi
 }
 
 func (scanner *Scanner) handleBlocks(msg events.Message) error {
-	body, ok := msg.Body.([]events.Block)
+	body, ok := msg.Body.([]data.Block)
 	if !ok {
 		return errors.Errorf("Invalid body type: %T", msg.Body)
 	}
@@ -284,7 +293,7 @@ func (scanner *Scanner) handleBlocks(msg events.Message) error {
 }
 
 func (scanner *Scanner) handleBigMaps(msg events.Message) error {
-	body, ok := msg.Body.([]events.BigMapUpdate)
+	body, ok := msg.Body.([]data.BigMapUpdate)
 	if !ok {
 		return errors.Errorf("Invalid body type: %T", msg.Body)
 	}
@@ -292,20 +301,20 @@ func (scanner *Scanner) handleBigMaps(msg events.Message) error {
 		return nil
 	}
 
-	diffs := make([]api.BigMapUpdate, len(body))
+	diffs := make([]data.BigMapUpdate, len(body))
 	for i := range body {
-		diffs[i] = api.BigMapUpdate{
+		diffs[i] = data.BigMapUpdate{
 			ID:        body[i].ID,
 			Level:     body[i].Level,
 			Timestamp: body[i].Timestamp,
 			Bigmap:    body[i].Bigmap,
-			Contract:  api.Address(body[i].Contract),
+			Contract:  body[i].Contract,
 			Path:      body[i].Path,
 			Action:    body[i].Action,
 		}
 
 		if body[i].Content != nil {
-			diffs[i].Content = &api.BigMapUpdateContent{
+			diffs[i].Content = &data.BigMapUpdateContent{
 				Hash:  body[i].Content.Hash,
 				Key:   body[i].Content.Key,
 				Value: body[i].Content.Value,

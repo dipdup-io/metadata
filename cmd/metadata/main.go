@@ -13,8 +13,8 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
 
-	"github.com/dipdup-net/go-lib/cmdline"
 	golibConfig "github.com/dipdup-net/go-lib/config"
 	"github.com/dipdup-net/go-lib/hasura"
 	"github.com/dipdup-net/metadata/cmd/metadata/config"
@@ -28,18 +28,30 @@ type startResult struct {
 	indexer *Indexer
 }
 
+var (
+	rootCmd = &cobra.Command{
+		Use:   "metadata",
+		Short: "DipDup metadata indexer",
+	}
+)
+
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out:        os.Stderr,
 		TimeFormat: "2006-01-02 15:04:05",
 	}).Level(zerolog.InfoLevel)
 
-	args := cmdline.Parse()
-	if args.Help {
+	configPath := rootCmd.PersistentFlags().StringP("config", "c", "dipdup.yml", "path to YAML config file")
+	if err := rootCmd.Execute(); err != nil {
+		log.Panic().Err(err).Msg("command line execute")
+		return
+	}
+	if err := rootCmd.MarkFlagRequired("config"); err != nil {
+		log.Panic().Err(err).Msg("config command line arg is required")
 		return
 	}
 
-	cfg, err := config.Load(args.Config)
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Err(err).Msg("")
 		return
