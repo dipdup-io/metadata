@@ -187,8 +187,8 @@ func createRepository(dir string, blacklist []string) (string, error) {
 	}
 
 	cfg.Swarm.DisableBandwidthMetrics = true
-	cfg.Swarm.ConnMgr.HighWater = 10
-	cfg.Swarm.ConnMgr.LowWater = 1
+	// cfg.Swarm.ConnMgr.HighWater = 10
+	// cfg.Swarm.ConnMgr.LowWater = 1
 	cfg.Swarm.Transports.Network.Relay = config.False
 	cfg.Swarm.Transports.Network.QUIC = config.False
 	cfg.Swarm.AddrFilters = blacklist

@@ -238,18 +238,16 @@ func (indexer *Indexer) listen(ctx context.Context) {
 		case msg := <-indexer.scanner.BigMaps():
 			if err := indexer.handlerUpdate(ctx, msg); err != nil {
 				log.Err(err).Msg("handlerUpdate")
-			} else {
-				indexer.log().Msg("New level")
 			}
 		case block := <-indexer.scanner.Blocks():
-			if block.Level > indexer.state.Level {
+			if block.Level > indexer.state.Level+1 {
 				indexer.state.Level = block.Level
 				indexer.state.Hash = block.Hash
 				indexer.state.Timestamp = block.Timestamp.UTC()
 				if err := indexer.db.UpdateState(indexer.state); err != nil {
 					log.Err(err).Msg("UpdateState")
 				} else {
-					indexer.log().Msg("New level")
+					indexer.log().Msg("new block received")
 				}
 			}
 
