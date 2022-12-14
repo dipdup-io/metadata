@@ -78,6 +78,9 @@ func (s Http) Resolve(ctx context.Context, network, address, link string) ([]byt
 
 	resp, err := s.client.Do(req)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil, err
+		}
 		return nil, newResolvingError(0, ErrorTypeReceiving, errors.Wrap(ErrHTTPRequest, err.Error()))
 	}
 	defer resp.Body.Close()

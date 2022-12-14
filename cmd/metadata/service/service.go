@@ -7,6 +7,7 @@ import (
 
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/prometheus"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -24,7 +25,7 @@ type Service[T models.Model] struct {
 	tasks         chan T
 	result        chan T
 	queue         *Queue
-	wg            sync.WaitGroup
+	wg            *sync.WaitGroup
 }
 
 // NewService -
@@ -39,6 +40,7 @@ func NewService[T models.Model](repo models.ModelRepository[T], handler func(con
 		network:       network,
 		queue:         NewQueue(),
 		delay:         10,
+		wg:            new(sync.WaitGroup),
 	}
 
 	for i := range opts {
@@ -97,7 +99,9 @@ func (s *Service[T]) manager(ctx context.Context) {
 			}
 			data, err := s.repo.Get(s.network, models.StatusNew, 200, 0, s.maxRetryCount, s.delay)
 			if err != nil {
-				log.Err(err).Msg("repo.Get")
+				if !errors.Is(err, context.Canceled) {
+					log.Err(err).Msg("repo.Get")
+				}
 				continue
 			}
 
@@ -192,6 +196,9 @@ func (s *Service[T]) worker(ctx context.Context) {
 			defer cancel()
 
 			if err := s.handler(resolveCtx, unresolved); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return
+				}
 				log.Err(err).Msg("resolve")
 			}
 

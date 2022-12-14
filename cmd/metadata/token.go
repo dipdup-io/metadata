@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 
 	api "github.com/dipdup-net/go-lib/tzkt/data"
@@ -113,29 +114,24 @@ func (indexer *Indexer) processTokenMetadata(update api.BigMapUpdate) (*models.T
 	return &token, nil
 }
 
-func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str, level string) {
-	entry := indexer.log().Str("contract", tm.Contract).Str("token_id", tm.TokenID.String()).Str("link", tm.Link)
-	switch level {
-	case "info":
-		entry.Msg(str)
-	case "warn":
-		entry.Msg(str)
-	case "error":
-		entry.Msg(str)
-	}
+func (indexer *Indexer) logTokenMetadata(tm models.TokenMetadata, str string) {
+	indexer.log().Str("contract", tm.Contract).Str("token_id", tm.TokenID.String()).Str("link", tm.Link).Msg(str)
 }
 
 func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.TokenMetadata) error {
 	if _, ok := legacyContracts[tm.Contract]; ok {
-		indexer.logTokenMetadata(*tm, "readonly legacy metadata", "info")
+		indexer.logTokenMetadata(*tm, "readonly legacy metadata")
 		return nil
 	}
 
-	indexer.logTokenMetadata(*tm, "trying to resolve", "info")
+	indexer.logTokenMetadata(*tm, "trying to resolve")
 	tm.RetryCount += 1
 
 	resolved, err := indexer.resolver.Resolve(ctx, tm.Network, tm.Contract, tm.Link)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return err
+		}
 		tm.Error = err.Error()
 		if e, ok := err.(resolver.ResolvingError); ok {
 			indexer.prom.IncrementErrorCounter(indexer.network, e)
@@ -147,10 +143,10 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 		}
 
 		if tm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {
-			indexer.logTokenMetadata(*tm, fmt.Sprintf("retry: %s", err.Error()), "warn")
+			indexer.logTokenMetadata(*tm, fmt.Sprintf("retry: %s", err.Error()))
 		} else {
 			tm.Status = models.StatusFailed
-			indexer.logTokenMetadata(*tm, "failed", "warn")
+			indexer.logTokenMetadata(*tm, "failed")
 		}
 	} else {
 		if utf8.Valid(resolved.Data) {

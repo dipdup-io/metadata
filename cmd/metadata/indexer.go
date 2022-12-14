@@ -43,7 +43,7 @@ type Indexer struct {
 	settings  config.Settings
 	filters   config.Filters
 
-	wg sync.WaitGroup
+	wg *sync.WaitGroup
 }
 
 // NewIndexer -
@@ -73,6 +73,7 @@ func NewIndexer(ctx context.Context, network string, indexerConfig *config.Index
 		db:        db,
 		prom:      prom,
 		filters:   filters,
+		wg:        new(sync.WaitGroup),
 	}
 
 	if aws := storage.NewAWS(settings.AWS); aws != nil {
@@ -154,6 +155,7 @@ func (indexer *Indexer) Start(ctx context.Context) error {
 
 // Close -
 func (indexer *Indexer) Close() error {
+	indexer.log().Msg("closing indexer...")
 	indexer.wg.Wait()
 
 	if err := indexer.scanner.Close(); err != nil {
@@ -178,6 +180,7 @@ func (indexer *Indexer) Close() error {
 		return err
 	}
 
+	indexer.log().Msg("indexer is closed")
 	return nil
 }
 
@@ -239,7 +242,7 @@ func (indexer *Indexer) listen(ctx context.Context) {
 				indexer.log().Msg("New level")
 			}
 		case block := <-indexer.scanner.Blocks():
-			if block.Level-indexer.state.Level > 1 {
+			if block.Level > indexer.state.Level {
 				indexer.state.Level = block.Level
 				indexer.state.Hash = block.Hash
 				indexer.state.Timestamp = block.Timestamp.UTC()

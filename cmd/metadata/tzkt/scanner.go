@@ -29,10 +29,9 @@ type Scanner struct {
 	msg       Message
 	contracts []string
 
-	diffs    chan Message
-	blocks   chan data.Block
-	wg       sync.WaitGroup
-	initOnce sync.Once
+	diffs  chan Message
+	blocks chan data.Block
+	wg     *sync.WaitGroup
 }
 
 // New -
@@ -50,6 +49,7 @@ func New(cfg config.DataSource, contracts ...string) (*Scanner, error) {
 		contracts: contracts,
 		diffs:     make(chan Message, 1024),
 		blocks:    make(chan data.Block, 10),
+		wg:        new(sync.WaitGroup),
 	}, nil
 }
 
@@ -59,21 +59,18 @@ func (scanner *Scanner) Start(ctx context.Context, startLevel, endLevel uint64) 
 		return
 	}
 
-	scanner.initOnce.Do(func() {
-		scanner.wg.Add(1)
-		go scanner.synchronization(ctx, startLevel, endLevel)
-	})
-
+	scanner.wg.Add(1)
+	go scanner.synchronization(ctx, startLevel, endLevel)
 }
 
 func (scanner *Scanner) start(ctx context.Context) {
 	if err := scanner.client.Connect(ctx); err != nil {
-		log.Err(err).Msg("")
+		log.Err(err).Msg("Connect")
 		return
 	}
 
 	if err := scanner.subscribe(); err != nil {
-		log.Err(err).Msg("")
+		log.Err(err).Msg("subscribe")
 		return
 	}
 
@@ -86,7 +83,7 @@ func (scanner *Scanner) synchronization(ctx context.Context, startLevel, endLeve
 
 	head, err := scanner.api.GetHead(ctx)
 	if err != nil {
-		log.Err(err).Msg("")
+		log.Err(err).Msg("GetHead")
 		return
 	}
 	log.Info().Msgf("Current TzKT head is %d. Indexer state is %d.", head.Level, startLevel)
@@ -108,14 +105,12 @@ func (scanner *Scanner) synchronization(ctx context.Context, startLevel, endLeve
 			}
 
 			if err := scanner.sync(ctx, head.Level); err != nil {
-				log.Err(err).Msg("")
-				return
+				log.Err(err).Msg("sync")
 			}
 
 			head, err = scanner.api.GetHead(ctx)
 			if err != nil {
-				log.Err(err).Msg("")
-				return
+				log.Err(err).Msg("GetHead")
 			}
 		}
 	}
@@ -176,23 +171,16 @@ func (scanner *Scanner) listen(ctx context.Context) {
 		case msg := <-scanner.client.Listen():
 			switch msg.Type {
 			case events.MessageTypeState:
-				if scanner.level < msg.State {
-					if err := scanner.client.Close(); err != nil {
-						log.Err(err).Msg("scanner.client.Close")
-					}
-					scanner.synchronization(ctx, scanner.level, 0)
-					return
-				}
 
 			case events.MessageTypeData:
 				switch msg.Channel {
 				case events.ChannelBlocks:
 					if err := scanner.handleBlocks(msg); err != nil {
-						log.Err(err).Msg("")
+						log.Err(err).Msg("handleBlocks")
 					}
 				case events.ChannelBigMap:
 					if err := scanner.handleBigMaps(msg); err != nil {
-						log.Err(err).Msg("")
+						log.Err(err).Msg("handleBigMaps")
 					}
 				default:
 					log.Error().Msgf("Unknown channel %s", msg.Channel)
@@ -207,7 +195,7 @@ func (scanner *Scanner) sync(ctx context.Context, headLevel uint64) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		default:
 			if headLevel <= scanner.level {
 				if scanner.msg.Level > 0 {

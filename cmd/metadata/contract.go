@@ -9,6 +9,7 @@ import (
 	"github.com/dipdup-net/metadata/cmd/metadata/helpers"
 	"github.com/dipdup-net/metadata/cmd/metadata/models"
 	"github.com/dipdup-net/metadata/cmd/metadata/resolver"
+	"github.com/pkg/errors"
 )
 
 func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*models.ContractMetadata, error) {
@@ -32,24 +33,19 @@ func (indexer *Indexer) processContractMetadata(update api.BigMapUpdate) (*model
 	}, nil
 }
 
-func (indexer *Indexer) logContractMetadata(cm models.ContractMetadata, str, level string) {
-	entry := indexer.log().Str("contract", cm.Contract).Str("link", cm.Link)
-	switch level {
-	case "info":
-		entry.Msg(str)
-	case "warn":
-		entry.Msg(str)
-	case "error":
-		entry.Msg(str)
-	}
+func (indexer *Indexer) logContractMetadata(cm models.ContractMetadata, str string) {
+	indexer.log().Str("contract", cm.Contract).Str("link", cm.Link).Msg(str)
 }
 
 func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.ContractMetadata) error {
-	indexer.logContractMetadata(*cm, "Trying to resolve", "info")
+	indexer.logContractMetadata(*cm, "trying to resolve")
 	cm.RetryCount += 1
 
 	resolved, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return err
+		}
 		cm.Error = err.Error()
 		if e, ok := err.(resolver.ResolvingError); ok {
 			indexer.prom.IncrementErrorCounter(indexer.network, e)
@@ -57,10 +53,10 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 		}
 
 		if cm.RetryCount < int8(indexer.settings.MaxRetryCountOnError) {
-			indexer.logContractMetadata(*cm, fmt.Sprintf("Retry: %s", err.Error()), "warn")
+			indexer.logContractMetadata(*cm, fmt.Sprintf("retry: %s", err.Error()))
 		} else {
 			cm.Status = models.StatusFailed
-			indexer.logContractMetadata(*cm, "Failed", "warn")
+			indexer.logContractMetadata(*cm, "failed")
 		}
 	} else {
 		cm.Metadata = resolved.Data

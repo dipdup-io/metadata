@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -83,6 +84,9 @@ func (s Ipfs) Resolve(ctx context.Context, network, address, link string) (ipfs.
 
 	data, err := s.pool.GetFromRandomGateway(requestCtx, link)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return data, err
+		}
 		if s.fallback == "" {
 			return data, newResolvingError(0, ErrorTypeHttpRequest, err)
 		}

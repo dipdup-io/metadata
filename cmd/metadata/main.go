@@ -105,7 +105,7 @@ func main() {
 		go func(network string, ind *config.Indexer) {
 			result, err := startIndexer(ctx, cfg, *ind, network, prometheusService, ipfsNode, views, custom_configs, &hasuraInit)
 			if err != nil {
-				log.Err(err).Msg("")
+				log.Err(err).Str("network", network).Msg("startIndexer")
 			} else {
 				indexers.Store(network, result.indexer)
 				indexerCancels.Store(network, result.cancel)
@@ -122,7 +122,7 @@ func main() {
 				case <-ticker.C:
 					result, err := startIndexer(ctx, cfg, *ind, network, prometheusService, ipfsNode, views, custom_configs, &hasuraInit)
 					if err != nil {
-						log.Err(err).Msg("")
+						log.Err(err).Str("network", network).Msg("startIndexer")
 					} else {
 						indexers.Store(network, result.indexer)
 						indexerCancels.Store(network, result.cancel)
