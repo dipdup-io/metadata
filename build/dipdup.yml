@@ -47,9 +47,6 @@ metadata:
     mainnet:
       datasources:
         tzkt: tzkt_mainnet
-    kathmandunet:
-      datasources:
-        tzkt: tzkt_kathmandunet
     ghostnet:
       datasources:
         tzkt: tzkt_ghostnet
@@ -80,10 +77,6 @@ prometheus:
 datasources:
   tzkt_mainnet:
     url: https://api.tzkt.io
-    kind: tzkt
-    timeout: 10  
-  tzkt_kathmandunet:
-    url: https://api.kathmandunet.tzkt.io
     kind: tzkt
     timeout: 10
   tzkt_ghostnet:
