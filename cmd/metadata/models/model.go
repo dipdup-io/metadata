@@ -15,11 +15,6 @@ type ModelRepository[T Model] interface {
 // Model -
 type Model interface {
 	GetStatus() Status
-	GetRetryCount() int8
 	GetID() uint64
-	GetLink() string
 	TableName() string
-	IncrementRetryCount()
-	SetMetadata(data JSONB)
-	SetStatus(status Status)
 }

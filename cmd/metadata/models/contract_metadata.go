@@ -40,34 +40,9 @@ func (cm *ContractMetadata) GetStatus() Status {
 	return cm.Status
 }
 
-// GetRetryCount -
-func (cm *ContractMetadata) GetRetryCount() int8 {
-	return cm.RetryCount
-}
-
 // GetID -
 func (cm *ContractMetadata) GetID() uint64 {
 	return cm.ID
-}
-
-// GetLink -
-func (cm *ContractMetadata) GetLink() string {
-	return cm.Link
-}
-
-// IncrementRetryCount -
-func (cm *ContractMetadata) IncrementRetryCount() {
-	cm.RetryCount += 1
-}
-
-// SetMetadata -
-func (cm *ContractMetadata) SetMetadata(data JSONB) {
-	cm.Metadata = data
-}
-
-// SetStatus -
-func (cm *ContractMetadata) SetStatus(status Status) {
-	cm.Status = status
 }
 
 // BeforeInsert -
@@ -164,7 +139,7 @@ func (contracts *Contracts) Save(metadata []*ContractMetadata) error {
 
 	_, err := contracts.db.DB().Model(&savings).
 		OnConflict("(network, contract) DO UPDATE").
-		Set("metadata = excluded.metadata, link = excluded.link, updated_at = excluded.updated_at, update_id = excluded.update_id, status = excluded.status").
+		Set("metadata = excluded.metadata, link = excluded.link, updated_at = excluded.updated_at, update_id = excluded.update_id, status = excluded.status, retry_count = excluded.retry_count").
 		Insert()
 	return err
 }

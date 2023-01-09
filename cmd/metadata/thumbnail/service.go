@@ -39,7 +39,7 @@ type Service struct {
 	network      string
 	workersCount int
 	tasks        chan models.TokenMetadata
-	wg           sync.WaitGroup
+	wg           *sync.WaitGroup
 }
 
 // New -
@@ -56,6 +56,7 @@ func New(storage storage.Storage, db *models.Tokens, network string, gateways []
 		timeout:       time.Second * 10,
 		workersCount:  10,
 		tasks:         make(chan models.TokenMetadata, 512),
+		wg:            new(sync.WaitGroup),
 	}
 
 	for i := range opts {

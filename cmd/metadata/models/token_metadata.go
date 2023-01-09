@@ -44,34 +44,9 @@ func (tm TokenMetadata) GetStatus() Status {
 	return tm.Status
 }
 
-// GetRetryCount -
-func (tm TokenMetadata) GetRetryCount() int8 {
-	return tm.RetryCount
-}
-
 // GetID -
 func (tm TokenMetadata) GetID() uint64 {
 	return tm.ID
-}
-
-// GetLink -
-func (tm TokenMetadata) GetLink() string {
-	return tm.Link
-}
-
-// IncrementRetryCount -
-func (tm *TokenMetadata) IncrementRetryCount() {
-	tm.RetryCount += 1
-}
-
-// SetMetadata -
-func (tm *TokenMetadata) SetMetadata(data JSONB) {
-	tm.Metadata = data
-}
-
-// SetStatus -
-func (tm *TokenMetadata) SetStatus(status Status) {
-	tm.Status = status
 }
 
 // BeforeInsert -
@@ -185,7 +160,7 @@ func (tokens *Tokens) Save(metadata []*TokenMetadata) error {
 
 	_, err := tokens.db.DB().Model(&savings).
 		OnConflict("(network, contract, token_id) DO UPDATE").
-		Set("metadata = excluded.metadata, link = excluded.link, updated_at = excluded.updated_at, update_id = excluded.update_id, status = excluded.status").
+		Set("metadata = excluded.metadata, link = excluded.link, updated_at = excluded.updated_at, update_id = excluded.update_id, status = excluded.status, retry_count = excluded.retry_count").
 		Insert()
 	return err
 }
