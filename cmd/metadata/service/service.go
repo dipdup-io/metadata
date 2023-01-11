@@ -219,7 +219,7 @@ func (s *Service[T]) lastHope(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := s.repo.Retry(s.network, s.maxRetryCount, time.Hour/time.Second); err != nil {
+			if err := s.repo.Retry(s.network, s.maxRetryCount, 3*time.Hour/time.Second); err != nil {
 				log.Err(err).Msg("repo.Retry")
 				continue
 			}
