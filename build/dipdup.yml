@@ -31,7 +31,7 @@ metadata:
         - https://cf-ipfs.com
       timeout: ${IPFS_TIMEOUT:-10}
       fallback: ${IPFS_NODE_URI}
-      delay: 10
+      delay: ${IPFS_DELAY:-10}
     http_timeout: 5
     max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
     contract_service_workers: 15

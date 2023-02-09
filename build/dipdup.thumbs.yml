@@ -30,7 +30,7 @@ metadata:
       bootstrap:
         - /dnsaddr/ipfs.infura.io/tcp/5001/https
       timeout: 10
-      delay: 10
+      delay: ${IPFS_DELAY:-10}
 
     http_timeout: 10
     max_retry_count_on_error: 3
