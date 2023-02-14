@@ -84,12 +84,14 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		"/ip4/145.40.67.73/tcp/4001/p2p/12D3KooWBszbJcQut3gW8CYPNgXsECiiRCMGm17xUb4Lr2iKQZEh",
 		"/ip4/139.178.88.103/tcp/4001/p2p/12D3KooWQzwTxWF82GkjCCvU8RR55FjfTtoUTPYLJtJUPsHEN1VS",
 		"/ip4/147.75.108.229/tcp/4001/p2p/12D3KooWHXKaRAKgQbPNqgpJwojmcHUajSFnQvHdKjPRbVHRhobC",
-		"/ip4/145.40.82.171/tcp/4001/p2p/12D3KooWMoAAVDbwuZc8oKALPJc9QDEe95V394fzKsEouB5DNG8T",
 		"/ip4/139.178.68.73/tcp/4001/p2p/12D3KooWK2q1YYRBchmyAyyfLhKjvXMvYByt2zn6pbM3yA8Z2DJZ",
 		"/ip4/147.75.108.191/tcp/4001/p2p/12D3KooWLSMVRxtFrRWofS6MjysgWnPh7iiFEGYeEAeBQceNrf4G",
 		"/ip4/147.75.108.145/tcp/4001/p2p/12D3KooWQYb2nGCfqq4krBSZFRiFwjwZ8fjxsVpeMeGZoCJHR8Ch",
 		"/ip4/139.178.94.209/tcp/4001/p2p/12D3KooWRZaQi1FWj7K1QBEMfzuvndS2gHPhT27yiwJHanEeuvBa",
 		"/ip4/139.178.88.53/tcp/4001/p2p/12D3KooWBKx6Neuxph5yedV1F3YD6Cxd1eqGib6xUzT7BjdeaAao",
+		"/ip4/104.248.44.204/tcp/4001/p2p/QmWaik1eJcGHq1ybTWe7sezRfqKNcDRNkeBaLnGwQJz1Cj",
+		"/ip4/167.71.55.120/tcp/4001/p2p/QmNfpLrQQZr5Ns9FAJKpyzgnDL2GgC6xBug1yUZozKFgu4",
+		"/ip4/64.225.105.42/tcp/4001/p2p/QmPo1ygpngghu5it8u4Mr3ym6SEU2Wp2wA66Z91Y1S1g29",
 	}
 
 	if len(bootstrap) > 0 {
@@ -178,6 +180,7 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 	var wg sync.WaitGroup
 	peerInfos := make(map[peer.ID]*peer.AddrInfo)
 	for _, addrStr := range peers {
+
 		addr, err := ma.NewMultiaddr(addrStr)
 		if err != nil {
 			return err
