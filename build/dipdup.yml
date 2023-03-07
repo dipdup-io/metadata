@@ -53,6 +53,9 @@ metadata:
     limanet:
       datasources:
         tzkt: tzkt_limanet
+    mumbainet:
+      datasources:
+        tzkt: tzkt_mumbainet
 
 
 database:
@@ -85,5 +88,9 @@ datasources:
     timeout: 10
   tzkt_limanet:
     url: https://api.limanet.tzkt.io
+    kind: tzkt
+    timeout: 10
+  tzkt_mumbainet:
+    url: https://api.mumbainet.tzkt.io
     kind: tzkt
     timeout: 10
