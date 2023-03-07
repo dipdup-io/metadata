@@ -11,3 +11,4 @@ linters:
     - ineffassign
     - containedctx
     - tenv
+    - musttag
