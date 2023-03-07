@@ -28,10 +28,6 @@ func (msg Message) copy() Message {
 	message := newMessage()
 	message.Type = msg.Type
 	message.Level = msg.Level
-
-	for i := range msg.Body {
-		message.Body = append(message.Body, msg.Body[i])
-	}
-
+	message.Body = append(message.Body, msg.Body...)
 	return message
 }

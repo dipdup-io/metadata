@@ -20,7 +20,7 @@ metadata:
 	cd cmd/metadata && go run . -c ../../build/dipdup.yml
 
 lint:
-	golangci-lint run --go=1.18
+	golangci-lint run
 
 test:
 	go test ./...
