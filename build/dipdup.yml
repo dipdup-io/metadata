@@ -53,9 +53,9 @@ metadata:
     limanet:
       datasources:
         tzkt: tzkt_limanet
-    # mumbainet:
-    #   datasources:
-    #     tzkt: tzkt_mumbainet
+    mumbainet:
+      datasources:
+        tzkt: tzkt_mumbainet
 
 
 database:
