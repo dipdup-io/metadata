@@ -61,7 +61,11 @@ hasura:
   select_limit: 10000
   allow_aggregation: false
   rest: true
-  add_source: true
+  source:
+    name: default
+    database_host: ${HASURA_POSTGRES_HOST}
+    use_prepared_statements: true
+    isolation_level: read-committed
 
 prometheus:
   url: ${EXPORT_HOST:-0.0.0.0}:2112
