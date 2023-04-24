@@ -12,6 +12,7 @@ tables:
       - status
       - retry_count
       - metadata
+      - error
 
   -
     name: token_metadata
@@ -28,3 +29,4 @@ tables:
       - retry_count
       - status
       - image_processed
+      - error
