@@ -3,6 +3,7 @@ version: "3.6"
 services:
   indexer:
     image: dipdup/metadata:latest
+    command: "-c dipdup.yml"
     build:
       dockerfile: build/metadata/Dockerfile
       context: .

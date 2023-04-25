@@ -1,0 +1,32 @@
+tables:
+  -
+    name: contract_metadata
+    columns:
+      - id
+      - created_at
+      - updated_at
+      - update_id
+      - network
+      - contract
+      - link
+      - status
+      - retry_count
+      - metadata
+      - error
+
+  -
+    name: token_metadata
+    columns:
+      - id
+      - created_at
+      - updated_at
+      - update_id
+      - token_id
+      - network
+      - contract
+      - link
+      - metadata
+      - retry_count
+      - status
+      - image_processed
+      - error
