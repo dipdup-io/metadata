@@ -50,9 +50,6 @@ metadata:
     ghostnet:
       datasources:
         tzkt: tzkt_ghostnet
-    limanet:
-      datasources:
-        tzkt: tzkt_limanet
     mumbainet:
       datasources:
         tzkt: tzkt_mumbainet
@@ -88,10 +85,6 @@ datasources:
     timeout: 10
   tzkt_ghostnet:
     url: https://api.ghostnet.tzkt.io
-    kind: tzkt
-    timeout: 10
-  tzkt_limanet:
-    url: https://api.limanet.tzkt.io
     kind: tzkt
     timeout: 10
   tzkt_mumbainet:
