@@ -9,17 +9,17 @@ import (
 	"sync"
 	"time"
 
-	files "github.com/ipfs/go-ipfs-files"
-	icore "github.com/ipfs/interface-go-ipfs-core"
-	icorepath "github.com/ipfs/interface-go-ipfs-core/path"
-	config "github.com/ipfs/kubo/config"
-	"github.com/ipfs/kubo/plugin/loader"
+	icore "github.com/ipfs/boxo/coreiface"
+	icorepath "github.com/ipfs/boxo/coreiface/path"
+	"github.com/ipfs/boxo/files"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ipfs/kubo/config"
 	"github.com/ipfs/kubo/core"
-	"github.com/ipfs/kubo/core/coreapi" // This package is needed so that all the preloaded plugins are loaded automatically
+	"github.com/ipfs/kubo/core/coreapi"
+	"github.com/ipfs/kubo/plugin/loader" // This package is needed so that all the preloaded plugins are loaded automatically
 	"github.com/ipfs/kubo/repo/fsrepo"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
