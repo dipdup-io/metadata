@@ -204,7 +204,7 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 			defer wg.Done()
 			log.Info().Str("peer", peerInfo.ID.String()).Msg("connecting...")
 
-			connectCtx, cancel := context.WithTimeout(ctx, time.Second*20)
+			connectCtx, cancel := context.WithTimeout(ctx, time.Second*30)
 			defer cancel()
 			err := ipfs.Swarm().Connect(connectCtx, *peerInfo)
 			if err != nil {
