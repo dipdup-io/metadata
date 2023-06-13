@@ -19,6 +19,7 @@ import (
 	"github.com/ipfs/kubo/config"
 	"github.com/ipfs/kubo/core"
 	"github.com/ipfs/kubo/core/coreapi"
+	"github.com/ipfs/kubo/core/node/libp2p"
 	"github.com/ipfs/kubo/plugin/loader" // This package is needed so that all the preloaded plugins are loaded automatically
 	"github.com/ipfs/kubo/repo/fsrepo"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -165,9 +166,9 @@ func spawn(ctx context.Context, dir string, blacklist []string) (icore.CoreAPI, 
 	}
 
 	node, err := core.NewNode(ctx, &core.BuildCfg{
-		Online: true,
-		// Routing: libp2p.DHTOption,
-		Repo: r,
+		Online:  true,
+		Routing: libp2p.DHTClientOption,
+		Repo:    r,
 	})
 	if err != nil {
 		return nil, nil, err
