@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/dipdup-net/go-lib/config"
+	"github.com/dipdup-net/metadata/internal/ipfs"
 	"github.com/pkg/errors"
 )
 
@@ -119,11 +120,12 @@ type Thumbnail struct {
 
 // IPFS -
 type IPFS struct {
-	Dir       string   `yaml:"dir"`
-	Bootstrap []string `yaml:"bootstrap"`
-	Gateways  []string `yaml:"gateways" validate:"min=1,dive,url"`
-	Blacklist []string `yaml:"blacklist"`
-	Timeout   uint64   `yaml:"timeout" validate:"min=1"`
-	Fallback  string   `yaml:"fallback" validate:"url"`
-	Delay     int      `yaml:"delay" validate:"min=1"`
+	Dir       string          `yaml:"dir"`
+	Bootstrap []string        `yaml:"bootstrap"`
+	Gateways  []string        `yaml:"gateways" validate:"min=1,dive,url"`
+	Blacklist []string        `yaml:"blacklist"`
+	Timeout   uint64          `yaml:"timeout" validate:"min=1"`
+	Fallback  string          `yaml:"fallback" validate:"url"`
+	Delay     int             `yaml:"delay" validate:"min=1"`
+	Providers []ipfs.Provider `yaml:"providers" validate:"omitempty"`
 }
