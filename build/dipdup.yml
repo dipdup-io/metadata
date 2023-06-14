@@ -78,6 +78,27 @@ metadata:
         # web3 storage
         - id: bafzbeibhqavlasjc7dvbiopygwncnrtvjd2xmryk5laib7zyjor6kf3avm
           addr: /dns4/elastic.dag.house
+        # European EPC Competence Center
+        - id: 12D3KooWGaHbxpDWn4JVYud899Wcpa4iHPa3AMYydfxQDb3MhDME
+          addr: /dnsaddr/ipfs.ssi.eecc.de
+        # Estuary
+        - id: 12D3KooWCVXs8P7iq6ao4XhfAmKWrEeuKFWCJgqe9jGDMTqHYBjw
+          addr: /ip4/139.178.68.217/tcp/6744
+        - id: 12D3KooWGBWx9gyUFTVQcKMTenQMSyE2ad9m7c9fpjS4NMjoDien
+          addr: /ip4/147.75.49.71/tcp/6745
+        - id: 12D3KooWFrnuj5o3tx4fGD2ZVJRyDqTdzGnU3XYXmBbWbc8Hs8Nd
+          addr: /ip4/147.75.86.255/tcp/6745
+        # Textile
+        - id: QmR69wtWUMm1TWnmuD4JqC1TWLZcc8iR2KrTenfZZbiztd
+          addr: /ip4/104.210.43.77
+        # 8api.sh
+        - id: 12D3KooWGASC2jm3pmohEJXUhuStkxDitPgzvs4qMuFPaiD9x1BA
+          addr: /ip4/78.46.108.24
+        - id: 12D3KooWRbWZN3GvLf9CHmozq4vnTzDD4EEoiqtRJxg5FV6Gfjmm
+          addr: /ip4/65.109.19.136
+        # 4EVERLAND
+        - id: 12D3KooWQ85aSCFwFkByr5e3pUCQeuheVhobVxGSSs1DrRQHGv1t
+          addr: /dnsaddr/node-1.ipfs.4everland.net
     http_timeout: 5
     max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
     contract_service_workers: 15
