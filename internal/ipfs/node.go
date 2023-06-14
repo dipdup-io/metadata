@@ -213,12 +213,18 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 					Msgf("failed to connect: %s", err)
 				return
 			}
-			log.Info().
-				Str("peer", peerInfo.ID.String()).
-				Msg("connected")
 		}(peerInfo)
 	}
 	wg.Wait()
+
+	connected, err := ipfs.Swarm().Peers(ctx)
+	if err != nil {
+		log.Warn().Msg("can't get perrs")
+		return nil
+	}
+	for i := range connected {
+		log.Info().Str("peer_id", connected[i].ID().String()).Str("address", connected[i].Address().String()).Msg("connected to peer")
+	}
 	return nil
 }
 
