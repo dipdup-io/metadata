@@ -2,11 +2,11 @@ package resolver
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
 	"github.com/dipdup-net/metadata/internal/ipfs"
+	"github.com/pkg/errors"
 
 	shell "github.com/ipfs/go-ipfs-api"
 )
@@ -96,6 +96,9 @@ func (s Ipfs) Resolve(ctx context.Context, network, address, link string) (ipfs.
 
 		data, err = s.pool.GetFromNode(requestCtx, link, s.fallback)
 		if err != nil {
+			if errors.Is(err, ipfs.ErrInvalidCID) {
+				return data, newResolvingError(0, ErrorTypeReceiving, errors.Wrap(ErrInvalidURI, err.Error()))
+			}
 			return data, err
 		}
 	}

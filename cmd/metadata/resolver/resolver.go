@@ -37,6 +37,7 @@ const (
 	ErrorTypeTezosURIParsing ErrorType = "tezos_uri_parsing"
 	ErrorTypeInvalidJSON     ErrorType = "invalid_json"
 	ErrorInvalidHTTPURI      ErrorType = "invalid_http_uri"
+	ErrorInvalidCID          ErrorType = "invalid_ipfs_cid"
 )
 
 // ResolvingError -
@@ -103,6 +104,9 @@ func (r Receiver) Resolve(ctx context.Context, network, address, link string) (r
 		resolved.By = ResolverTypeIPFS
 		data, err := r.ipfs.Resolve(ctx, network, address, link)
 		if err != nil {
+			if errors.Is(err, ipfs.ErrInvalidCID) {
+				return resolved, newResolvingError(0, ErrorInvalidCID, err)
+			}
 			return resolved, err
 		}
 		resolved.Data = data.Raw

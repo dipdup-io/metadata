@@ -75,7 +75,7 @@ func (n *Node) Close() error {
 func (n *Node) Get(ctx context.Context, cid string) (Data, error) {
 	cidObj := icorepath.New(cid)
 	if err := cidObj.IsValid(); err != nil {
-		return Data{}, errors.Wrapf(err, "invalid CID: %s", cid)
+		return Data{}, errors.Wrapf(ErrInvalidCID, cid)
 	}
 
 	start := time.Now()
