@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/ipfs/go-cid"
 	"github.com/pkg/errors"
@@ -59,7 +58,6 @@ func ShuffleGateways(gateways []string) []string {
 
 	shuffled := make([]string, len(gateways))
 	copy(shuffled, gateways)
-	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
 	return shuffled
 }

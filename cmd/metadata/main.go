@@ -86,7 +86,7 @@ func main() {
 		return
 	}
 
-	ipfsNode, err := ipfs.NewNode(ctx, cfg.Metadata.Settings.IPFS.Dir, 1024*1024, cfg.Metadata.Settings.IPFS.Blacklist)
+	ipfsNode, err := ipfs.NewNode(ctx, cfg.Metadata.Settings.IPFS.Dir, 1024*1024, cfg.Metadata.Settings.IPFS.Blacklist, cfg.Metadata.Settings.IPFS.Providers)
 	if err != nil {
 		log.Err(err).Msg("ipfs.NewNode")
 		return
