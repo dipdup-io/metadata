@@ -1,0 +1,147 @@
+version: 0.0.1
+
+metadata:
+  settings:
+    ipfs:
+      dir: /etc/metadata/ipfs
+      bootstrap:
+        - /dnsaddr/ipfs.infura.io/tcp/5001/https
+      blacklist:
+        - /ip4/10.0.0.0/ipcidr/8
+        - /ip4/100.64.0.0/ipcidr/10
+        - /ip4/169.254.0.0/ipcidr/16
+        - /ip4/172.16.0.0/ipcidr/12
+        - /ip4/192.0.0.0/ipcidr/24
+        - /ip4/192.0.2.0/ipcidr/24
+        - /ip4/192.168.0.0/ipcidr/16
+        - /ip4/198.18.0.0/ipcidr/15
+        - /ip4/198.51.100.0/ipcidr/24
+        - /ip4/203.0.113.0/ipcidr/24
+        - /ip4/240.0.0.0/ipcidr/4
+        - /ip6/100::/ipcidr/64
+        - /ip6/2001:2::/ipcidr/48
+        - /ip6/2001:db8::/ipcidr/32
+        - /ip6/fc00::/ipcidr/7
+        - /ip6/fe80::/ipcidr/10
+      gateways:
+        - https://ipfs.infura.io
+        - https://dweb.link
+        - https://ipfs.io
+        - https://ipfs.teia.rocks
+        - https://cf-ipfs.com
+      timeout: ${IPFS_TIMEOUT:-10}
+      fallback: ${IPFS_NODE_URI}
+      delay: ${IPFS_DELAY:-10}
+      providers:
+        # Pinata
+        - id: QmWaik1eJcGHq1ybTWe7sezRfqKNcDRNkeBaLnGwQJz1Cj
+          addr: /dnsaddr/fra1-1.hostnodes.pinata.cloud
+        - id: QmNfpLrQQZr5Ns9FAJKpyzgnDL2GgC6xBug1yUZozKFgu4
+          addr: /dnsaddr/fra1-2.hostnodes.pinata.cloud
+        - id: QmPo1ygpngghu5it8u4Mr3ym6SEU2Wp2wA66Z91Y1S1g29
+          addr: /dnsaddr/fra1-3.hostnodes.pinata.cloud
+        - id: QmRjLSisUCHVpFa5ELVvX3qVPfdxajxWJEHs9kN3EcxAW6
+          addr: /dnsaddr/nyc1-1.hostnodes.pinata.cloud
+        - id: QmPySsdmbczdZYBpbi2oq2WMJ8ErbfxtkG8Mo192UHkfGP
+          addr: /dnsaddr/nyc1-2.hostnodes.pinata.cloud
+        - id: QmSarArpxemsPESa6FNkmuu9iSE1QWqPX2R3Aw6f5jq4D5
+          addr: /dnsaddr/nyc1-3.hostnodes.pinata.cloud
+        - id: QmSarArpxemsPESa6FNkmuu9iSE1QWqPX2R3Aw6f5jq4D5
+          addr: /dnsaddr/nyc1-3.hostnodes.pinata.cloud
+        - id: Qma8ddFEQWEU8ijWvdxXm3nxU7oHsRtCykAaVz8WUYhiKn
+          addr: /dns4/production-ipfs-peer.pinata.cloud
+        # Cloudflare
+        - id: QmcFf2FH3CEgTNHeMRGhN7HNHU1EXAxoEk6EFuSyXCsvRE
+          addr: /dnsaddr/node-1.ingress.cloudflare-ipfs.com
+        - id: QmcFmLd5ySfk2WZuJ1mfSWLDjdmHZq7rSAua4GoeSQfs1z
+          addr: /dnsaddr/node-2.ingress.cloudflare-ipfs.com
+        - id: QmcfFmzSDVbwexQ9Au2pt5YEXHK5xajwgaU6PpkbLWerMa
+          addr: /dnsaddr/node-3.ingress.cloudflare-ipfs.com
+        - id: QmcfJeB3Js1FG7T8YaZATEiaHqNKVdQfybYYkbT1knUswx
+          addr: /dnsaddr/node-4.ingress.cloudflare-ipfs.com
+        - id: QmcfVvzK4tMdFmpJjEKDUoqRgP4W9FnmJoziYX5GXJJ8eZ
+          addr: /dnsaddr/node-5.ingress.cloudflare-ipfs.com
+        - id: QmcfZD3VKrUxyP9BbyUnZDpbqDnT7cQ4WjPP8TRLXaoE7G
+          addr: /dnsaddr/node-6.ingress.cloudflare-ipfs.com
+        - id: QmcfZP2LuW4jxviTeG8fi28qjnZScACb8PEgHAc17ZEri3
+          addr: /dnsaddr/node-7.ingress.cloudflare-ipfs.com
+        - id: QmcfgsJsMtx6qJb74akCw1M24X1zFwgGo11h1cuhwQjtJP
+          addr: /dnsaddr/node-8.ingress.cloudflare-ipfs.com
+        - id: Qmcfr2FC7pFzJbTSDfYaSy1J8Uuy8ccGLeLyqJCKJvTHMi
+          addr: /dnsaddr/node-9.ingress.cloudflare-ipfs.com
+        - id: QmcfR3V5YAtHBzxVACWCzXTt26SyEkxdwhGJ6875A8BuWx
+          addr: /dnsaddr/node-10.ingress.cloudflare-ipfs.com
+        - id: Qmcfuo1TM9uUiJp6dTbm915Rf1aTqm3a3dnmCdDQLHgvL5
+          addr: /dnsaddr/node-11.ingress.cloudflare-ipfs.com
+        - id: QmcfV2sg9zaq7UUHVCGuSvT2M2rnLBAPsiE79vVyK3Cuev
+          addr: /dnsaddr/node-12.ingress.cloudflare-ipfs.com
+        # web3 storage
+        - id: bafzbeibhqavlasjc7dvbiopygwncnrtvjd2xmryk5laib7zyjor6kf3avm
+          addr: /dns4/elastic.dag.house
+        # European EPC Competence Center
+        - id: 12D3KooWGaHbxpDWn4JVYud899Wcpa4iHPa3AMYydfxQDb3MhDME
+          addr: /dnsaddr/ipfs.ssi.eecc.de
+        # Estuary
+        - id: 12D3KooWCVXs8P7iq6ao4XhfAmKWrEeuKFWCJgqe9jGDMTqHYBjw
+          addr: /ip4/139.178.68.217/tcp/6744
+        - id: 12D3KooWGBWx9gyUFTVQcKMTenQMSyE2ad9m7c9fpjS4NMjoDien
+          addr: /ip4/147.75.49.71/tcp/6745
+        - id: 12D3KooWFrnuj5o3tx4fGD2ZVJRyDqTdzGnU3XYXmBbWbc8Hs8Nd
+          addr: /ip4/147.75.86.255/tcp/6745
+        # Textile
+        - id: QmR69wtWUMm1TWnmuD4JqC1TWLZcc8iR2KrTenfZZbiztd
+          addr: /ip4/104.210.43.77
+        # 8api.sh
+        - id: 12D3KooWGASC2jm3pmohEJXUhuStkxDitPgzvs4qMuFPaiD9x1BA
+          addr: /ip4/78.46.108.24
+        - id: 12D3KooWRbWZN3GvLf9CHmozq4vnTzDD4EEoiqtRJxg5FV6Gfjmm
+          addr: /ip4/65.109.19.136
+        # 4EVERLAND
+        - id: 12D3KooWQ85aSCFwFkByr5e3pUCQeuheVhobVxGSSs1DrRQHGv1t
+          addr: /dnsaddr/node-1.ipfs.4everland.net
+    http_timeout: 5
+    max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
+    contract_service_workers: 15
+    token_service_workers: 25
+    max_cpu: 4
+    aws:
+    thumbnail:
+      max_file_size_mb: 100
+      workers: 20
+      size: 100
+      timeout: 20
+  indexers:
+    ghostnet:
+      datasources:
+        tzkt: tzkt_ghostnet
+
+
+
+database:
+  kind: postgres
+  host: ${POSTGRES_HOST:-db}
+  port: 5432
+  user: ${POSTGRES_USER:-dipdup}
+  password: ${POSTGRES_PASSWORD:-changeme}
+  database: ${POSTGRES_DB:-dipdup}
+
+hasura:
+  url: http://${HASURA_HOST:-hasura}:8080
+  admin_secret: ${ADMIN_SECRET:-changeme}
+  select_limit: 10000
+  allow_aggregation: false
+  rest: true
+  source:
+    name: default
+    database_host: ${HASURA_POSTGRES_HOST}
+    use_prepared_statements: true
+    isolation_level: read-committed
+
+prometheus:
+  url: ${EXPORT_HOST:-0.0.0.0}:2112
+
+datasources:
+  tzkt_ghostnet:
+    url: https://api.ghostnet.tzkt.io
+    kind: tzkt
+    timeout: 10
