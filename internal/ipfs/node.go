@@ -255,6 +255,8 @@ func createRepository(dir string, blacklist []string, providers []Provider) (str
 	cfg.Swarm.Transports.Network.Relay = config.False
 	cfg.Swarm.Transports.Network.QUIC = config.False
 	cfg.Swarm.AddrFilters = blacklist
+	cfg.Swarm.ConnMgr.HighWater = config.NewOptionalInteger(10000)
+	cfg.Swarm.ConnMgr.LowWater = config.NewOptionalInteger(100)
 
 	peers := make([]peer.AddrInfo, 0)
 	for i := range providers {
