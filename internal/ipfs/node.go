@@ -105,6 +105,7 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		"/ip4/18.232.70.69/tcp/4001/p2p/12D3KooWAYgR87jsuQMUno9MXQHGv3A7GGf4wLPVQhSG7jPNtejk",
 		"/ip4/94.130.71.31/tcp/4001/p2p/12D3KooWJFBXTQaRhU3JJo5JiS4rHusKB7KuWmz1nfRjrkViaaMQ",
 		"/ip4/148.113.152.143/tcp/4001/p2p/12D3KooWBYznKkpGnjj2JSdbbV4nSgomi4eDSDyhfbg7962HQDD1",
+		"/ip4/75.101.168.30/tcp/4001/p2p/QmZNWqSqBRVkKkCF7UUVpwmKaNoV3yCgAcySiu33EMp1SZ",
 	}
 
 	if len(bootstrap) > 0 {
