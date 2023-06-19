@@ -214,12 +214,20 @@ func (s *Service[T]) lastHope(ctx context.Context) {
 	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 
+	dailyBackFillTicker := time.NewTicker(time.Hour * 12)
+	defer dailyBackFillTicker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 			if err := s.repo.Retry(s.network, s.maxRetryCount, 3*time.Hour/time.Second); err != nil {
+				log.Err(err).Msg("repo.Retry")
+				continue
+			}
+		case <-dailyBackFillTicker.C:
+			if err := s.repo.Retry(s.network, s.maxRetryCount, 24*time.Hour/time.Second); err != nil {
 				log.Err(err).Msg("repo.Retry")
 				continue
 			}

@@ -75,7 +75,7 @@ metadata:
           addr: /dnsaddr/node-12.ingress.cloudflare-ipfs.com
         # web3 storage
         - id: bafzbeibhqavlasjc7dvbiopygwncnrtvjd2xmryk5laib7zyjor6kf3avm
-          addr: /dns4/elastic.dag.house
+          addr: /dnsaddr/elastic.dag.house
         # European EPC Competence Center
         - id: 12D3KooWGaHbxpDWn4JVYud899Wcpa4iHPa3AMYydfxQDb3MhDME
           addr: /dnsaddr/ipfs.ssi.eecc.de
