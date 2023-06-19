@@ -16,6 +16,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/labstack/echo/v4 v4.9.0
 	github.com/libp2p/go-libp2p v0.28.0
+	github.com/libp2p/go-libp2p-kad-dht v0.24.0
 	github.com/multiformats/go-multiaddr v0.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.1
@@ -140,7 +141,6 @@ require (
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.3.0 // indirect
 	github.com/libp2p/go-libp2p-core v0.20.1 // indirect
-	github.com/libp2p/go-libp2p-kad-dht v0.24.0 // indirect
 	github.com/libp2p/go-libp2p-kbucket v0.6.1 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.9.3 // indirect
 	github.com/libp2p/go-libp2p-pubsub-router v0.6.0 // indirect

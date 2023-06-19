@@ -127,7 +127,7 @@ func (indexer *Indexer) resolveTokenMetadata(ctx context.Context, tm *models.Tok
 	indexer.logTokenMetadata(*tm, "trying to resolve")
 	tm.RetryCount += 1
 
-	resolved, err := indexer.resolver.Resolve(ctx, tm.Network, tm.Contract, tm.Link)
+	resolved, err := indexer.resolver.Resolve(ctx, tm.Network, tm.Contract, tm.Link, tm.RetryCount)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return err

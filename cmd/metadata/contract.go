@@ -41,7 +41,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 	indexer.logContractMetadata(*cm, "trying to resolve")
 	cm.RetryCount += 1
 
-	resolved, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link)
+	resolved, err := indexer.resolver.Resolve(ctx, cm.Network, cm.Contract, cm.Link, cm.RetryCount)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return err

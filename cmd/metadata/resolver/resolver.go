@@ -11,6 +11,7 @@ import (
 	"github.com/dipdup-net/metadata/internal/tezos"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -94,7 +95,7 @@ func New(ctx context.Context, settings config.Settings, tezosKeys *tezoskeys.Tez
 }
 
 // Resolve -
-func (r Receiver) Resolve(ctx context.Context, network, address, link string) (resolved Resolved, err error) {
+func (r Receiver) Resolve(ctx context.Context, network, address, link string, attempt int8) (resolved Resolved, err error) {
 	if len(link) < 7 { // the shortest prefix is http://
 		return resolved, errors.Wrap(ErrUnknownStorageType, link)
 	}
@@ -102,6 +103,12 @@ func (r Receiver) Resolve(ctx context.Context, network, address, link string) (r
 	switch {
 	case r.ipfs.Is(link):
 		resolved.By = ResolverTypeIPFS
+		if attempt == 3 && network == "mainnet" {
+			if err := r.ipfs.FindPeers(ctx, link); err != nil {
+				log.Err(err).Str("link", link).Str("network", network).Msg("can't find peers for CID")
+			}
+		}
+
 		data, err := r.ipfs.Resolve(ctx, network, address, link)
 		if err != nil {
 			if errors.Is(err, ipfs.ErrInvalidCID) {
