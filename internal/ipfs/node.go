@@ -34,6 +34,7 @@ type Node struct {
 	node  *core.IpfsNode
 	dht   *kadDHT.IpfsDHT
 	limit int64
+	wg    *sync.WaitGroup
 }
 
 // NewNode -
@@ -50,7 +51,7 @@ func NewNode(ctx context.Context, dir string, limit int64, blacklist []string, p
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create dht client")
 	}
-	return &Node{api, node, dht, limit}, nil
+	return &Node{api, node, dht, limit, new(sync.WaitGroup)}, nil
 }
 
 // Start -
@@ -122,11 +123,15 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		return errors.Wrap(err, "failed connect to peers")
 	}
 
+	n.wg.Add(1)
+	go n.print(ctx)
+
 	return nil
 }
 
 // Close -
 func (n *Node) Close() error {
+	n.wg.Wait()
 	return n.node.Close()
 }
 
@@ -362,4 +367,28 @@ func setupPlugins(externalPluginsPath string) error {
 	}
 
 	return nil
+}
+
+func (n *Node) print(ctx context.Context) {
+	defer n.wg.Done()
+
+	ticker := time.NewTicker(time.Minute * 10)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			peers, err := n.api.Swarm().Peers(ctx)
+			if err != nil {
+				log.Err(err).Msg("receiving peers")
+				continue
+			}
+
+			for i := range peers {
+				log.Info().Str("peer_id", peers[i].ID().String()).Str("address", peers[i].Address().String()).Msg("connected to peer")
+			}
+		}
+	}
 }
