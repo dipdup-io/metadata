@@ -208,7 +208,7 @@ func (n *Node) FindPeersForContent(ctx context.Context, cidString string) error 
 	for i := range providers {
 		var connected bool
 		for j := range peers {
-			if peers[j].ID() == providers[i].ID {
+			if peers[j].ID().String() == providers[i].ID.String() {
 				connected = true
 				break
 			}
