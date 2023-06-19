@@ -206,9 +206,6 @@ func (n *Node) FindPeersForContent(ctx context.Context, cidString string) error 
 	}
 
 	for i := range providers {
-		connectCtx, cancel := context.WithTimeout(ctx, time.Second*10)
-		defer cancel()
-
 		var connected bool
 		for j := range peers {
 			if peers[j].ID() == providers[i].ID {
@@ -220,10 +217,16 @@ func (n *Node) FindPeersForContent(ctx context.Context, cidString string) error 
 			continue
 		}
 
+		connectCtx, cancel := context.WithTimeout(ctx, time.Second*15)
+		defer cancel()
+
 		if err := n.api.Swarm().Connect(connectCtx, providers[i]); err != nil {
-			log.Warn().
-				Str("peer", providers[i].ID.String()).
-				Msgf("failed to connect: %s", err)
+			l := log.Warn().
+				Str("peer", providers[i].ID.String())
+			if len(providers[i].Addrs) > 0 {
+				l = l.Str("address", providers[i].Addrs[0].String())
+			}
+			l.Msgf("failed to connect: %s", err)
 		} else {
 			log.Info().Str("peer", providers[i].ID.String()).Msg("connected")
 		}
