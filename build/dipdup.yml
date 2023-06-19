@@ -139,6 +139,10 @@ metadata:
           addr: /ip4/45.32.130.169
         - id: 12D3KooWHR1v13MD6ybgj5T3Ds56MB8LGcaXRH8W9cNLJP19AnRy
           addr: /ip4/54.147.190.40
+        - id: 12D3KooWSMc3sjPAAxdNXPg5nUa9M76WK2Vp3uf9FhfARpnmKjEH
+          addr: /ip4/54.80.114.62
+        - id: 12D3KooWQo32RF8QSanP2LUnPnuKshqZdCFuUtypexzpAiUCK3js
+          addr: /ip4/54.174.102.221
     http_timeout: 5
     max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
     contract_service_workers: 15
