@@ -108,9 +108,9 @@ metadata:
         - id: 12D3KooWAYgR87jsuQMUno9MXQHGv3A7GGf4wLPVQhSG7jPNtejk
           addr: /ip4/18.232.70.69/tcp/4001
         - id: 12D3KooWJFBXTQaRhU3JJo5JiS4rHusKB7KuWmz1nfRjrkViaaMQ
-          # addr: /ip4/94.130.71.31/tcp/4001
+          addr: /ip4/94.130.71.31/tcp/4001
         - id: 12D3KooWBYznKkpGnjj2JSdbbV4nSgomi4eDSDyhfbg7962HQDD1
-          # addr: /ip4/148.113.152.143/tcp/4001
+          addr: /ip4/148.113.152.143/tcp/4001
         - id: QmZNWqSqBRVkKkCF7UUVpwmKaNoV3yCgAcySiu33EMp1SZ
           addr: /ip4/75.101.168.30/tcp/4001
         - id: QmU5SHDWb97oSnxNzWwCdoo5mbHcBhnhhbZvJraFWPsTsd
@@ -148,7 +148,7 @@ metadata:
     http_timeout: 5
     max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
     contract_service_workers: 15
-    token_service_workers: 25
+    token_service_workers: 15
     max_cpu: 4
     aws:
     thumbnail:
