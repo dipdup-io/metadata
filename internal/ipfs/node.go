@@ -33,7 +33,7 @@ type Node struct {
 	node  *core.IpfsNode
 	dht   *kadDHT.IpfsDHT
 	limit int64
-	peers []icore.ConnectionInfo
+	peers []*peer.AddrInfo
 	wg    *sync.WaitGroup
 }
 
@@ -55,7 +55,7 @@ func NewNode(ctx context.Context, dir string, limit int64, blacklist []string, p
 		api:   api,
 		node:  node,
 		dht:   dht,
-		peers: make([]icore.ConnectionInfo, 0),
+		peers: make([]*peer.AddrInfo, 0),
 		limit: limit,
 		wg:    new(sync.WaitGroup),
 	}, nil
@@ -86,7 +86,6 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		"/ip4/136.144.57.15/tcp/4001/p2p/12D3KooWJEfH2MB4RsUoaJPogDPRWbFTi8iehsxsqrQpiJwFNDrP",
 		"/ip4/147.75.63.131/tcp/4001/p2p/12D3KooWHpE5KiQTkqbn8KbU88ZxwJxYJFaqP4mp9Z9bhNPhym9V",
 		"/ip4/147.75.62.95/tcp/4001/p2p/12D3KooWBHvsSSKHeragACma3HUodK5FcPUpXccLu2vHooNsDf9k",
-		"/ip4/147.75.50.77/tcp/4001/p2p/12D3KooWMaTJKNwQJyP1fw3ftGb5uqqM2U24Kam8aWqMRXzWHNiF",
 		"/ip4/147.75.50.141/tcp/4001/p2p/12D3KooWNCmYvqPbeXmNC4rnTr7hbuVtJKDNpL1vvNz6mq9Sr2Xf",
 		"/ip4/147.28.147.193/tcp/4001/p2p/12D3KooWDRak1XzURGh9MvGR4EWaP9kcbmdoagAcGMcNxBXXLzTF",
 		"/ip4/139.178.69.93/tcp/4001/p2p/12D3KooWRi18oHN1j8McxS9RMnuibcTwxu6VCTYHyLNH2R14qhTy",
@@ -128,8 +127,13 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		bootstrapNodes = append(bootstrapNodes, bootstrap...)
 	}
 
-	if err := connectToPeers(ctx, n.api, bootstrapNodes); err != nil {
+	peerInfo, err := connectToPeers(ctx, n.api, bootstrapNodes)
+	if err != nil {
 		return errors.Wrap(err, "failed connect to peers")
+	}
+
+	for _, peer := range peerInfo {
+		n.peers = append(n.peers, peer)
 	}
 
 	connected, err := n.api.Swarm().Peers(ctx)
@@ -137,7 +141,6 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		log.Warn().Msg("can't get perrs")
 		return nil
 	}
-	n.peers = connected
 	for i := range connected {
 		log.Info().
 			Str("peer_id", connected[i].ID().String()).
@@ -146,7 +149,7 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 	}
 
 	n.wg.Add(1)
-	go n.print(ctx)
+	go n.reconnect(ctx)
 
 	return nil
 }
@@ -270,16 +273,16 @@ func spawn(ctx context.Context, dir string, blacklist []string, providers []Prov
 	return api, node, err
 }
 
-func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) error {
+func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) (map[peer.ID]*peer.AddrInfo, error) {
 	peerInfos := make(map[peer.ID]*peer.AddrInfo)
 	for _, addrStr := range peers {
 		addr, err := ma.NewMultiaddr(addrStr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		pii, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		pi, ok := peerInfos[pii.ID]
 		if !ok {
@@ -287,6 +290,7 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 			peerInfos[pi.ID] = pi
 		}
 		pi.Addrs = append(pi.Addrs, pii.Addrs...)
+
 	}
 
 	var wg sync.WaitGroup
@@ -302,14 +306,14 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 			if err := ipfs.Swarm().Connect(connectCtx, *peerInfo); err != nil {
 				log.Warn().
 					Str("peer", peerInfo.ID.String()).
-					Msgf("failed to connect: %s", err)
+					Msgf("failed to connect: %s", err.Error())
 				return
 			}
 		}(peerInfo)
 	}
 	wg.Wait()
 
-	return nil
+	return peerInfos, nil
 }
 
 func createRepository(dir string, blacklist []string, providers []Provider) (string, error) {
@@ -386,10 +390,10 @@ func setupPlugins(externalPluginsPath string) error {
 	return nil
 }
 
-func (n *Node) print(ctx context.Context) {
+func (n *Node) reconnect(ctx context.Context) {
 	defer n.wg.Done()
 
-	ticker := time.NewTicker(time.Minute * 10)
+	ticker := time.NewTicker(time.Minute * 15)
 	defer ticker.Stop()
 
 	for {
@@ -403,8 +407,28 @@ func (n *Node) print(ctx context.Context) {
 				continue
 			}
 
-			for i := range peers {
-				log.Info().Str("peer_id", peers[i].ID().String()).Str("address", peers[i].Address().String()).Msg("connected to peer")
+			for _, peerInfo := range n.peers {
+				var found bool
+				for i := range peers {
+					if peerInfo.ID.String() == peers[i].ID().String() {
+						found = true
+						break
+					}
+				}
+
+				if found {
+					log.Info().Str("peer_id", peerInfo.ID.String()).Msg("connected to peer")
+				} else {
+					n.wg.Add(1)
+					go func(p *peer.AddrInfo) {
+						connectCtx, cancel := context.WithTimeout(ctx, time.Second*30)
+						defer cancel()
+
+						if err := n.api.Swarm().Connect(connectCtx, *p); err == nil {
+							log.Info().Str("peer_id", p.ID.String()).Msg("reconnected to peer")
+						}
+					}(peerInfo)
+				}
 			}
 		}
 	}
