@@ -34,6 +34,7 @@ type Node struct {
 	node  *core.IpfsNode
 	dht   *kadDHT.IpfsDHT
 	limit int64
+	peers []icore.ConnectionInfo
 	wg    *sync.WaitGroup
 }
 
@@ -51,7 +52,14 @@ func NewNode(ctx context.Context, dir string, limit int64, blacklist []string, p
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create dht client")
 	}
-	return &Node{api, node, dht, limit, new(sync.WaitGroup)}, nil
+	return &Node{
+		api:   api,
+		node:  node,
+		dht:   dht,
+		peers: make([]icore.ConnectionInfo, 0),
+		limit: limit,
+		wg:    new(sync.WaitGroup),
+	}, nil
 }
 
 // Start -
@@ -64,6 +72,7 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 
 	bootstrapNodes := []string{
 		"/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
+		"/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
 		"/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
 		"/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
 		"/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",
@@ -90,7 +99,7 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		"/dns4/node1.preload.ipfs.io/tcp/443/wss/ipfs/Qmbut9Ywz9YEDrz8ySBSgWyJk41Uvm2QJPhwDJzJyGFsD6",
 		"/dns4/node0.preload.ipfs.io/tcp/443/wss/ipfs/QmZMxNdpMkewiVZLMRxaNxUeZpDUb34pWjZ1kZvsd16Zic",
 		"/dns4/production-ipfs-peer.pinata.cloud/tcp/3000/ws/p2p/Qma8ddFEQWEU8ijWvdxXm3nxU7oHsRtCykAaVz8WUYhiKn",
-		"/dnsaddr/elastic.dag.house/tcp/443/wss/p2p/bafzbeibhqavlasjc7dvbiopygwncnrtvjd2xmryk5laib7zyjor6kf3avm",
+		"/dns4/elastic.dag.house/tcp/443/wss/p2p/QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC",
 		"/ip4/141.94.193.54/tcp/4001/p2p/12D3KooWAJJJwXsB5b68cbq69KpXiKqQAgTKssg76heHkg6mo2qB",
 		"/ip4/18.232.70.69/tcp/4001/p2p/12D3KooWAYgR87jsuQMUno9MXQHGv3A7GGf4wLPVQhSG7jPNtejk",
 		"/ip4/94.130.71.31/tcp/4001/p2p/12D3KooWJFBXTQaRhU3JJo5JiS4rHusKB7KuWmz1nfRjrkViaaMQ",
@@ -121,6 +130,19 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 
 	if err := connectToPeers(ctx, n.api, bootstrapNodes); err != nil {
 		return errors.Wrap(err, "failed connect to peers")
+	}
+
+	connected, err := n.api.Swarm().Peers(ctx)
+	if err != nil {
+		log.Warn().Msg("can't get perrs")
+		return nil
+	}
+	n.peers = connected
+	for i := range connected {
+		log.Info().
+			Str("peer_id", connected[i].ID().String()).
+			Str("address", connected[i].Address().String()).
+			Msg("connected to peer")
 	}
 
 	n.wg.Add(1)
@@ -239,7 +261,8 @@ func spawn(ctx context.Context, dir string, blacklist []string, providers []Prov
 	node, err := core.NewNode(ctx, &core.BuildCfg{
 		Online:  true,
 		Routing: libp2p.DHTClientOption,
-		Repo:    r,
+
+		Repo: r,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -288,15 +311,6 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) err
 	}
 	wg.Wait()
 
-	connected, err := ipfs.Swarm().Peers(ctx)
-	if err != nil {
-		log.Warn().Msg("can't get perrs")
-		return nil
-	}
-	for i := range connected {
-		log.Info().Str("peer_id", connected[i].ID().String()).Str("address", connected[i].Address().String()).Msg("connected to peer")
-	}
-
 	return nil
 }
 
@@ -323,6 +337,7 @@ func createRepository(dir string, blacklist []string, providers []Provider) (str
 	cfg.Swarm.AddrFilters = blacklist
 	cfg.Swarm.ConnMgr.HighWater = config.NewOptionalInteger(10000)
 	cfg.Swarm.ConnMgr.LowWater = config.NewOptionalInteger(450)
+	cfg.Routing.AcceleratedDHTClient = true
 
 	peers := make([]peer.AddrInfo, 0)
 	for i := range providers {
@@ -331,12 +346,16 @@ func createRepository(dir string, blacklist []string, providers []Provider) (str
 			log.Err(err).Str("peer", providers[i].ID).Msg("invalid identity")
 			continue
 		}
-		peers = append(peers, peer.AddrInfo{
+		info := peer.AddrInfo{
 			ID: id,
-			Addrs: []ma.Multiaddr{
+		}
+		if providers[i].Address != "" {
+			info.Addrs = []ma.Multiaddr{
 				ma.StringCast(providers[i].Address),
-			},
-		})
+			}
+		}
+
+		peers = append(peers, info)
 	}
 	cfg.Peering = config.Peering{
 		Peers: peers,
