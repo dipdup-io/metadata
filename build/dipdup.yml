@@ -100,9 +100,7 @@ metadata:
         # fxhash
         - id: 12D3KooWBpazXqzm5UnDtpTFbTkUJfXRHCCydnuFp2uq6vdzKVnF
           addr: /dns4/ipfs-swarm.fxhash2.xyz/tcp/4001
-        - id: 12D3KooWDhTJt4YdqWddayBaru1mH7cBXVvqGcCYtRaGn6qMguf9
-          addr: /dns4/ipfs-swarm.dev.fxhash2.xyz/tcp/4001
-        - id: 12D3KooWFZMXd4Q3mTCBvtE71pQwLLAS6j84kuXPyLW4cigN2NXk
+        - id: 12D3KooWPbN11QKCmEbMz1QYjeGaoAspmxSnGMD7T6z9JPJSWvmh
           addr: /dns4/ipfs-swarm.dev.fxhash2.xyz/tcp/4001
         # others
         - id: 12D3KooWAJJJwXsB5b68cbq69KpXiKqQAgTKssg76heHkg6mo2qB

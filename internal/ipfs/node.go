@@ -111,6 +111,7 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		"/ip4/54.209.21.103/tcp/4001/p2p/QmTfhyfLC59LNFBKgdvoMkA9R6VgAte1h2gCs8XiFzDfFS",
 		"/ip4/54.144.87.112/tcp/4001/p2p/12D3KooWNTYSAYUWwc7QwPkAajW9UtLeatSMArRfLRJfAHwsoewH",
 		"/dns4/ipfs-swarm.fxhash2.xyz/tcp/4001/p2p/12D3KooWBpazXqzm5UnDtpTFbTkUJfXRHCCydnuFp2uq6vdzKVnF",
+		"/dns4/ipfs-swarm.dev.fxhash2.xyz/tcp/4001/p2p/12D3KooWPbN11QKCmEbMz1QYjeGaoAspmxSnGMD7T6z9JPJSWvmh",
 		"/ip4/54.152.12.107/tcp/4001/p2p/12D3KooWRiTA6r3uvnB87ntQ5eRZwTeVFGBjPUBuAHhdwTMW8Hss",
 		"/ip4/3.86.210.183/tcp/4001/p2p/12D3KooWGrmsCy5FSXTovD235fAyp25SpPuzqtQvjqNDDZj4rAmb",
 		"/ip4/54.89.217.140/tcp/4001/p2p/12D3KooWConXG4mVuWtxxubA3wfmUWdCwkL54nZ7SnUgbEDnHZkX",
