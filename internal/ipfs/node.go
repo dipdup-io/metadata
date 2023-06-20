@@ -33,7 +33,6 @@ type Node struct {
 	node  *core.IpfsNode
 	dht   *kadDHT.IpfsDHT
 	limit int64
-	peers []*peer.AddrInfo
 	wg    *sync.WaitGroup
 }
 
@@ -55,7 +54,6 @@ func NewNode(ctx context.Context, dir string, limit int64, blacklist []string, p
 		api:   api,
 		node:  node,
 		dht:   dht,
-		peers: make([]*peer.AddrInfo, 0),
 		limit: limit,
 		wg:    new(sync.WaitGroup),
 	}, nil
@@ -127,13 +125,8 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		bootstrapNodes = append(bootstrapNodes, bootstrap...)
 	}
 
-	peerInfo, err := connectToPeers(ctx, n.api, bootstrapNodes)
-	if err != nil {
+	if err := connectToPeers(ctx, n.api, bootstrapNodes); err != nil {
 		return errors.Wrap(err, "failed connect to peers")
-	}
-
-	for _, peer := range peerInfo {
-		n.peers = append(n.peers, peer)
 	}
 
 	connected, err := n.api.Swarm().Peers(ctx)
@@ -273,16 +266,16 @@ func spawn(ctx context.Context, dir string, blacklist []string, providers []Prov
 	return api, node, err
 }
 
-func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) (map[peer.ID]*peer.AddrInfo, error) {
+func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) error {
 	peerInfos := make(map[peer.ID]*peer.AddrInfo)
 	for _, addrStr := range peers {
 		addr, err := ma.NewMultiaddr(addrStr)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		pii, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		pi, ok := peerInfos[pii.ID]
 		if !ok {
@@ -313,7 +306,7 @@ func connectToPeers(ctx context.Context, ipfs icore.CoreAPI, peers []string) (ma
 	}
 	wg.Wait()
 
-	return peerInfos, nil
+	return nil
 }
 
 func createRepository(dir string, blacklist []string, providers []Provider) (string, error) {
@@ -393,7 +386,23 @@ func setupPlugins(externalPluginsPath string) error {
 func (n *Node) reconnect(ctx context.Context) {
 	defer n.wg.Done()
 
-	ticker := time.NewTicker(time.Minute * 15)
+	connected, err := n.api.Swarm().Peers(ctx)
+	if err != nil {
+		log.Err(err).Msg("receiving peers")
+		return
+	}
+
+	peerInfo := make([]*peer.AddrInfo, len(connected))
+	for i := range connected {
+		peerInfo[i] = &peer.AddrInfo{
+			ID: connected[i].ID(),
+			Addrs: []ma.Multiaddr{
+				connected[i].Address(),
+			},
+		}
+	}
+
+	ticker := time.NewTicker(time.Minute * 5)
 	defer ticker.Stop()
 
 	for {
@@ -407,29 +416,31 @@ func (n *Node) reconnect(ctx context.Context) {
 				continue
 			}
 
-			for _, peerInfo := range n.peers {
+			for _, pi := range peerInfo {
 				var found bool
 				for i := range peers {
-					if peerInfo.ID.String() == peers[i].ID().String() {
+					if pi.ID.String() == peers[i].ID().String() {
 						found = true
 						break
 					}
 				}
 
 				if found {
-					log.Info().Str("peer_id", peerInfo.ID.String()).Msg("connected to peer")
+					log.Info().Str("peer_id", pi.ID.String()).Msg("connected to peer")
 				} else {
 					n.wg.Add(1)
 					go func(p *peer.AddrInfo) {
-						connectCtx, cancel := context.WithTimeout(ctx, time.Second*30)
+						connectCtx, cancel := context.WithTimeout(ctx, time.Second*15)
 						defer cancel()
 
 						if err := n.api.Swarm().Connect(connectCtx, *p); err == nil {
 							log.Info().Str("peer_id", p.ID.String()).Msg("reconnected to peer")
 						}
-					}(peerInfo)
+					}(pi)
 				}
 			}
+
+			log.Info().Msg("reconnection completed")
 		}
 	}
 }
