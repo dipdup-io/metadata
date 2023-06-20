@@ -119,6 +119,8 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		"/ip4/54.80.114.62/tcp/4001/p2p/12D3KooWSMc3sjPAAxdNXPg5nUa9M76WK2Vp3uf9FhfARpnmKjEH",
 		"/ip4/54.174.102.221/tcp/4001/p2p/12D3KooWQo32RF8QSanP2LUnPnuKshqZdCFuUtypexzpAiUCK3js",
 		"/ip4/54.172.254.208/tcp/4001/p2p/12D3KooWMsupg6xmmfmRht93nmLyRizrECj4gNh4FdUvpxE5eqaW",
+		"/ip4/3.84.126.176/tcp/4001/p2p/12D3KooWCMfdY2PVSJTKDujSqVrGXmeXTbCnGfgJDXr9ghTVwfyu",
+		"/ip4/44.201.127.70/tcp/4001/p2p/12D3KooWCW7UeJXZuXrtkqTgNWnHvS76XNHF6CGguDgYujtXrV2w",
 	}
 
 	if len(bootstrap) > 0 {
@@ -255,8 +257,12 @@ func spawn(ctx context.Context, dir string, blacklist []string, providers []Prov
 	}
 
 	node, err := core.NewNode(ctx, &core.BuildCfg{
-		Online: true,
-		Repo:   r,
+		Online:    true,
+		Repo:      r,
+		Permanent: true,
+		ExtraOpts: map[string]bool{
+			"enable-gc": true,
+		},
 	})
 	if err != nil {
 		return nil, nil, err
