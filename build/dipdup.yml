@@ -157,12 +157,12 @@ metadata:
       size: 100
       timeout: 20
   indexers:
-    # mainnet:
-    #   datasources:
-    #     tzkt: tzkt_mainnet
-    # ghostnet:
-    #   datasources:
-    #     tzkt: tzkt_ghostnet
+    mainnet:
+      datasources:
+        tzkt: tzkt_mainnet
+    ghostnet:
+      datasources:
+        tzkt: tzkt_ghostnet
     mumbainet:
       datasources:
         tzkt: tzkt_mumbainet
