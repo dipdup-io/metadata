@@ -6,27 +6,126 @@
     {
       "type": "pg_add_computed_field",
       "args": {
-        "table": { "schema": "public", "name": "token_metadata" },
+        "table": {
+          "schema": "public",
+          "name": "token_metadata"
+        },
         "name": "failed",
         "definition": {
-          "function": { "name": "token_metadata_failed", "schema": "public" },
+          "function": {
+            "name": "token_metadata_failed",
+            "schema": "public"
+          },
           "table_argument": null,
           "session_argument": null
         },
         "comment": "Field is true when active phase of resolving is finished and metadata was not resolved",
         "source": "default"
       }
-    },{
+    },
+    {
       "type": "pg_add_computed_field",
       "args": {
-        "table": { "schema": "public", "name": "contract_metadata" },
+        "table": {
+          "schema": "public",
+          "name": "contract_metadata"
+        },
         "name": "failed",
         "definition": {
-          "function": { "name": "contract_metadata_failed", "schema": "public" },
+          "function": {
+            "name": "contract_metadata_failed",
+            "schema": "public"
+          },
           "table_argument": null,
           "session_argument": null
         },
         "comment": "Field is true when active phase of resolving is finished and metadata was not resolved",
+        "source": "default"
+      }
+    },
+    {
+      "type": "pg_drop_select_permission",
+      "args": {
+        "table": {
+          "name": "token_metadata",
+          "schema": "public"
+        },
+        "role": "user",
+        "source": "default"
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "table": {
+          "name": "token_metadata",
+          "schema": "public"
+        },
+        "role": "user",
+        "permission": {
+          "columns": [
+            "id",
+            "created_at",
+            "updated_at",
+            "update_id",
+            "token_id",
+            "network",
+            "contract",
+            "link",
+            "metadata",
+            "retry_count",
+            "status",
+            "image_processed",
+            "error"
+          ],
+          "filter": {},
+          "limit": 100,
+          "computed_fields": [
+            "failed"
+          ]
+        },
+        "source": "default"
+      }
+    },
+    {
+      "type": "pg_drop_select_permission",
+      "args": {
+        "table": {
+          "name": "contract_metadata",
+          "schema": "public"
+        },
+        "role": "user",
+        "source": "default"
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "table": {
+          "name": "contract_metadata",
+          "schema": "public"
+        },
+        "role": "user",
+        "permission": {
+          "columns": [
+            "id",
+            "created_at",
+            "updated_at",
+            "update_id",
+            "network",
+            "contract",
+            "link",
+            "metadata",
+            "retry_count",
+            "status",
+            "error"
+          ],
+          "filter": {},
+          "limit": 100,
+          "computed_fields": [
+            "failed"
+          ]
+        },
         "source": "default"
       }
     }
