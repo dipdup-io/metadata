@@ -38,6 +38,7 @@ const (
 	ErrorTypeInvalidJSON     ErrorType = "invalid_json"
 	ErrorInvalidHTTPURI      ErrorType = "invalid_http_uri"
 	ErrorInvalidCID          ErrorType = "invalid_ipfs_cid"
+	ErrorUnknownStorageType  ErrorType = "unknown_storage_type"
 )
 
 // ResolvingError -
@@ -57,6 +58,14 @@ func (err ResolvingError) Error() string {
 
 func newResolvingError(code int, typ ErrorType, err error) ResolvingError {
 	return ResolvingError{code, typ, err}
+}
+
+// IsFatal -
+func (err ResolvingError) IsFatal() bool {
+	return err.Type == ErrorInvalidHTTPURI ||
+		err.Type == ErrorTypeInvalidJSON ||
+		err.Type == ErrorInvalidCID ||
+		err.Type == ErrorUnknownStorageType
 }
 
 // Resolved -
@@ -137,7 +146,7 @@ func (r Receiver) Resolve(ctx context.Context, network, address, link string, at
 		resolved.Data, err = r.sha.Resolve(ctx, network, address, link)
 
 	default:
-		return resolved, errors.Wrap(ErrUnknownStorageType, link)
+		return resolved, newResolvingError(0, ErrorUnknownStorageType, errors.Wrap(ErrUnknownStorageType, err.Error()))
 	}
 
 	if err != nil {

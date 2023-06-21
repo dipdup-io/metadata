@@ -51,9 +51,7 @@ func (indexer *Indexer) resolveContractMetadata(ctx context.Context, cm *models.
 			indexer.prom.IncrementErrorCounter(indexer.network, e)
 			err = e.Err
 
-			if e.Type == resolver.ErrorInvalidHTTPURI ||
-				e.Type == resolver.ErrorTypeInvalidJSON ||
-				e.Type == resolver.ErrorInvalidCID {
+			if e.IsFatal() {
 				cm.RetryCount = int8(indexer.settings.MaxRetryCountOnError)
 			}
 		}

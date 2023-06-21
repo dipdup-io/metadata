@@ -29,11 +29,12 @@ import (
 
 // Node -
 type Node struct {
-	api   icore.CoreAPI
-	node  *core.IpfsNode
-	dht   *kadDHT.IpfsDHT
-	limit int64
-	wg    *sync.WaitGroup
+	api       icore.CoreAPI
+	node      *core.IpfsNode
+	dht       *kadDHT.IpfsDHT
+	providers []Provider
+	limit     int64
+	wg        *sync.WaitGroup
 }
 
 // NewNode -
@@ -51,11 +52,12 @@ func NewNode(ctx context.Context, dir string, limit int64, blacklist []string, p
 		return nil, errors.Wrap(err, "failed to create dht client")
 	}
 	return &Node{
-		api:   api,
-		node:  node,
-		dht:   dht,
-		limit: limit,
-		wg:    new(sync.WaitGroup),
+		api:       api,
+		node:      node,
+		dht:       dht,
+		providers: providers,
+		limit:     limit,
+		wg:        new(sync.WaitGroup),
 	}, nil
 }
 
@@ -95,7 +97,7 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		"/dns4/node1.preload.ipfs.io/tcp/443/wss/ipfs/Qmbut9Ywz9YEDrz8ySBSgWyJk41Uvm2QJPhwDJzJyGFsD6",
 		"/dns4/node0.preload.ipfs.io/tcp/443/wss/ipfs/QmZMxNdpMkewiVZLMRxaNxUeZpDUb34pWjZ1kZvsd16Zic",
 		"/dns4/production-ipfs-peer.pinata.cloud/tcp/3000/ws/p2p/Qma8ddFEQWEU8ijWvdxXm3nxU7oHsRtCykAaVz8WUYhiKn",
-		"/dns4/elastic.dag.house/tcp/443/wss/p2p/QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC",
+		"/ip4/104.18.21.126/tcp/4001/p2p/QmQzqxhK82kAmKvARFZSkUVS6fo9sySaiogAnx5EnZ6ZmC",
 		"/ip4/141.94.193.54/tcp/4001/p2p/12D3KooWAJJJwXsB5b68cbq69KpXiKqQAgTKssg76heHkg6mo2qB",
 		"/ip4/18.232.70.69/tcp/4001/p2p/12D3KooWAYgR87jsuQMUno9MXQHGv3A7GGf4wLPVQhSG7jPNtejk",
 		"/ip4/94.130.71.31/tcp/4001/p2p/12D3KooWJFBXTQaRhU3JJo5JiS4rHusKB7KuWmz1nfRjrkViaaMQ",
@@ -114,7 +116,7 @@ func (n *Node) Start(ctx context.Context, bootstrap ...string) error {
 		"/ip4/54.87.223.182/tcp/4001/p2p/12D3KooWHRtiyBEGddhe7wvNz5q8A6gyDReqpzN5aiyT2gktKqXd",
 		"/ip4/128.199.70.49/tcp/4001/p2p/12D3KooWQySWhisgDXXJEJTHZiewHasbsmfAMYbERdtnAS39397v",
 		"/ip4/35.171.4.239/tcp/4001/p2p/12D3KooWHJCJJrAjSnJB9Mx9JWMeBAjgdSXrV7FwkCZk61if2bR3",
-		"/ip4/45.32.130.169/tcp/4001/p2p/12D3KooWA1x69gRbUDaJqpZvQARRCR6H848ZydM6BBnszrTQV4w1",
+		"/ip4/45.32.130.169/tcp/4001/p2p/12D3KooWPhuXjAH2wprpAQdtUvGmB3A8Hbw18JtL99MRvasWqrjF",
 		"/ip4/54.147.190.40/tcp/4001/p2p/12D3KooWHR1v13MD6ybgj5T3Ds56MB8LGcaXRH8W9cNLJP19AnRy",
 		"/ip4/54.80.114.62/tcp/4001/p2p/12D3KooWSMc3sjPAAxdNXPg5nUa9M76WK2Vp3uf9FhfARpnmKjEH",
 		"/ip4/54.174.102.221/tcp/4001/p2p/12D3KooWQo32RF8QSanP2LUnPnuKshqZdCFuUtypexzpAiUCK3js",
@@ -336,27 +338,13 @@ func createRepository(dir string, blacklist []string, providers []Provider) (str
 	cfg.Swarm.Transports.Network.Relay = config.False
 	// cfg.Swarm.Transports.Network.QUIC = config.False
 	cfg.Swarm.AddrFilters = blacklist
-	cfg.Swarm.ConnMgr.HighWater = config.NewOptionalInteger(10000)
-	cfg.Swarm.ConnMgr.LowWater = config.NewOptionalInteger(450)
+	cfg.Swarm.ConnMgr.HighWater = config.NewOptionalInteger(900)
+	cfg.Swarm.ConnMgr.LowWater = config.NewOptionalInteger(600)
 	cfg.Routing.AcceleratedDHTClient = true
 
-	peers := make([]peer.AddrInfo, 0)
-	for i := range providers {
-		id, err := peer.Decode(providers[i].ID)
-		if err != nil {
-			log.Err(err).Str("peer", providers[i].ID).Msg("invalid identity")
-			continue
-		}
-		info := peer.AddrInfo{
-			ID: id,
-		}
-		if providers[i].Address != "" {
-			info.Addrs = []ma.Multiaddr{
-				ma.StringCast(providers[i].Address),
-			}
-		}
-
-		peers = append(peers, info)
+	peers, err := providersToAddrInfo(providers)
+	if err != nil {
+		return "", errors.Wrap(err, "collecting providers info error")
 	}
 	cfg.Peering = config.Peering{
 		Peers: peers,
@@ -398,9 +386,9 @@ func (n *Node) reconnect(ctx context.Context) {
 		return
 	}
 
-	peerInfo := make([]*peer.AddrInfo, len(connected))
+	peerInfo := make([]peer.AddrInfo, len(connected))
 	for i := range connected {
-		peerInfo[i] = &peer.AddrInfo{
+		peerInfo[i] = peer.AddrInfo{
 			ID: connected[i].ID(),
 			Addrs: []ma.Multiaddr{
 				connected[i].Address(),
@@ -408,7 +396,7 @@ func (n *Node) reconnect(ctx context.Context) {
 		}
 	}
 
-	ticker := time.NewTicker(time.Minute * 5)
+	ticker := time.NewTicker(time.Minute * 3)
 	defer ticker.Stop()
 
 	for {
@@ -422,6 +410,7 @@ func (n *Node) reconnect(ctx context.Context) {
 				continue
 			}
 
+			var wg sync.WaitGroup
 			for _, pi := range peerInfo {
 				var found bool
 				for i := range peers {
@@ -434,19 +423,48 @@ func (n *Node) reconnect(ctx context.Context) {
 				if found {
 					log.Info().Str("peer_id", pi.ID.String()).Msg("connected to peer")
 				} else {
-					n.wg.Add(1)
-					go func(p *peer.AddrInfo) {
-						connectCtx, cancel := context.WithTimeout(ctx, time.Second*15)
+					wg.Add(1)
+					go func(p peer.AddrInfo, wg *sync.WaitGroup) {
+						defer wg.Done()
+
+						connectCtx, cancel := context.WithTimeout(ctx, time.Second*10)
 						defer cancel()
 
-						if err := n.api.Swarm().Connect(connectCtx, *p); err == nil {
+						if err := n.api.Swarm().Connect(connectCtx, p); err == nil {
 							log.Info().Str("peer_id", p.ID.String()).Msg("reconnected to peer")
+						} else {
+							log.Debug().Str("peer_id", p.ID.String()).Msgf("failed to reconnect: %s", err.Error())
 						}
-					}(pi)
+					}(pi, &wg)
 				}
 			}
 
+			wg.Wait()
 			log.Info().Msg("reconnection completed")
+
+			<-n.dht.RefreshRoutingTable()
+			log.Info().Msg("refresh routing table completed")
 		}
 	}
+}
+
+func providersToAddrInfo(providers []Provider) ([]peer.AddrInfo, error) {
+	peers := make([]peer.AddrInfo, 0)
+	for i := range providers {
+		id, err := peer.Decode(providers[i].ID)
+		if err != nil {
+			return nil, errors.Wrap(err, "providersToAddrInfo")
+		}
+		info := peer.AddrInfo{
+			ID: id,
+		}
+		if providers[i].Address != "" {
+			info.Addrs = []ma.Multiaddr{
+				ma.StringCast(providers[i].Address),
+			}
+		}
+
+		peers = append(peers, info)
+	}
+	return peers, nil
 }
