@@ -49,11 +49,3 @@ func (s IpfsNode) Resolve(ctx context.Context, network, address, link string) (i
 func (s IpfsNode) Is(link string) bool {
 	return strings.HasPrefix(link, prefixIpfs)
 }
-
-// FindPeers -
-func (s IpfsNode) FindPeers(ctx context.Context, link string) error {
-	requestCtx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-
-	return s.node.FindPeersForContent(requestCtx, strings.TrimPrefix(link, prefixIpfs))
-}

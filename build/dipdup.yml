@@ -133,6 +133,8 @@ metadata:
           addr: /ip4/54.174.102.221/tcp/4001
         - id: 12D3KooWMsupg6xmmfmRht93nmLyRizrECj4gNh4FdUvpxE5eqaW
           addr: /ip4/54.172.254.208/tcp/4001
+        - id: 12D3KooWGfSEBNvbEnV9wp1TUq9YbLfzCNmy9FUYYoYbjcoE4M9q
+          addr: /ip4/158.247.233.94/udp/4001/quic
     http_timeout: 5
     max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
     contract_service_workers: 15
