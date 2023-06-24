@@ -135,6 +135,12 @@ metadata:
           addr: /ip4/54.172.254.208/tcp/4001
         - id: 12D3KooWGfSEBNvbEnV9wp1TUq9YbLfzCNmy9FUYYoYbjcoE4M9q
           addr: /ip4/158.247.233.94/udp/4001/quic
+        - id: 12D3KooWDbWbrd7p5Se8zJp5zBHvftLwX7AhLRWfgzJunes1Ux4M
+          addr: /ip4/54.166.245.177/tcp/4001
+        - id: 12D3KooWCW7UeJXZuXrtkqTgNWnHvS76XNHF6CGguDgYujtXrV2w
+          addr: /ip4/44.201.127.70/tcp/4001
+        - id: 12D3KooWCMfdY2PVSJTKDujSqVrGXmeXTbCnGfgJDXr9ghTVwfyu
+          addr: /ip4/3.84.126.176/udp/4001/quic
     http_timeout: 5
     max_retry_count_on_error: ${MAX_RETRY_COUNT:-5}
     contract_service_workers: 15
