@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,7 +21,6 @@ import (
 	"github.com/ipfs/kubo/config"
 	"github.com/ipfs/kubo/core"
 	"github.com/ipfs/kubo/core/coreapi"
-	"github.com/ipfs/kubo/core/node/libp2p"
 	"github.com/ipfs/kubo/plugin/loader" // This package is needed so that all the preloaded plugins are loaded automatically
 	"github.com/ipfs/kubo/repo/fsrepo"
 	p2p "github.com/libp2p/go-libp2p"
@@ -124,13 +124,14 @@ func (n *Node) Get(ctx context.Context, cid string) (Data, error) {
 
 // FindPeersForContent -
 func (n *Node) FindPeersForContent(ctx context.Context, cidString string) error {
-	c, err := cid.Decode(cidString)
+	parts := strings.Split(cidString, "/")
+	c, err := cid.Decode(parts[0])
 	if err != nil {
-		return errors.Wrapf(err, "cid decoding: %s", cidString)
+		return errors.Wrapf(err, "cid decoding: %s", parts[0])
 	}
 	providers, err := n.dht.FindProviders(ctx, c)
 	if err != nil {
-		return errors.Wrapf(err, "finding peers for cid: %s", cidString)
+		return errors.Wrapf(err, "finding peers for cid: %s", c.String())
 	}
 	if len(providers) == 0 {
 		return nil
@@ -156,7 +157,7 @@ func (n *Node) FindPeersForContent(ctx context.Context, cidString string) error 
 			continue
 		}
 
-		connectCtx, cancel := context.WithTimeout(ctx, time.Second*15)
+		connectCtx, cancel := context.WithTimeout(ctx, time.Second*10)
 		defer cancel()
 
 		if err := n.api.Swarm().Connect(connectCtx, providers[i]); err != nil {
@@ -190,9 +191,8 @@ func spawn(ctx context.Context, dir string, blacklist []string, providers []Prov
 	}
 
 	node, err := core.NewNode(ctx, &core.BuildCfg{
-		Online:  true,
-		Repo:    r,
-		Routing: libp2p.DHTClientOption,
+		Online: true,
+		Repo:   r,
 		ExtraOpts: map[string]bool{
 			"enable-gc": true,
 		},
@@ -224,11 +224,12 @@ func createRepository(dir string, blacklist []string, providers []Provider) (str
 
 	cfg.Swarm.DisableBandwidthMetrics = true
 	cfg.Swarm.Transports.Network.Relay = config.False
-	// cfg.Swarm.Transports.Network.QUIC = config.False
 	cfg.Swarm.AddrFilters = blacklist
 	cfg.Swarm.ConnMgr.HighWater = config.NewOptionalInteger(900)
 	cfg.Swarm.ConnMgr.LowWater = config.NewOptionalInteger(600)
+	cfg.Swarm.ConnMgr.GracePeriod = config.NewOptionalDuration(time.Minute * 5)
 	cfg.Routing.AcceleratedDHTClient = true
+	cfg.Routing.Type = config.NewOptionalString("auto")
 
 	peers, err := providersToAddrInfo(providers)
 	if err != nil {
@@ -285,6 +286,8 @@ func (n *Node) reconnect(ctx context.Context) {
 			for _, pi := range peers {
 				log.Info().Str("peer_id", pi.ID().String()).Str("address", pi.Address().String()).Msg("connected to peer")
 			}
+
+			<-n.dht.ForceRefresh()
 		}
 	}
 }
