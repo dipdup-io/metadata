@@ -147,8 +147,8 @@ github.com/dgraph-io/ristretto v0.0.2 h1:a5WaUrDa0qm0YrAAS1tUykT5El3kt62KNZZeMxQ
 github.com/dgraph-io/ristretto v0.0.2/go.mod h1:KPxhHT9ZxKefz+PCeOGsrHpl1qZ7i70dGTu2u+Ahh6E=
 github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 h1:tdlZCpZ/P9DhczCTSixgIKmwPv6+wP5DGjqLYw5SUiA=
 github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2/go.mod h1:SqUrOPUnsFjfmXRMNPybcSiG0BgUW2AuFH8PAnS2iTw=
-github.com/dipdup-net/go-lib v0.2.32 h1:gG86VgAig11z8e2fi7ErgA+R/NuqriRUEXp3fI02ZdE=
-github.com/dipdup-net/go-lib v0.2.32/go.mod h1:oXILRskGR7bXvuFyc6B8prCKOjGJdDc76kMcf65EvcE=
+github.com/dipdup-net/go-lib v0.2.34 h1:ug5Fm+LoX6HcMrbt8jxiJZ8d+ydhaVn/hrqaBsre6os=
+github.com/dipdup-net/go-lib v0.2.34/go.mod h1:oXILRskGR7bXvuFyc6B8prCKOjGJdDc76kMcf65EvcE=
 github.com/disintegration/imaging v1.6.2 h1:w1LecBlG2Lnp8B3jk5zSuNqd7b4DXhcjwek1ei82L+c=
 github.com/disintegration/imaging v1.6.2/go.mod h1:44/5580QXChDfwIclfc/PCwrr44amcmDAg8hxG0Ewe4=
 github.com/docker/go-units v0.4.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=

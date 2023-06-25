@@ -59,7 +59,6 @@ func main() {
 	runtime.GOMAXPROCS(cfg.Metadata.Settings.MaxCPU)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
@@ -149,6 +148,8 @@ func main() {
 		}
 		return err == nil
 	})
+
+	cancel()
 
 	if err := ipfsNode.Close(); err != nil {
 		log.Err(err).Msgf("ipfsNode.Close()")

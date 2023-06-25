@@ -12,6 +12,7 @@ import (
 	icore "github.com/ipfs/boxo/coreiface"
 	icorepath "github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"
+	"github.com/ipfs/go-cid"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -22,6 +23,8 @@ import (
 	"github.com/ipfs/kubo/core/node/libp2p"
 	"github.com/ipfs/kubo/plugin/loader" // This package is needed so that all the preloaded plugins are loaded automatically
 	"github.com/ipfs/kubo/repo/fsrepo"
+	p2p "github.com/libp2p/go-libp2p"
+	kadDHT "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -30,6 +33,7 @@ type Node struct {
 	api       icore.CoreAPI
 	node      *core.IpfsNode
 	providers []Provider
+	dht       *kadDHT.IpfsDHT
 	limit     int64
 	wg        *sync.WaitGroup
 }
@@ -40,10 +44,19 @@ func NewNode(ctx context.Context, dir string, limit int64, blacklist []string, p
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to spawn node")
 	}
+	host, err := p2p.New()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create p2p host")
+	}
+	dht, err := kadDHT.New(ctx, host, kadDHT.Mode(kadDHT.ModeClient), kadDHT.BootstrapPeers(kadDHT.GetDefaultBootstrapPeerAddrInfos()...))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create dht client")
+	}
 	return &Node{
 		api:       api,
 		node:      node,
 		providers: providers,
+		dht:       dht,
 		limit:     limit,
 		wg:        new(sync.WaitGroup),
 	}, nil
@@ -107,6 +120,52 @@ func (n *Node) Get(ctx context.Context, cid string) (Data, error) {
 		Node:         "ipfs-metadata-node",
 		ResponseTime: responseTime,
 	}, nil
+}
+
+// FindPeersForContent -
+func (n *Node) FindPeersForContent(ctx context.Context, cidString string) error {
+	c, err := cid.Decode(cidString)
+	if err != nil {
+		return errors.Wrapf(err, "cid decoding: %s", cidString)
+	}
+	providers, err := n.dht.FindProviders(ctx, c)
+	if err != nil {
+		return errors.Wrapf(err, "finding peers for cid: %s", cidString)
+	}
+	if len(providers) == 0 {
+		return nil
+	}
+
+	peers, err := n.api.Swarm().Peers(ctx)
+	if err != nil {
+		return errors.Wrap(err, "receiving current peers")
+	}
+
+	for i := range providers {
+		var connected bool
+		for j := range peers {
+			if peers[j].ID().String() == providers[i].ID.String() {
+				connected = true
+				break
+			}
+		}
+		if connected {
+			continue
+		}
+		if len(providers[i].Addrs) == 0 {
+			continue
+		}
+
+		connectCtx, cancel := context.WithTimeout(ctx, time.Second*15)
+		defer cancel()
+
+		if err := n.api.Swarm().Connect(connectCtx, providers[i]); err != nil {
+			log.Warn().Fields(providers[i].Loggable()).Msgf("failed to connect: %s", err)
+		} else {
+			log.Info().Fields(providers[i].Loggable()).Msg("connected")
+		}
+	}
+	return nil
 }
 
 var loadPluginsOnce sync.Once
@@ -224,7 +283,7 @@ func (n *Node) reconnect(ctx context.Context) {
 			}
 
 			for _, pi := range peers {
-				log.Info().Str("peer_id", pi.ID().String()).Msg("connected to peer")
+				log.Info().Str("peer_id", pi.ID().String()).Str("address", pi.Address().String()).Msg("connected to peer")
 			}
 		}
 	}

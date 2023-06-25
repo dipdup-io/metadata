@@ -192,7 +192,7 @@ func (s *Service[T]) worker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case unresolved := <-s.tasks:
-			resolveCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			resolveCtx, cancel := context.WithTimeout(ctx, time.Minute)
 			defer cancel()
 
 			if err := s.handler(resolveCtx, unresolved); err != nil {

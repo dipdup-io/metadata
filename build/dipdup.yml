@@ -36,6 +36,14 @@ metadata:
         # Pinata
         - id: Qma8ddFEQWEU8ijWvdxXm3nxU7oHsRtCykAaVz8WUYhiKn
           addr: /dns4/production-ipfs-peer.pinata.cloud
+        - id: 12D3KooWQJiEEHPzpg9vA2Au3EqeEa15z6uAfvBUwfsLpfbW2fLq
+          addr: /dns4/pinning-0.ipfs-swarm.production-pinning-lb-eu.nodes.pinata.cloud/tcp/4001
+        - id: 12D3KooWHi1PH8TUhAVzL3o5cAfJoEZA7ULTgPcAnpeFiya1u8En
+          addr: /dns4/pinning-1.ipfs-swarm.production-pinning-lb-eu.nodes.pinata.cloud/tcp/4001
+        - id: 12D3KooWNfDBUrhUEB2cxvQRUabzJNFLZSkJC6jy6ehgx6PHgKpa
+          addr: /dns4/pinning-2.ipfs-swarm.production-pinning-lb-eu.nodes.pinata.cloud/tcp/4001
+        - id: 12D3KooWSdwvdJ9nPxeiNVt1nsAp5txgs19ReKdkjfUZTds5nfPq
+          addr: /dns4/pinning-3.ipfs-swarm.production-pinning-lb-eu.nodes.pinata.cloud/tcp/4001
         # Cloudflare
         - id: QmcFf2FH3CEgTNHeMRGhN7HNHU1EXAxoEk6EFuSyXCsvRE
           addr: /dnsaddr/node-1.ingress.cloudflare-ipfs.com

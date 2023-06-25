@@ -11,6 +11,7 @@ import (
 	"github.com/dipdup-net/metadata/internal/tezos"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -111,11 +112,11 @@ func (r Receiver) Resolve(ctx context.Context, network, address, link string, at
 	switch {
 	case r.ipfs.Is(link):
 		resolved.By = ResolverTypeIPFS
-		// if attempt == 3 && network == "mainnet" {
-		// 	if err := r.ipfs.FindPeers(ctx, link); err != nil {
-		// 		log.Err(err).Str("link", link).Str("network", network).Msg("can't find peers for CID")
-		// 	}
-		// }
+		if attempt > 2 {
+			if err := r.ipfs.FindPeers(ctx, link); err != nil {
+				log.Err(err).Str("link", link).Str("network", network).Msg("can't find peers for CID")
+			}
+		}
 
 		data, err := r.ipfs.Resolve(ctx, network, address, link)
 		if err != nil {
@@ -146,7 +147,7 @@ func (r Receiver) Resolve(ctx context.Context, network, address, link string, at
 		resolved.Data, err = r.sha.Resolve(ctx, network, address, link)
 
 	default:
-		return resolved, newResolvingError(0, ErrorUnknownStorageType, errors.Wrap(ErrUnknownStorageType, err.Error()))
+		return resolved, newResolvingError(0, ErrorUnknownStorageType, ErrUnknownStorageType)
 	}
 
 	if err != nil {
