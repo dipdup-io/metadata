@@ -9,14 +9,13 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/elastic/go-elasticsearch/v8 v8.1.0
 	github.com/go-pg/pg/v10 v10.10.6
-	github.com/ipfs/boxo v0.10.0
+	github.com/ipfs/boxo v0.10.1
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ipfs-api v0.3.0
-	github.com/ipfs/kubo v0.21.0-rc1
+	github.com/ipfs/kubo v0.21.0-rc3
 	github.com/json-iterator/go v1.1.12
 	github.com/labstack/echo/v4 v4.9.0
-	github.com/libp2p/go-libp2p v0.28.0
-	github.com/libp2p/go-libp2p-kad-dht v0.24.0
+	github.com/libp2p/go-libp2p v0.28.1
 	github.com/multiformats/go-multiaddr v0.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.1
@@ -141,7 +140,8 @@ require (
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.3.0 // indirect
 	github.com/libp2p/go-libp2p-core v0.20.1 // indirect
-	github.com/libp2p/go-libp2p-kbucket v0.6.1 // indirect
+	github.com/libp2p/go-libp2p-kad-dht v0.24.2 // indirect
+	github.com/libp2p/go-libp2p-kbucket v0.6.3 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.9.3 // indirect
 	github.com/libp2p/go-libp2p-pubsub-router v0.6.0 // indirect
 	github.com/libp2p/go-libp2p-record v0.2.0 // indirect
@@ -245,7 +245,7 @@ require (
 	gonum.org/v1/gonum v0.13.0 // indirect
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	google.golang.org/grpc v1.55.0 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/mysql v1.3.3 // indirect
