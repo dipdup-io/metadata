@@ -286,8 +286,6 @@ func (n *Node) reconnect(ctx context.Context) {
 			for _, pi := range peers {
 				log.Info().Str("peer_id", pi.ID().String()).Str("address", pi.Address().String()).Msg("connected to peer")
 			}
-
-			<-n.dht.ForceRefresh()
 		}
 	}
 }

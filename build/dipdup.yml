@@ -104,7 +104,7 @@ metadata:
         - id: 12D3KooWAYgR87jsuQMUno9MXQHGv3A7GGf4wLPVQhSG7jPNtejk
           addr: /ip4/18.232.70.69/tcp/4001
         - id: 12D3KooWJFBXTQaRhU3JJo5JiS4rHusKB7KuWmz1nfRjrkViaaMQ
-          addr: /ip4/94.130.71.31/tcp/4001
+          addr: /ip4/94.130.71.31/udp/4001/quic
         - id: 12D3KooWBYznKkpGnjj2JSdbbV4nSgomi4eDSDyhfbg7962HQDD1
           addr: /ip4/148.113.152.143/tcp/4001
         - id: QmZNWqSqBRVkKkCF7UUVpwmKaNoV3yCgAcySiu33EMp1SZ
