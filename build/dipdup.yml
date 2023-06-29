@@ -205,10 +205,6 @@ datasources:
     url: https://api.ghostnet.tzkt.io
     kind: tzkt
     timeout: 10
-  tzkt_mumbainet:
-    url: https://api.mumbainet.tzkt.io
-    kind: tzkt
-    timeout: 10
   tzkt_nairobinet:
     url: https://api.nairobinet.tzkt.io
     kind: tzkt
