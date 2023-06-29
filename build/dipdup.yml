@@ -167,9 +167,6 @@ metadata:
     ghostnet:
       datasources:
         tzkt: tzkt_ghostnet
-    mumbainet:
-      datasources:
-        tzkt: tzkt_mumbainet
     nairobinet:
       datasources:
         tzkt: tzkt_nairobinet
