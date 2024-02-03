@@ -171,6 +171,21 @@ func (scanner *Scanner) listen(ctx context.Context) {
 		case msg := <-scanner.client.Listen():
 			switch msg.Type {
 			case events.MessageTypeState:
+				// on reconnect
+				if msg.Channel != events.ChannelBlocks {
+					continue
+				}
+
+				if scanner.level < msg.State {
+					// if blocks was missed in some reason we should index missed blocks
+					log.Warn().Uint64("old_state", scanner.level).Uint64("new_level", msg.State).Msg("detect missed blocks. resync...")
+
+					if err := scanner.sync(ctx, msg.State); err != nil {
+						log.Err(err).Msg("resync error")
+						return
+					}
+				}
+				scanner.level = msg.State
 
 			case events.MessageTypeData:
 				switch msg.Channel {
@@ -276,6 +291,7 @@ func (scanner *Scanner) handleBlocks(msg events.Message) error {
 		return errors.Errorf("Empty body: %v", body)
 	}
 
+	scanner.level = body[0].Level
 	scanner.blocks <- body[0]
 	return nil
 }
