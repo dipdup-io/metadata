@@ -185,7 +185,7 @@ func (indexer *Indexer) Close() error {
 }
 
 func (indexer *Indexer) initState(ctx context.Context) error {
-	current, err := indexer.db.State(indexer.indexName)
+	current, err := indexer.db.State(ctx, indexer.indexName)
 	if err != nil {
 		if !errors.Is(err, pg.ErrNoRows) {
 			return err
@@ -195,7 +195,7 @@ func (indexer *Indexer) initState(ctx context.Context) error {
 			IndexName: indexer.indexName,
 		}
 
-		if err := indexer.db.CreateState(indexer.state); err != nil {
+		if err := indexer.db.CreateState(ctx, indexer.state); err != nil {
 			return err
 		}
 	} else {
@@ -244,7 +244,7 @@ func (indexer *Indexer) listen(ctx context.Context) {
 				indexer.state.Level = block.Level
 				indexer.state.Hash = block.Hash
 				indexer.state.Timestamp = block.Timestamp.UTC()
-				if err := indexer.db.UpdateState(indexer.state); err != nil {
+				if err := indexer.db.UpdateState(ctx, indexer.state); err != nil {
 					log.Err(err).Msg("UpdateState")
 				} else {
 					indexer.log().Msg("new block received")
