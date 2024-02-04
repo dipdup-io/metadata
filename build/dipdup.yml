@@ -170,8 +170,9 @@ metadata:
     nairobinet:
       datasources:
         tzkt: tzkt_nairobinet
-
-
+    oxfordnet:
+      datasources:
+        tzkt: tzkt_oxfordnet
 
 database:
   kind: postgres
@@ -207,5 +208,9 @@ datasources:
     timeout: 10
   tzkt_nairobinet:
     url: https://api.nairobinet.tzkt.io
+    kind: tzkt
+    timeout: 10
+  tzkt_oxfordnet:
+    url: https://api.oxfordnet.tzkt.io
     kind: tzkt
     timeout: 10
