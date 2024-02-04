@@ -40,7 +40,7 @@ func New(cfg config.DataSource, contracts ...string) (*Scanner, error) {
 	if err != nil {
 		return nil, err
 	}
-	eventsURL := baseURL.JoinPath("v1/events")
+	eventsURL := baseURL.JoinPath("v1/ws")
 
 	return &Scanner{
 		client:    events.NewTzKT(eventsURL.String()),
