@@ -14,7 +14,7 @@ services:
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
       - ADMIN_SECRET=${ADMIN_SECRET:-changeme}
-      - HASURA_SELECT_LIMIT=${HASURA_SELECT_LIMIT:-1000}
+      - HASURA_SELECT_LIMIT=${HASURA_SELECT_LIMIT:-10000}
       - IPFS_NODE_URI=${IPFS_NODE_URI:-https://ipfs.io}
     volumes:
       - ipfs:/etc/metadata/ipfs
@@ -37,7 +37,7 @@ services:
       retries: 5
 
   hasura:
-    image: hasura/graphql-engine:latest
+    image: hasura/graphql-engine:v2.23.0
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
