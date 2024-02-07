@@ -185,7 +185,7 @@ database:
 hasura:
   url: http://${HASURA_HOST:-hasura}:8080
   admin_secret: ${ADMIN_SECRET:-changeme}
-  select_limit: 10000
+  select_limit: ${HASURA_SELECT_LIMIT:-10000}
   allow_aggregation: false
   rest: true
   source:
