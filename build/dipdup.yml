@@ -167,9 +167,6 @@ metadata:
     ghostnet:
       datasources:
         tzkt: tzkt_ghostnet
-    nairobinet:
-      datasources:
-        tzkt: tzkt_nairobinet
     oxfordnet:
       datasources:
         tzkt: tzkt_oxfordnet
@@ -204,10 +201,6 @@ datasources:
     timeout: 10
   tzkt_ghostnet:
     url: https://api.ghostnet.tzkt.io
-    kind: tzkt
-    timeout: 10
-  tzkt_nairobinet:
-    url: https://api.nairobinet.tzkt.io
     kind: tzkt
     timeout: 10
   tzkt_oxfordnet:
