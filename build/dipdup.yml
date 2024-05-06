@@ -170,6 +170,9 @@ metadata:
     oxfordnet:
       datasources:
         tzkt: tzkt_oxfordnet
+    parisnet:
+      datasources:
+        tzkt: tzkt_parisnet
 
 database:
   kind: postgres
@@ -205,5 +208,9 @@ datasources:
     timeout: 10
   tzkt_oxfordnet:
     url: https://api.oxfordnet.tzkt.io
+    kind: tzkt
+    timeout: 10
+  tzkt_parisnet:
+    url: https://api.parisnet.tzkt.io
     kind: tzkt
     timeout: 10
